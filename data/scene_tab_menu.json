@@ -1,0 +1,19 @@
+{
+  "context_menu": {
+    "Add object": {
+      "alembic": "cmd",
+      "camera": "cmd",
+      "channel": "cmd"
+    },
+    "Add asset": {
+      "published asset": "cmd",
+      "dependency": "cmd",
+      "connection": "cmd"
+    },
+    "Operation": {
+      "merge": "cmd",
+      "export": "cmd",
+      "import": "cmd"
+    }
+  }
+}
