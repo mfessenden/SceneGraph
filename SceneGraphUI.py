@@ -2,8 +2,8 @@
 from PyQt4 import QtCore, QtGui
 from functools import partial
 
-from . import scene
-reload(scene)
+from . import graph
+reload(graph)
 
 
 class SceneGraph(QtGui.QMainWindow):
@@ -14,13 +14,13 @@ class SceneGraph(QtGui.QMainWindow):
         self.centralwidget = QtGui.QWidget(self)
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.tabWidget = QtGui.QTabWidget(self.centralwidget)
-        self.sceneTab = QtGui.QWidget()
-        self.tabGridLayout = QtGui.QGridLayout(self.sceneTab)
-        self.main_splitter = QtGui.QSplitter(self.sceneTab)
+        self.graphTab = QtGui.QWidget()
+        self.tabGridLayout = QtGui.QGridLayout(self.graphTab)
+        self.main_splitter = QtGui.QSplitter(self.graphTab)
         self.main_splitter.setOrientation(QtCore.Qt.Horizontal)
         
         # Node view
-        self.graphicsView = scene.GraphicsView(self.main_splitter)
+        self.graphicsView = graph.GraphicsView(self.main_splitter, gui=self)
         self.right_splitter = QtGui.QSplitter(self.main_splitter)
         self.right_splitter.setOrientation(QtCore.Qt.Vertical)
         
@@ -29,7 +29,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.optionsBox = QtGui.QGroupBox(self.right_splitter)
         self.tabGridLayout.addWidget(self.main_splitter, 0, 0, 1, 1)
         
-        self.tabWidget.addTab(self.sceneTab, "Scene View")
+        self.tabWidget.addTab(self.graphTab, "Scene View")
         self.gridLayout.addWidget(self.tabWidget, 0, 0, 1, 1)
         self.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(self)
@@ -41,7 +41,13 @@ class SceneGraph(QtGui.QMainWindow):
         self.setupUI()
         self.connect(self.graphicsView, QtCore.SIGNAL("tabPressed"), partial(self.createTabMenu, self.graphicsView))
         
-    
+        # for debugging
+        self.graphicsScene.createNode('generic', [0, 0])
+        self.graphicsScene.createNode('generic', [600, 25])
+        
+        self.graphicsScene.createNode('generic', [800, 1100])
+        self.graphicsScene.createNode('generic', [10, 900])
+        
     def setupUI(self):
         """
         Set up the main UI
@@ -63,19 +69,23 @@ class SceneGraph(QtGui.QMainWindow):
     def setupConnections(self):
         pass
     
-    def _setupGraphicsView(self):        
+    def _setupGraphicsView(self, filter=False):        
         # scene view
-        self.scene = scene.GraphicsScene()
-        self.graphicsView.setScene(self.scene)
-        self.graphicsView.setSceneRect(0, 0, 630, 555)
+        self.graphicsScene = graph.GraphicsScene()
+        self.graphicsView.setScene(self.graphicsScene)
+        self.graphicsView.setSceneRect(0, 0, 1000, 1000)
+        #self.graphicsView.setSceneRect(-10000, -10000, 20000, 20000)
 
         # graphics View
         self.graphicsView.wheelEvent = self.graphicsView_wheelEvent
         self.graphicsView.resizeEvent = self.graphicsView_resizeEvent
         self.graphicsView.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
         
-        self.graphicsView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)        
-        self.scene.tabKeyPressed.connect(partial(self.createTabMenu, self.scene))
+        self.graphicsView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu) 
+        # event filter
+        if filter:
+            self.viewEventFilter = MouseEventFilter(self.graphicsView)
+            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)               
         
     def _setupNodeAttributes(self):
         self.detailGroup.setTitle('Node Attributes')
@@ -92,7 +102,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.graphicsView.scale(factor, factor)
 
     def graphicsView_resizeEvent(self, event):
-        self.scene.setSceneRect(0, 0, self.graphicsView.width(), self.graphicsView.height())
+        self.graphicsScene.setSceneRect(0, 0, self.graphicsView.width(), self.graphicsView.height())
        
     #- MENUS -----
     def createTabMenu(self, parent):
@@ -101,12 +111,14 @@ class SceneGraph(QtGui.QMainWindow):
         menu=QtGui.QMenu(parent)
         menu.clear()
         reset_action = menu.addAction('Reset options to default')
-        menu.exec_(QtGui.QCursor.pos())
+        menu.exec_(parent.scenePos())
 
 
 class MouseEventFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.KeyPress:
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            # call a function here..
+            # obj.doSomething()
             return True
         return False
     
