@@ -1,8 +1,33 @@
 <svg width="180" height="225" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
- <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
- <g>
-  <title>Layer 1</title>
-  <rect fill="#999999" stroke="#cccccc" stroke-width="2" x="0" y="0" width="180" height="225" id="svg_1"/>
-  <rect stroke="#cccccc" id="svg_2" height="32" width="180" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="2" fill="#8698aa"/>
- </g>
+<clipPath id="textClip"> <rect  style="fill:none;stroke:none;" id="rect3606-9" width="180" height="225"  x="0"  y="0" rx="20" ry="20" /> </clipPath>
+
+    <rect
+       style="fill:#999999;fill-opacity:1;stroke-width:3;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect3762"
+       width="180"
+       height="225"
+       x="0"
+       y="0"
+       clip-path="url(#textClip)" 
+        />
+
+    <rect
+       style="fill:#8698aa;fill-opacity:1;stroke-width:3;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect3764"
+       width="180"
+       height="32"
+       x="0"
+       y="0"
+       clip-path="url(#textClip)" 
+       />
+
+    <rect
+       style="fill:none;stroke:#cccccc;stroke-width:4;stroke-opacity:1;display:inline"
+       id="rect3762-0"
+       width="180"
+       height="225"
+       x="0"
+       y="0"
+       rx="20"
+       ry="20" />
 </svg>
