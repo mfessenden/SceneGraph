@@ -1,5 +1,5 @@
 <svg width="180" height="225" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
-<clipPath id="textClip"> <rect  style="fill:none;stroke:none;" id="rect3606-9" width="180" height="225"  x="0"  y="0" rx="20" ry="20" /> </clipPath>
+
 
     <rect
        style="fill:#999999;fill-opacity:1;stroke-width:3;stroke-miterlimit:4;stroke-dasharray:none"
@@ -20,14 +20,14 @@
        y="0"
        clip-path="url(#textClip)" 
        />
-
     <rect
-       style="fill:none;stroke:#cccccc;stroke-width:4;stroke-opacity:1;display:inline"
+       style="fill:none;stroke:#cccccc;stroke-width:3;stroke-opacity:1;display:inline"
        id="rect3762-0"
        width="180"
        height="225"
        x="0"
        y="0"
-       rx="20"
-       ry="20" />
+       rx="0"
+       ry="0" />
+
 </svg>
