@@ -2,8 +2,10 @@
 from PyQt4 import QtCore, QtGui
 from functools import partial
 
+from . import config
 from . import graph
 from . import ui
+reload(config)
 reload(graph)
 reload(ui)
 
@@ -61,7 +63,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.eventFilter = MouseEventFilter(self)        
         self.installEventFilter(self.eventFilter)
         
-        self.setWindowTitle('Scene Graph')
+        self.setWindowTitle('Scene Graph - v%s' % config.VERSION_AS_STRING)
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
         self.main_splitter.setSizes([770, 300])
@@ -117,10 +119,11 @@ class SceneGraph(QtGui.QMainWindow):
         self.removeDetailWidgets()
         nodes = self.graphicsScene.selectedItems()
         if len(nodes) == 1:
-            nodeAttrWidget = ui.NodeAttributesWidget(self.detailGroup, manager=self.graphicsScene.nodeManager)
             node = nodes[0]
-            nodeAttrWidget.setNode(node)
-            self.detailGroupLayout.addWidget(nodeAttrWidget)     
+            if node._is_node:
+                nodeAttrWidget = ui.NodeAttributesWidget(self.detailGroup, manager=self.graphicsScene.nodeManager)                
+                nodeAttrWidget.setNode(node)
+                self.detailGroupLayout.addWidget(nodeAttrWidget)     
     
     #- EVENTS ----
     def graphicsView_wheelEvent(self, event):

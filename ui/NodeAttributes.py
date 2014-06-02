@@ -12,14 +12,23 @@ class NodeAttributesWidget(QtGui.QWidget):
         self._current_node  = None
         
         self.gridLayout = QtGui.QGridLayout(self)
+        
+        # Name Attribute
         self.nameLabel = QtGui.QLabel(self)
         self.gridLayout.addWidget(self.nameLabel, 0, 0, 1, 1)
         self.nameEdit = QtGui.QLineEdit(self)
         self.gridLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
+
+        self.pathLabel = QtGui.QLabel(self)
+        self.gridLayout.addWidget(self.pathLabel, 1, 0, 1, 1)
+        self.pathEdit = QtGui.QLineEdit(self)
+        self.gridLayout.addWidget(self.pathEdit, 1, 1, 1, 1)
+
         spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem, 1, 1, 1, 1)
+        self.gridLayout.addItem(spacerItem, 2, 1, 1, 1)
 
         self.nameLabel.setText("Name:")
+        self.pathLabel.setText("Path:")
     
     def setNode(self, node_item):
         """
@@ -31,13 +40,17 @@ class NodeAttributesWidget(QtGui.QWidget):
             self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
             self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
             
+            self.pathEdit.setText(node_item.path())
+            self.pathEdit.setEnabled(False)
+            
     def nodeUpdateAction(self):
         """
         Update the current node
         """
         new_name = str(self.nameEdit.text())
         if self._current_node:
-            self.manager.renameNode(self._current_node.node_name, new_name)    
+            newNode = self.manager.renameNode(self._current_node.node_name, new_name)
+            self.setNode(newNode)
     
     def nodeUpdatedFilter(self):
         """

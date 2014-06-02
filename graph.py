@@ -1,10 +1,17 @@
 #!/X/tools/binlinux/xpython
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore, QtGui, QtSvg
 import weakref
 import re
 
 from . import core
 reload(core)
+
+"""
+Notes:
+
+    - overloading mouseMoveEvent on QGraphicsScene not easily implemented
+
+"""
 
 
 class GraphicsView (QtGui.QGraphicsView):
@@ -17,6 +24,7 @@ class GraphicsView (QtGui.QGraphicsView):
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         #self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         #self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.renderer = QtSvg.QSvgRenderer()
     
     def wheelEvent (self, event):
         super (GraphicsView, self).wheelEvent(event)
@@ -44,8 +52,8 @@ class GraphicsView (QtGui.QGraphicsView):
             graphicsScene = self.scene()
             nodeManager = graphicsScene.nodeManager
             for item in graphicsScene.selectedItems():
-                nodeManager.removeNode(item)
-                #graphicsScene.removeItem(item)
+                #nodeManager.removeNode(item)
+                item.deleteNode()
         event.accept()
 
 
@@ -91,7 +99,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
     
     def dropEvent(self, event):
         newPos = event.scenePos()
-
+    
     def mouseDoubleClickEvent(self, event):
         """
         If mouse is double-clicked, add a node # BETA
@@ -100,7 +108,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = self.nodeManager.createNode('generic')
         position = QtCore.QPointF(event.scenePos()) - item.rectF.center()
         item.setPos(position.x() , position.y())
-
+    
 
 class NodeManager(object):
     """
@@ -137,7 +145,9 @@ class NodeManager(object):
         """
         node_name = node_item.node_name
         print '# Removing node: "%s"' % node_name
-        self._parent.removeItem(node_item)       
+        self._parent.removeItem(node_item)
+        if node_name in self._parent.sceneNodes.keys():
+            self._parent.sceneNodes.pop(node_name)
     
     def renameNode(self, old_name, new_name):
         """
@@ -145,6 +155,10 @@ class NodeManager(object):
         
         Returns the renamed node
         """
+        if new_name in self._getNames():
+            print '# Error: "%s" is not unique' % new_name
+            return
+
         item=self._parent.sceneNodes.pop(old_name)
         item.node_name = new_name
         self._parent.sceneNodes[item.node_name]=item
