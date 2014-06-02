@@ -2,6 +2,7 @@
 from PyQt4 import QtCore, QtGui, QtSvg
 import weakref
 import re
+import simplejson as json
 
 from . import core
 reload(core)
@@ -90,15 +91,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.sceneNodes[sceneNode.node_name] = sceneNode
         self.addItem(sceneNode)
         return sceneNode
-    
-    def createTestNode(self, **kwargs):        
-        node_pos = kwargs.get('pos', [0,0])
-        sceneNode = core.NodeTest(**kwargs)
-        sceneNode.setPos(node_pos[0], node_pos[1])
-        self.sceneNodes["generic"] = sceneNode
-        self.addItem(sceneNode)
-        return sceneNode
-    
+
     def dropEvent(self, event):
         newPos = event.scenePos()
     
@@ -131,7 +124,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def mouseReleaseEvent(self, event):
         if self.line:
             startItems = self.items(self.line.line().p1())
-            print '# start items: ', startItems
             if len(startItems) and startItems[0] == self.line:
                 startItems.pop(0)
             endItems = self.items(self.line.line().p2())
@@ -184,6 +176,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             pass
         return False
 
+
 class NodeManager(object):
     """
     Manages nodes in the parent graph
@@ -210,7 +203,10 @@ class NodeManager(object):
         """
         Creates a node in the parent graph
         """
-        node_name = self._nodeNamer(kwargs.pop('name', 'My_Node'))
+        force = kwargs.get('force', False)
+        node_name = kwargs.pop('name', 'My_Node')
+        if not force:
+            node_name = self._nodeNamer(node_name)
         return self._parent.createNode(node_type, name=node_name, **kwargs)
     
     def removeNode(self, node_item):
@@ -238,6 +234,31 @@ class NodeManager(object):
         self._parent.sceneNodes[item.node_name]=item
         return item
     
+    def connectNodes(self, output, input):
+        """
+        Connect two nodes via a "Node.attribute" string
+        """
+        input_name, input_conn = input.split('.')
+        output_name, output_conn = output.split('.')
+        input_node = self.getNode(input_name)
+        output_node = self.getNode(output_name)
+        
+        #print '# input:  ', input_node
+        #print '# output: ', output_node
+        
+        input_conn_node  = input_node.getInputConnection(input_conn)
+        output_conn_node = output_node.getOutputConnection(output_conn)
+        
+        if input_conn_node and output_conn_node:
+            connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
+            self._parent.addItem(connectionLine)
+        else:
+            if not input_conn_node:
+                print '# Error: cannot find an input connection "%s" for node "%s"' % (input_conn, input_node )
+
+            if not output_conn_node:
+                print '# Error: cannot find an output connection "%s" for node "%s"' % (output_conn, output_node)
+
     def _getNames(self):
         """
         Returns the names of all the current nodes
@@ -259,6 +280,53 @@ class NodeManager(object):
                     node_name = '%s%d' % (node_base, i)
                     break
         return node_name
+    
+    def write(self, filename='/tmp/scene_graph_output.json'):
+        """
+        Write the graph to scene file
+        """
+        data = {}
+        data.update(nodes={})
+        data.update(connections={})
+        conn_idx = 0
+        for item in self._parent.items():
+            if isinstance(item, core.nodes.NodeBase):
+                data.get('nodes').update(**{item.node_name:item.data})
+            elif isinstance(item, core.nodes.LineClass):
+                startItem = str(item.myStartItem)
+                endItem = str(item.myEndItem)
+                data.get('connections').update(**{'connection%d' % conn_idx: {'start':startItem, 'end':endItem}})
+                conn_idx+=1
+        fn = open(filename, 'w')
+        output_data=data
+        json.dump(output_data, fn, indent=4)
+        fn.close()
+        
+    def read(self, filename='/tmp/scene_graph_output.json'):
+        """
+        Read a graph from a saved scene
+        """
+        import os
+        if os.path.exists(filename):
+            raw_data = open(filename).read()
+            tmp_data = json.loads(raw_data, object_pairs_hook=dict)
+            node_data = tmp_data.get('nodes', {})
+            conn_data = tmp_data.get('connections', {})
+            for node in node_data.keys():
+                print '# building node: "%s"' % node
+                posx = node_data.get(node).get('x')
+                posy = node_data.get(node).get('y')
+                self.createNode('generic', name=node, pos=[posx, posy], force=True)
+                
+            for conn in conn_data.keys():
+                cdata = conn_data.get(conn)
+                start_str = cdata.get('start')
+                end_str = cdata.get('end')
+                print '# connecting: %s >> %s' % (start_str, end_str)
+                self.connectNodes(start_str, end_str)
+                    
+        else:
+            print '# Error: filename "%s" does not exist' % filename
                 
     
         

@@ -1,4 +1,5 @@
 from PyQt4 import QtGui, QtCore, QtSvg
+import simplejson as json
 import os
 import math
 
@@ -25,7 +26,7 @@ class NodeBase(object):
         Returns a path relative to the base (parenting not yet implemented)
         """
         return '/%s' % str(self._node_name)
-        
+       
 
 class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
@@ -66,8 +67,9 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         """
         Runs when node is selected
         """
-        print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
+        #print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
         event.accept()
+
     '''
     def mouseMoveEvent(self, event):
         """
@@ -142,7 +144,19 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         return self._attributes.get('input', {}).keys()     
 
     def getOutputAttributes(self):
-        return self._attributes.get('output', {}).keys()    
+        return self._attributes.get('output', {}).keys()
+    
+    def getInputConnection(self, conn_name):
+        """
+        Returns the input connection NODE for the given name
+        """
+        return self._attributes.get('input').get(conn_name, None)
+
+    def getOutputConnection(self, conn_name):
+        """
+        Returns the output connection NODE for the given name
+        """
+        return self._attributes.get('output').get(conn_name, None)
 
     @property
     def node_name(self):
@@ -161,11 +175,22 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def height(self):
         return self.sceneBoundingRect().height()
 
-
     def deleteNode(self):
         # disconnection logic here
         self.scene().nodeManager.removeNode(self)
-
+    
+    @property
+    def data(self):
+        data = dict()
+        data.update(x=self.sceneBoundingRect().x())
+        data.update(y=self.sceneBoundingRect().y())
+        data.update(width=self.width)
+        data.update(height=self.height)
+        return data
+    
+    def dump(self):
+        output_data = {self.node_name:self.data}
+        json.dumps(output_data, indent=5)
 
 #- CONNECTIONS -----
 
@@ -258,6 +283,7 @@ class LineClass(QtGui.QGraphicsLineItem):
         super(LineClass, self).__init__(*args, **kwargs)
 
         # The arrow that's drawn in the center of the line
+        self._is_node = False
         self.arrowHead = QtGui.QPolygonF()
         self.myColor = QtCore.Qt.white
         self.myStartItem = startItem
@@ -279,7 +305,10 @@ class LineClass(QtGui.QGraphicsLineItem):
         except AttributeError, e:
             print "Error checking isInputConnection on node %s" %str(e)
 
-
+    def __repr__(self):
+        return '%s >> %s' % (self.myStartItem, self.myEndItem)
+    
+    
     def deleteLine(self):
         # For whatever the shit reason, I have to have this check. If I don't, I get an error in rare cases.
         if self:
@@ -389,28 +418,4 @@ class LineClass(QtGui.QGraphicsLineItem):
             if line:
                 painter.drawPolygon(self.arrowHead)
                 painter.drawLine(line)
-
-#- TESTING -----
-
-# not currently used
-class NodeTest(QtGui.QGraphicsItem):
-    """
-    Simple test node
-    icon=GraphicsItem()
-    icon.setPos(200, 200)
-    """   
-    def __init__ (self):
-        super(QtGui.QGraphicsItem, self).__init__()
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setAcceptHoverEvents(True)
-        self.rectF = QtCore.QRectF(0,0,125,180)
-        
-    def boundingRect (self):
-        return self.rectF
-    
-    def paint (self, painter=None, style=None, widget=None):
-        #print dir(painter)
-        painter.drawRoundedRect(self.rectF.x()-10, self.rectF.y()-10, self.rectF.width(), self.rectF.height(), 5, 5)
-        #painter.fillRect(self.rectF, QtCore.Qt.red)
-
-
+                #painter.drawCubicBezier(line)
