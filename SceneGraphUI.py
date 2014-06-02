@@ -2,15 +2,22 @@
 from PyQt4 import QtCore, QtGui
 from functools import partial
 
+from . import config
 from . import graph
+from . import ui
+reload(config)
 reload(graph)
+reload(ui)
 
 
 class SceneGraph(QtGui.QMainWindow):
     
     def __init__(self, parent=None):
         super(SceneGraph, self).__init__(parent)
-        
+
+        self.settings       = QtCore.QSettings('SceneGraphc.ini', QtCore.QSettings.IniFormat)
+        self.settings.setFallbacksEnabled(False)
+
         self.centralwidget = QtGui.QWidget(self)
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.tabWidget = QtGui.QTabWidget(self.centralwidget)
@@ -26,6 +33,8 @@ class SceneGraph(QtGui.QMainWindow):
         
         # Node Attributes
         self.detailGroup = QtGui.QGroupBox(self.right_splitter)
+        self.detailGroupLayout = QtGui.QVBoxLayout(self.detailGroup)
+        # add widgets here
         self.optionsBox = QtGui.QGroupBox(self.right_splitter)
         self.tabGridLayout.addWidget(self.main_splitter, 0, 0, 1, 1)
         
@@ -41,12 +50,10 @@ class SceneGraph(QtGui.QMainWindow):
         self.setupUI()
         self.connect(self.graphicsView, QtCore.SIGNAL("tabPressed"), partial(self.createTabMenu, self.graphicsView))
         
-        # for debugging
-        self.graphicsScene.createNode('generic', [0, 0])
-        self.graphicsScene.createNode('generic', [600, 25])
+        # load saved settings
+        self.resize(self.settings.value('size').toSize())
+        self.move(self.settings.value('pos').toPoint())
         
-        self.graphicsScene.createNode('generic', [800, 1100])
-        self.graphicsScene.createNode('generic', [10, 900])
         
     def setupUI(self):
         """
@@ -56,7 +63,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.eventFilter = MouseEventFilter(self)        
         self.installEventFilter(self.eventFilter)
         
-        self.setWindowTitle('Scene Graph')
+        self.setWindowTitle('Scene Graph - v%s' % config.VERSION_AS_STRING)
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
         self.main_splitter.setSizes([770, 300])
@@ -85,7 +92,9 @@ class SceneGraph(QtGui.QMainWindow):
         # event filter
         if filter:
             self.viewEventFilter = MouseEventFilter(self.graphicsView)
-            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)               
+            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)
+            
+        self.graphicsScene.selectionChanged.connect(self.nodesSelectedAction)          
         
     def _setupNodeAttributes(self):
         self.detailGroup.setTitle('Node Attributes')
@@ -95,6 +104,26 @@ class SceneGraph(QtGui.QMainWindow):
 
     def sizeHint(self):
         return QtCore.QSize(1070, 800)
+    
+    def removeDetailWidgets(self):
+        """
+        Remove a widget from the detailGroup box
+        """
+        for i in reversed(range(self.detailGroupLayout.count())):
+            widget = self.detailGroupLayout.takeAt(i).widget()
+            if widget is not None: 
+                widget.deleteLater()
+    
+    #- ACTIONS ----
+    def nodesSelectedAction(self):
+        self.removeDetailWidgets()
+        nodes = self.graphicsScene.selectedItems()
+        if len(nodes) == 1:
+            node = nodes[0]
+            if node._is_node:
+                nodeAttrWidget = ui.NodeAttributesWidget(self.detailGroup, manager=self.graphicsScene.nodeManager)                
+                nodeAttrWidget.setNode(node)
+                self.detailGroupLayout.addWidget(nodeAttrWidget)     
     
     #- EVENTS ----
     def graphicsView_wheelEvent(self, event):
@@ -113,6 +142,13 @@ class SceneGraph(QtGui.QMainWindow):
         reset_action = menu.addAction('Reset options to default')
         menu.exec_(parent.scenePos())
 
+    def closeEvent(self, event):
+        """ 
+        Write window prefs when UI is closed
+        """
+        self.settings.setValue('size', self.size())
+        self.settings.setValue('pos', self.pos())
+        event.accept()
 
 class MouseEventFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
