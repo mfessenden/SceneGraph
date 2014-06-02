@@ -66,8 +66,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
     """
      
     def __init__ (self, parent=None):
-        super(GraphicsScene, self).__init__ (parent)      
-        self.sceneNodes = weakref.WeakValueDictionary()
+        super(GraphicsScene, self).__init__ (parent)
+        
+        self.line        = None    
+        self.sceneNodes  = weakref.WeakValueDictionary()
         self.nodeManager = NodeManager(self)     
         
     def createGenericNode(self):
@@ -109,6 +111,76 @@ class GraphicsScene(QtGui.QGraphicsScene):
         position = QtCore.QPointF(event.scenePos()) - item.rectF.center()
         item.setPos(position.x() , position.y())
     
+    """
+    To connect the nodes, we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent    
+    """
+    def mousePressEvent(self, event):
+        item = self.itemAt(event.scenePos())
+        if event.button() == QtCore.Qt.LeftButton and (isinstance(item, core.nodes.NodeInput) or isinstance(item, core.nodes.NodeOutput)):
+            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
+            self.addItem(self.line)
+        super(GraphicsScene, self).mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.line:
+            newLine = QtCore.QLineF(self.line.line().p1(), event.scenePos())
+            self.line.setLine(newLine)
+        super(GraphicsScene, self).mouseMoveEvent(event)
+        self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.line:
+            startItems = self.items(self.line.line().p1())
+            print '# start items: ', startItems
+            if len(startItems) and startItems[0] == self.line:
+                startItems.pop(0)
+            endItems = self.items(self.line.line().p2())
+            if len(endItems) and endItems[0] == self.line:
+                endItems.pop(0)
+
+            self.removeItem(self.line)
+
+            # If this is true a successful line was created
+            if self.connectionTest(startItems, endItems):
+                # Creates a line that is basically of 0 length, just to put a line into the scene
+                connectionLine = core.nodes.LineClass(startItems[0], endItems[0], QtCore.QLineF(startItems[0].scenePos(), endItems[0].scenePos()))
+                self.addItem(connectionLine)
+                # Now use that previous line created and update its position, giving it the proper length and etc...
+                connectionLine.updatePosition()
+                # Setting the emitter, particle, and particleShape on the node
+                connectionLine.getStartItem().getWidgetMenu().emitter = connectionLine.getEndItem().getWidgetMenu().emitter
+                connectionLine.getStartItem().getWidgetMenu().particle = connectionLine.getEndItem().getWidgetMenu().particle
+                connectionLine.getStartItem().getWidgetMenu().particleShape = connectionLine.getEndItem().getWidgetMenu().particleShape
+                # Sending the data downstream. The start item is the upstream node ALWAYS. The end item is the downstream node ALWAYS.
+                connectionLine.getEndItem().getWidgetMenu().receiveFrom(connectionLine.getStartItem(), delete=False)
+                connectionLine.getStartItem().getWidgetMenu().sendData(connectionLine.getStartItem().getWidgetMenu().packageData())
+                # Emitting the "justConnected" signal (That is on all connection points)
+                connectionLine.myEndItem.lineConnected.emit()
+                connectionLine.myStartItem.lineConnected.emit()
+
+        self.line = None
+        super(GraphicsScene, self).mouseReleaseEvent(event)
+
+    def connectionTest(self, startItems, endItems):
+        """
+        This is the big if statement that is checking
+        to make sure that whatever nodes the user is trying to
+        make a connection between is allowable.
+        """
+        if startItems[0].isInputConnection:
+            temp = startItems[0]
+            startItems[0] = endItems[0]
+            endItems[0] = temp
+
+        try:
+            if len(startItems) is not 0 and len(endItems) is not 0:
+                if startItems[0] is not endItems[0]:
+                    if isinstance(startItems[0], core.nodes.NodeOutput) and isinstance(endItems[0], core.nodes.NodeInput):
+                        if (startItems[0].isOutputConnection and endItems[0].isInputConnection):
+                            return True
+        except AttributeError:
+            pass
+        return False
 
 class NodeManager(object):
     """

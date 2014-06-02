@@ -2,6 +2,7 @@ from PyQt4 import QtGui, QtCore, QtSvg
 import os
 import math
 
+
 class NodeBase(object):
     """
     Base node type
