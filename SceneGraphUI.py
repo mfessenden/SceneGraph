@@ -1,7 +1,9 @@
 #!/X/tools/binlinux/xpython
 from PyQt4 import QtCore, QtGui
 from functools import partial
+import os
 
+from . import logger
 from . import config
 from . import graph
 from . import ui
@@ -14,10 +16,13 @@ class SceneGraph(QtGui.QMainWindow):
     
     def __init__(self, parent=None):
         super(SceneGraph, self).__init__(parent)
-
+        
+        self._current_file  = None              # current save file name (if any)
+        self._startdir      = os.getenv('HOME')
+        
         self.settings       = QtCore.QSettings('SceneGraphc.ini', QtCore.QSettings.IniFormat)
         self.settings.setFallbacksEnabled(False)
-
+        self.menubar = QtGui.QMenuBar(self)
         self.centralwidget = QtGui.QWidget(self)
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
         self.tabWidget = QtGui.QTabWidget(self.centralwidget)
@@ -53,6 +58,7 @@ class SceneGraph(QtGui.QMainWindow):
         # load saved settings
         self.resize(self.settings.value('size').toSize())
         self.move(self.settings.value('pos').toPoint())
+        self.setMenuBar(self.menubar)
         
         
     def setupUI(self):
@@ -72,6 +78,8 @@ class SceneGraph(QtGui.QMainWindow):
         self._setupGraphicsView()
         self._setupNodeAttributes()
         self._setupOptions()
+        
+        self._buildMenuBar()
     
     def setupConnections(self):
         pass
@@ -101,7 +109,88 @@ class SceneGraph(QtGui.QMainWindow):
 
     def _setupOptions(self):
         self.optionsBox.setTitle('Options')
+    
+    def _buildMenuBar(self):
+        """
+        Build the main menubar
+        """
+        # FILE MENU
+        self.menuFile = QtGui.QMenu(self.menubar)
+        self.menuFile.setTitle("File")
 
+        self.action_saveAs = QtGui.QAction(self)
+        self.action_save = QtGui.QAction(self)
+        self.action_read = QtGui.QAction(self)
+        self.action_reset = QtGui.QAction(self)
+        
+        self.menuFile.addAction(self.action_saveAs)
+        self.menuFile.addAction(self.action_save)
+        self.menuFile.addAction(self.action_read)
+        self.menuFile.addAction(self.action_reset)
+        
+        
+        self.action_saveAs.setText("Save Graph As...")
+        self.action_save.setText("Save Graph...")
+        self.action_read.setText("Read Graph...")
+        self.action_reset.setText("Reset Graph")
+        
+        self.action_saveAs.triggered.connect(self.saveGraph)
+        self.action_save.triggered.connect(partial(self.saveGraph, filename=self._current_file))
+        self.action_read.triggered.connect(self.readGraph)
+        self.action_reset.triggered.connect(self.resetGraph)
+        
+        if not self._current_file:
+            self.action_save.setEnabled(False)
+        self.menubar.addAction(self.menuFile.menuAction())
+        
+        # GRAPH MENU
+        self.menuGraph = QtGui.QMenu(self.menubar)
+        self.menuGraph.setTitle("Graph")
+        self.action_add_generic = QtGui.QAction(self)
+        self.menuGraph.addAction(self.action_add_generic)
+        self.action_add_generic.setText("Add Generic node...")
+        self.action_add_generic.triggered.connect(partial(self.graphicsScene.nodeManager.createNode, 'generic'))
+        self.menubar.addAction(self.menuGraph.menuAction())
+        
+    #- SAVING/LOADING ------
+    def saveGraph(self, filename=None):
+        """
+        Save the current graph to a json file
+        """
+        import os
+        if not filename:
+            filename = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._startdir, "JSON files (*.json)")
+            if filename == "":
+                return          
+
+        logger.getLogger().info('saving current graph "%s"' % filename)
+        self.graphicsScene.nodeManager.write(filename)
+        self._current_file = filename
+        self.action_save.setEnabled(True)
+
+    def readGraph(self):
+        """
+        Read the current graph from a json file
+        """
+        import os
+        filename = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
+        if filename == "":
+            return
+        
+        self.resetGraph()
+        logger.getLogger().info('reading graph "%s"' % filename)
+        self.graphicsScene.nodeManager.read(filename)
+        self._current_file = filename
+        self.action_save.setEnabled(True)
+
+    def resetGraph(self):
+        """
+        Reset the current graph
+        """
+        self.graphicsScene.nodeManager.reset()
+        self._current_file = None
+        self.action_save.setEnabled(False)
+        
     def sizeHint(self):
         return QtCore.QSize(1070, 800)
     

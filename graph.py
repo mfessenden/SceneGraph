@@ -4,6 +4,7 @@ import weakref
 import re
 import simplejson as json
 
+from . import logger
 from . import core
 reload(core)
 
@@ -73,10 +74,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.sceneNodes  = weakref.WeakValueDictionary()
         self.nodeManager = NodeManager(self)     
         
-    def createGenericNode(self):
-        newPos = QtCore.QPointF(150, 150)
-        return self.createNode(newPos)
-        
     def createNode(self, node_type, **kwargs):
         """
         Create a node in the current scene with the given attributes
@@ -100,14 +97,17 @@ class GraphicsScene(QtGui.QGraphicsScene):
         If mouse is double-clicked, add a node # BETA
         """
         super(GraphicsScene, self).mouseDoubleClickEvent(event)
-        item = self.nodeManager.createNode('generic')
-        position = QtCore.QPointF(event.scenePos()) - item.rectF.center()
-        item.setPos(position.x() , position.y())
+        #item = self.nodeManager.createNode('generic')
+        #position = QtCore.QPointF(event.scenePos()) - item.rectF.center()
+        #item.setPos(position.x() , position.y())
     
     """
-    To connect the nodes, we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent    
+    To connect nodes, we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent    
     """
     def mousePressEvent(self, event):
+        """
+        If an input/output connector is selected, draw a line
+        """
         item = self.itemAt(event.scenePos())
         if event.button() == QtCore.Qt.LeftButton and (isinstance(item, core.nodes.NodeInput) or isinstance(item, core.nodes.NodeOutput)):
             self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
@@ -214,7 +214,7 @@ class NodeManager(object):
         Removes a node from the graph
         """
         node_name = node_item.node_name
-        print '# Removing node: "%s"' % node_name
+        logger.getLogger().info('Removing node: "%s"' % node_name)
         self._parent.removeItem(node_item)
         if node_name in self._parent.sceneNodes.keys():
             self._parent.sceneNodes.pop(node_name)
@@ -226,12 +226,13 @@ class NodeManager(object):
         Returns the renamed node
         """
         if new_name in self._getNames():
-            print '# Error: "%s" is not unique' % new_name
+            logger.getLogger().error('"%s" is not unique' % new_name)
             return
 
         item=self._parent.sceneNodes.pop(old_name)
         item.node_name = new_name
         self._parent.sceneNodes[item.node_name]=item
+        item.update()
         return item
     
     def connectNodes(self, output, input):
@@ -243,9 +244,6 @@ class NodeManager(object):
         input_node = self.getNode(input_name)
         output_node = self.getNode(output_name)
         
-        #print '# input:  ', input_node
-        #print '# output: ', output_node
-        
         input_conn_node  = input_node.getInputConnection(input_conn)
         output_conn_node = output_node.getOutputConnection(output_conn)
         
@@ -254,10 +252,21 @@ class NodeManager(object):
             self._parent.addItem(connectionLine)
         else:
             if not input_conn_node:
-                print '# Error: cannot find an input connection "%s" for node "%s"' % (input_conn, input_node )
+                logger.getLogger().error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))
 
             if not output_conn_node:
-                print '# Error: cannot find an output connection "%s" for node "%s"' % (output_conn, output_node)
+                logger.getLogger().error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
+    
+    def reset(self):
+        """
+        Remove all node & connection data
+        """
+        for item in self._parent.items():
+            if isinstance(item, core.nodes.NodeBase):
+                self._parent.removeItem(item)
+            elif isinstance(item, core.nodes.LineClass):
+                self._parent.removeItem(item)
+
 
     def _getNames(self):
         """
@@ -313,7 +322,7 @@ class NodeManager(object):
             node_data = tmp_data.get('nodes', {})
             conn_data = tmp_data.get('connections', {})
             for node in node_data.keys():
-                print '# building node: "%s"' % node
+                logger.getLogger().info('building node: "%s"' % node)
                 posx = node_data.get(node).get('x')
                 posy = node_data.get(node).get('y')
                 self.createNode('generic', name=node, pos=[posx, posy], force=True)
@@ -322,11 +331,11 @@ class NodeManager(object):
                 cdata = conn_data.get(conn)
                 start_str = cdata.get('start')
                 end_str = cdata.get('end')
-                print '# connecting: %s >> %s' % (start_str, end_str)
+                logger.getLogger().info('connecting: %s >> %s' % (start_str, end_str))
                 self.connectNodes(start_str, end_str)
                     
         else:
-            print '# Error: filename "%s" does not exist' % filename
+            logger.getLogger().error('filename "%s" does not exist' % filename)
                 
     
         

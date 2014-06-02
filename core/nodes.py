@@ -57,8 +57,6 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self.rectF = QtCore.QRectF(0,0,250,180)        
         
         # setup UI
-        self.set_name()
-        self.set_tooltip()
         self.addInputAttributes(*self.inputs)
         self.addOutputAttributes(*self.outputs)
         self.update()
@@ -79,6 +77,11 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         event.accept()
     '''
     
+    def update(self):
+        self.set_name()
+        self.set_tooltip()
+        super(GenericNode, self).update()
+
     #- ATTRIBUTES -----
     def set_name(self):
         """
@@ -97,7 +100,10 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
             self._name_text.setPlainText(self._node_name)
     
     def set_tooltip(self):
-        self.setToolTip(self.description)
+        """
+        Set the tooltip text in the graph
+        """
+        self.setToolTip(self.path())
         
     def addInputAttributes(self, *attrs):
         """
@@ -157,7 +163,10 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         Returns the output connection NODE for the given name
         """
         return self._attributes.get('output').get(conn_name, None)
-
+    
+    def getConnectedLines(self):
+        pass
+    
     @property
     def node_name(self):
         return self._node_name

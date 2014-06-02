@@ -5,5 +5,4 @@ reload(nodes)
 reload(connections)
 
 GenericNode = nodes.GenericNode
-NodeTest    = nodes.NodeTest
 

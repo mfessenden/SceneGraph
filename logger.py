@@ -1,6 +1,6 @@
 # adapted from scene_builder
 import logging
-from . import globals
+from . import config
 
 LOGGER_INITIALIZED = False
 LOGGER_LEVEL = logging.INFO
@@ -9,7 +9,7 @@ LOGGER_LEVEL = logging.INFO
 def getLogger():
     """ Returns logger object for use in this package """
     global LOGGER_INITIALIZED
-    logger = logging.getLogger(globals.PACKAGE)
+    logger = logging.getLogger(config.PACKAGE)
     if not LOGGER_INITIALIZED:
         for handler in logger.handlers:
             logger.removeHandler(handler)
@@ -49,7 +49,7 @@ def disableDebugging():
 def getLogFile():
     """ Returns the user log file """
     import os
-    PREFS_DIR=os.path.join(os.environ.get('HOME'), '.mrx', globals.PACKAGE)
+    PREFS_DIR=os.path.join(os.environ.get('HOME'), '.mrx', config.PACKAGE)
     if not os.path.exists(PREFS_DIR):
         os.makedirs(PREFS_DIR)
-    return os.path.join(PREFS_DIR, '%s.log' % globals.PACKAGE)
+    return os.path.join(PREFS_DIR, '%s.log' % config.PACKAGE)
