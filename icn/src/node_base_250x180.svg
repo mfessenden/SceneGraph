@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<svg width="180" height="250" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <defs>
+  <linearGradient id="svg_2">
+   <stop offset="0" stop-opacity="0.992188" stop-color="#474747"/>
+   <stop offset="1" stop-opacity="0.996094" stop-color="#c9c9c9"/>
+  </linearGradient>
+  <linearGradient y2="0" x2="0.5" y1="1" x1="0.5" id="svg_3">
+   <stop offset="0" stop-opacity="0.992188" stop-color="#474747"/>
+   <stop offset="1" stop-opacity="0.996094" stop-color="#c9c9c9"/>
+  </linearGradient>
+  <linearGradient y2="0" x2="0.5" y1="1" x1="0.5" id="svg_4">
+   <stop offset="0" stop-opacity="0.988281" stop-color="#666666"/>
+   <stop offset="1" stop-opacity="0.996094" stop-color="#c9c9c9"/>
+  </linearGradient>
+ </defs>
+ <g>
+  <title>Layer 1</title>
+  <rect ry="5" rx="5" id="svg_1" height="250" width="180" y="0" x="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="2" stroke="#d6d6d6" fill="url(#svg_4)"/>
+ </g>
+</svg>

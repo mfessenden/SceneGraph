@@ -17,8 +17,10 @@ class SceneGraph(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(SceneGraph, self).__init__(parent)
         
-        self._current_file  = None              # current save file name (if any)
-        self._startdir      = os.getenv('HOME')
+        self._current_file    = None              # current save file name (if any)
+        self._startdir        = os.getenv('HOME')
+        self.timer            = QtCore.QTimer()
+        self._recent_file_log = os.path.join(os.getenv('HOME'), '.mrx', 'SceneGraph', 'recent_files.json')
         
         self.settings       = QtCore.QSettings('SceneGraphc.ini', QtCore.QSettings.IniFormat)
         self.settings.setFallbacksEnabled(False)
@@ -58,13 +60,14 @@ class SceneGraph(QtGui.QMainWindow):
         # load saved settings
         self.resize(self.settings.value('size').toSize())
         self.move(self.settings.value('pos').toPoint())
-        self.setMenuBar(self.menubar)
-        
+        self.setMenuBar(self.menubar)        
         
     def setupUI(self):
         """
         Set up the main UI
         """
+        self.setupFonts()
+        self.statusBar().setFont(self.fonts.get('status'))
         # event filter
         self.eventFilter = MouseEventFilter(self)        
         self.installEventFilter(self.eventFilter)
@@ -79,15 +82,38 @@ class SceneGraph(QtGui.QMainWindow):
         self._setupNodeAttributes()
         self._setupOptions()
         
-        self._buildMenuBar()
+        self._buildMenuBar()        
+        self.setupConnections()        
+        
+        self.resetStatus()
+    
+    def setupFonts(self, font='SansSerif', size=9):
+        """ 
+        Initializes the fonts attribute
+        """
+        self.fonts = dict()
+        self.fonts["ui"] = QtGui.QFont(font)
+        self.fonts["ui"].setPointSize(size)
+        
+        self.fonts["status"] = QtGui.QFont(font)
+        self.fonts["status"].setStyleHint(QtGui.QFont.Courier)
+        self.fonts["status"].setPointSize(size+1)
     
     def setupConnections(self):
-        pass
+        """
+        Set up widget signals/slots
+        """
+        self.timer.timeout.connect(self.resetStatus)
     
     def _setupGraphicsView(self, filter=False):        
         # scene view
+        
+        # BUILD THE NODE MANAGER
+
         self.graphicsScene = graph.GraphicsScene()
         self.graphicsView.setScene(self.graphicsScene)
+        self.nodeManager = graph.NodeManager(self.graphicsView)
+        self.graphicsScene.setNodeManager(self.nodeManager)
         self.graphicsView.setSceneRect(0, 0, 1000, 1000)
         #self.graphicsView.setSceneRect(-10000, -10000, 20000, 20000)
 
@@ -100,9 +126,8 @@ class SceneGraph(QtGui.QMainWindow):
         # event filter
         if filter:
             self.viewEventFilter = MouseEventFilter(self.graphicsView)
-            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)
-            
-        self.graphicsScene.selectionChanged.connect(self.nodesSelectedAction)          
+            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)            
+        self.graphicsScene.selectionChanged.connect(self.nodesSelectedAction)            
         
     def _setupNodeAttributes(self):
         self.detailGroup.setTitle('Node Attributes')
@@ -122,27 +147,27 @@ class SceneGraph(QtGui.QMainWindow):
         self.action_save = QtGui.QAction(self)
         self.action_read = QtGui.QAction(self)
         self.action_reset = QtGui.QAction(self)
-        
+
         self.menuFile.addAction(self.action_saveAs)
         self.menuFile.addAction(self.action_save)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_read)
         self.menuFile.addAction(self.action_reset)
-        
-        
+        self.menuFile.addSeparator()
         self.action_saveAs.setText("Save Graph As...")
         self.action_save.setText("Save Graph...")
         self.action_read.setText("Read Graph...")
         self.action_reset.setText("Reset Graph")
         
-        self.action_saveAs.triggered.connect(self.saveGraph)
-        self.action_save.triggered.connect(partial(self.saveGraph, filename=self._current_file))
+        self.action_saveAs.triggered.connect(self.saveGraphAs)
+        self.action_save.triggered.connect(self.saveCurrentGraph)
         self.action_read.triggered.connect(self.readGraph)
         self.action_reset.triggered.connect(self.resetGraph)
         
         if not self._current_file:
             self.action_save.setEnabled(False)
         self.menubar.addAction(self.menuFile.menuAction())
-        
+
         # GRAPH MENU
         self.menuGraph = QtGui.QMenu(self.menubar)
         self.menuGraph.setTitle("Graph")
@@ -152,8 +177,69 @@ class SceneGraph(QtGui.QMainWindow):
         self.action_add_generic.triggered.connect(partial(self.graphicsScene.nodeManager.createNode, 'generic'))
         self.menubar.addAction(self.menuGraph.menuAction())
         
+        self._buildRecentFilesMenu()
+    
+    def _buildRecentFilesMenu(self):
+        """
+        Build a menu of recently opened scenes
+        """
+        import os
+        import simplejson as json
+        recent_files = dict()
+        
+        # build the menu
+        self.recent_menu = QtGui.QMenu('Recent files...',self)
+        self.menuFile.addMenu(self.recent_menu)
+        self.recent_menu.setEnabled(False)
+        
+        if self._recent_file_log and os.path.exists(self._recent_file_log):
+            print 'reading file: ', self._recent_file_log
+            raw_data = open(self._recent_file_log).read()
+            data = json.loads(raw_data, object_pairs_hook=dict)
+            recent_files = data.get('recent_files', {})
+        
+        
+        if recent_files:
+            # Recent files menu
+            for k in sorted(recent_files.keys()):
+                filename = recent_files.get(k)
+                file_action = QtGui.QAction(filename, self.recent_menu)
+                file_action.triggered.connect(partial(self.readRecentGraph, filename))
+                self.recent_menu.addAction(file_action)
+                 
+            self.recent_menu.setEnabled(True)
+            
+    #- STATUS MESSAGING ------
+    # TODO: this is temp, find a better way to redirect output
+    def updateStatus(self, val, level='info'):
+        """
+        Send output to logger/statusbar
+        """
+        if level == 'info':
+            self.statusBar().showMessage(self._getInfoStatus(val))
+            logger.getLogger().info(val)
+        if level == 'error':
+            self.statusBar().showMessage(self._getErrorStatus(val))
+            logger.getLogger().error(val)
+        if level == 'warning':
+            self.statusBar().showMessage(self._getWarningStatus(val))
+            logger.getLogger().warning(val)
+        self.timer.start(4000)
+    
+    def resetStatus(self):
+        self.statusBar().showMessage('[SceneGraph]: Ready')
+    
+    def _getInfoStatus(self, val):
+        return '[SceneGraph]: Info: %s' % val
+
+    def _getErrorStatus(self, val):
+        return '[SceneGraph]: Error: %s' % val
+
+    def _getWarningStatus(self, val):
+        return '[SceneGraph]: Warning: %s' % val
+
     #- SAVING/LOADING ------
-    def saveGraph(self, filename=None):
+    def saveGraphAs(self, filename=None):
         """
         Save the current graph to a json file
         """
@@ -162,12 +248,24 @@ class SceneGraph(QtGui.QMainWindow):
             filename = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._startdir, "JSON files (*.json)")
             if filename == "":
                 return          
-
-        logger.getLogger().info('saving current graph "%s"' % filename)
+        
+        self.updateStatus('saving current graph "%s"' % filename)
         self.graphicsScene.nodeManager.write(filename)
         self._current_file = filename
         self.action_save.setEnabled(True)
-
+    
+    # TODO: figure out why this has to be a separate method from saveGraphAs
+    def saveCurrentGraph(self):
+        """
+        Save the current graph file
+        """
+        if self._current_file:
+            self.updateStatus('saving current graph "%s"' % self._current_file)
+            self.nodeManager.write(self._current_file)
+        else:
+            self.updateStatus('no graph file is loaded', level='error')
+        
+    
     def readGraph(self):
         """
         Read the current graph from a json file
@@ -178,7 +276,15 @@ class SceneGraph(QtGui.QMainWindow):
             return
         
         self.resetGraph()
-        logger.getLogger().info('reading graph "%s"' % filename)
+        self.updateStatus('reading graph "%s"' % filename)
+        self.graphicsScene.nodeManager.read(filename)
+        self._current_file = filename
+        self.action_save.setEnabled(True)
+    
+    # TODO: combine this with readGraph
+    def readRecentGraph(self, filename):
+        self.resetGraph()
+        self.updateStatus('reading graph "%s"' % filename)
         self.graphicsScene.nodeManager.read(filename)
         self._current_file = filename
         self.action_save.setEnabled(True)
@@ -246,4 +352,4 @@ class MouseEventFilter(QtCore.QObject):
             # obj.doSomething()
             return True
         return False
-    
+

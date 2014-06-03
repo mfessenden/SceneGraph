@@ -4,6 +4,10 @@ import os
 import math
 
 
+class MyPath(QtGui.QGraphicsPathItem):
+    pass
+
+
 class NodeBase(object):
     """
     Base node type
@@ -38,7 +42,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         
         self.nodetype      = 'generic'
         self._node_name    = kwargs.pop('name', 'My_Node')
-        self.nodeimage     = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_base_225x180.svg')
+        self.nodeimage     = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_base_250x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
         self.inputs        = ['input1', 'input2', 'input3']
@@ -51,7 +55,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         args.insert(0, self.nodeimage)
         QtSvg.QGraphicsSvgItem.__init__(self, *args, **kwargs)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setCachingEnabled(False)
+        self.setCachingEnabled(True)
         self.setAcceptHoverEvents(True)
         
         self.rectF = QtCore.QRectF(0,0,250,180)        
@@ -60,14 +64,22 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self.addInputAttributes(*self.inputs)
         self.addOutputAttributes(*self.outputs)
         self.update()
-
+     
+    
+    def paint(self, painter, option, widget):
+        if self.isSelected():
+            self.setElementId("hover")
+        else:
+            self.setElementId("regular")
+        super(GenericNode, self).paint(painter, option, widget)
+    
     def mousePressEvent(self, event):
         """
         Runs when node is selected
         """
         #print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
         event.accept()
-
+   
     '''
     def mouseMoveEvent(self, event):
         """
@@ -285,6 +297,14 @@ class NodeOutput(ConnectionBase, QtSvg.QGraphicsSvgItem):
         return self.sceneBoundingRect().height()
 
 
+class MyLine(QtGui.QGraphicsLineItem):
+    def __init__(self, start_item, end_item, *args, **kwargs):
+        super(MyLine, self).__init__(*args, **kwargs)
+        
+        self._start_item   = start_item
+        self._end_item     = end_item
+
+
 # Line class for connecting the nodes together
 class LineClass(QtGui.QGraphicsLineItem):
 
@@ -317,13 +337,12 @@ class LineClass(QtGui.QGraphicsLineItem):
     def __repr__(self):
         return '%s >> %s' % (self.myStartItem, self.myEndItem)
     
-    
-    def deleteLine(self):
+    def deleteNode(self):
         # For whatever the shit reason, I have to have this check. If I don't, I get an error in rare cases.
         if self:
-            self.getEndItem().getWidgetMenu().receiveFrom(self.getStartItem(), delete=True)
-            self.getStartItem().getWidgetMenu().sendData(self.getStartItem().getWidgetMenu().packageData())
-            self.getStartItem().removeReferences()
+            #self.getEndItem().getWidgetMenu().receiveFrom(self.getStartItem(), delete=True)
+            #self.getStartItem().getWidgetMenu().sendData(self.getStartItem().getWidgetMenu().packageData())
+            #self.getStartItem().removeReferences()
             self.scene().removeItem(self)
             self.myStartItem.connectedLine.remove(self)
             self.myEndItem.connectedLine.remove(self)
@@ -331,7 +350,7 @@ class LineClass(QtGui.QGraphicsLineItem):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Delete:
-            self.deleteLine()
+            self.deleteNode()
             self.update()
         else:
             super(LineClass, self).keyPressEvent(event)

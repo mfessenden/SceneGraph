@@ -17,39 +17,56 @@ Notes:
 
 
 class GraphicsView (QtGui.QGraphicsView):
+    
     tabPressed        = QtCore.pyqtSignal(bool)
+    
     def __init__ (self, parent = None, **kwargs):
         super(GraphicsView, self).__init__ (parent)
+        
         self.gui = kwargs.get('gui')
         self.parent = parent
+        
+        self.pan_on   = False
+        self.ctrl_on = False
+        
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
-        #self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        #self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.renderer = QtSvg.QSvgRenderer()
     
     def wheelEvent (self, event):
+        """
+        Scale the viewport with the middle-mouse wheel
+        """
         super (GraphicsView, self).wheelEvent(event)
         factor = 1.2
         if event.delta() < 0 :
             factor = 1.0 / factor
         self.scale(factor, factor)
     
+    def mousePressEvent(self, event):
+        """
+        Pan the viewport if the control key is pressed
+        """
+        if event.modifiers() == QtCore.Qt.ControlModifier:
+            self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
+        else:
+            self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
+        super(GraphicsView, self).mousePressEvent(event)
+
     def keyPressEvent(self, event):
-        # fit all nodes in the view
+        """
+        Fit the viewport if the 'A' key is pressed
+        """
         if event.key() == QtCore.Qt.Key_A:
             graphicsScene = self.scene()
+            
+            # get the bounding rect of the graphics scene
             boundsRect = graphicsScene.itemsBoundingRect()
-            
-            # adjust bounds TODO: fix this
-            boundsRect.adjust(-100, -100, 100, 100)
+            # set it to the GraphicsView scene rect...        
+            self.setSceneRect(boundsRect)
+            # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
-            
-        elif event.key() == QtCore.Qt.Key_Tab:
-            print '# Tab key pressed'
-            self.tabPressed.emit(True)
-            return True
-            
+
         elif event.key() == QtCore.Qt.Key_Delete:
             graphicsScene = self.scene()
             nodeManager = graphicsScene.nodeManager
@@ -57,7 +74,22 @@ class GraphicsView (QtGui.QGraphicsView):
                 #nodeManager.removeNode(item)
                 item.deleteNode()
         event.accept()
-
+       
+    def get_scroll_state(self):
+        """
+        Returns a tuple of scene extents percentages
+        """
+        centerPoint = self.mapToScene(self.viewport().width()/2,
+                                      self.viewport().height()/2)
+        sceneRect = self.sceneRect()
+        centerWidth = centerPoint.x() - sceneRect.left()
+        centerHeight = centerPoint.y() - sceneRect.top()
+        sceneWidth =  sceneRect.width()
+        sceneHeight = sceneRect.height()
+    
+        sceneWidthPercent = centerWidth / sceneWidth if sceneWidth != 0 else 0
+        sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
+        return sceneWidthPercent, sceneHeightPercent
 
 class GraphicsScene(QtGui.QGraphicsScene):    
     """
@@ -72,8 +104,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
         
         self.line        = None    
         self.sceneNodes  = weakref.WeakValueDictionary()
-        self.nodeManager = NodeManager(self)     
-        
+        self.nodeManager = None    
+    
+    def setNodeManager(self, val):
+        self.nodeManager = val
+    
     def createNode(self, node_type, **kwargs):
         """
         Create a node in the current scene with the given attributes
@@ -93,16 +128,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         newPos = event.scenePos()
     
     def mouseDoubleClickEvent(self, event):
-        """
-        If mouse is double-clicked, add a node # BETA
-        """
         super(GraphicsScene, self).mouseDoubleClickEvent(event)
-        #item = self.nodeManager.createNode('generic')
-        #position = QtCore.QPointF(event.scenePos()) - item.rectF.center()
-        #item.setPos(position.x() , position.y())
     
     """
-    To connect nodes, we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent    
+    # CONNECTING NODES:
+         
+         - we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent methods  
     """
     def mousePressEvent(self, event):
         """
@@ -183,13 +214,14 @@ class NodeManager(object):
     """
     def __init__(self, parent):
         
-        self._parent = parent
+        self.viewport   = parent
+        self.scene      = self.viewport.scene()
         
     def getNodes(self):
         """
         Returns a weakref to all of the scene nodes
         """
-        return self._parent.sceneNodes
+        return self.scene.sceneNodes
 
     def getNode(self, node_name):
         """
@@ -207,7 +239,7 @@ class NodeManager(object):
         node_name = kwargs.pop('name', 'My_Node')
         if not force:
             node_name = self._nodeNamer(node_name)
-        return self._parent.createNode(node_type, name=node_name, **kwargs)
+        return self.scene.createNode(node_type, name=node_name, **kwargs)
     
     def removeNode(self, node_item):
         """
@@ -215,9 +247,9 @@ class NodeManager(object):
         """
         node_name = node_item.node_name
         logger.getLogger().info('Removing node: "%s"' % node_name)
-        self._parent.removeItem(node_item)
-        if node_name in self._parent.sceneNodes.keys():
-            self._parent.sceneNodes.pop(node_name)
+        self.scene.removeItem(node_item)
+        if node_name in self.scene.sceneNodes.keys():
+            self.scene.sceneNodes.pop(node_name)
     
     def renameNode(self, old_name, new_name):
         """
@@ -229,9 +261,9 @@ class NodeManager(object):
             logger.getLogger().error('"%s" is not unique' % new_name)
             return
 
-        item=self._parent.sceneNodes.pop(old_name)
+        item=self.scene.sceneNodes.pop(old_name)
         item.node_name = new_name
-        self._parent.sceneNodes[item.node_name]=item
+        self.scene.sceneNodes[item.node_name]=item
         item.update()
         return item
     
@@ -249,7 +281,7 @@ class NodeManager(object):
         
         if input_conn_node and output_conn_node:
             connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
-            self._parent.addItem(connectionLine)
+            self.scene.addItem(connectionLine)
         else:
             if not input_conn_node:
                 logger.getLogger().error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))
@@ -261,11 +293,11 @@ class NodeManager(object):
         """
         Remove all node & connection data
         """
-        for item in self._parent.items():
+        for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):
-                self._parent.removeItem(item)
+                self.scene.removeItem(item)
             elif isinstance(item, core.nodes.LineClass):
-                self._parent.removeItem(item)
+                self.scene.removeItem(item)
 
 
     def _getNames(self):
@@ -298,7 +330,7 @@ class NodeManager(object):
         data.update(nodes={})
         data.update(connections={})
         conn_idx = 0
-        for item in self._parent.items():
+        for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):
                 data.get('nodes').update(**{item.node_name:item.data})
             elif isinstance(item, core.nodes.LineClass):
@@ -333,6 +365,8 @@ class NodeManager(object):
                 end_str = cdata.get('end')
                 logger.getLogger().info('connecting: %s >> %s' % (start_str, end_str))
                 self.connectNodes(start_str, end_str)
+            
+            self.viewport.setSceneRect(self.scene.itemsBoundingRect())
                     
         else:
             logger.getLogger().error('filename "%s" does not exist' % filename)
