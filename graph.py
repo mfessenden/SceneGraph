@@ -23,11 +23,8 @@ class GraphicsView (QtGui.QGraphicsView):
     def __init__ (self, parent = None, **kwargs):
         super(GraphicsView, self).__init__ (parent)
         
-        self.gui = kwargs.get('gui')
+        self.gui    = kwargs.get('gui')
         self.parent = parent
-        
-        self.pan_on   = False
-        self.ctrl_on = False
         
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
@@ -57,9 +54,10 @@ class GraphicsView (QtGui.QGraphicsView):
         """
         Fit the viewport if the 'A' key is pressed
         """
-        if event.key() == QtCore.Qt.Key_A:
-            graphicsScene = self.scene()
-            
+        graphicsScene = self.scene()
+        nodeManager = graphicsScene.nodeManager
+        
+        if event.key() == QtCore.Qt.Key_A:           
             # get the bounding rect of the graphics scene
             boundsRect = graphicsScene.itemsBoundingRect()
             # set it to the GraphicsView scene rect...        
@@ -67,9 +65,16 @@ class GraphicsView (QtGui.QGraphicsView):
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
 
+        elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
+            nodes = nodeManager.selectedNodes()
+            nodeManager.copyNodes(nodes)
+            print '# copying nodes: ', nodes
+
+        elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
+            nodes = nodeManager.pasteNodes()
+            print '# pasting nodes: ', nodes
+
         elif event.key() == QtCore.Qt.Key_Delete:
-            graphicsScene = self.scene()
-            nodeManager = graphicsScene.nodeManager
             for item in graphicsScene.selectedItems():
                 #nodeManager.removeNode(item)
                 item.deleteNode()
@@ -214,8 +219,9 @@ class NodeManager(object):
     """
     def __init__(self, parent):
         
-        self.viewport   = parent
-        self.scene      = self.viewport.scene()
+        self.viewport       = parent
+        self.scene          = self.viewport.scene()
+        self._copied_nodes  = []
         
     def getNodes(self):
         """
@@ -230,6 +236,17 @@ class NodeManager(object):
         if node_name in self.getNodes():
             return self.getNodes().get(node_name)
         return
+    
+    def selectedNodes(self):
+        """
+        Returns nodes selected in the graph
+        """
+        selected_nodes = []
+        for nn in self.getNodes():
+            node = self.getNode(nn)
+            if node.isSelected():
+                selected_nodes.append(node)
+        return selected_nodes
     
     def createNode(self, node_type, **kwargs):
         """
@@ -266,6 +283,30 @@ class NodeManager(object):
         self.scene.sceneNodes[item.node_name]=item
         item.update()
         return item
+
+    def copyNodes(self, nodes):
+        """
+        Copy nodes to the copy buffer
+        """
+        self._copied_nodes = []
+        self._copied_nodes = nodes
+        return self._copied_nodes
+
+    def pasteNodes(self):
+        """
+        Paste saved nodes
+        """
+        pasted_nodes = []
+        for node in self._copied_nodes:
+            node.setSelected(False)
+            new_name = self._nodeNamer(node.node_name)
+            posx = node.pos().x() + node.width
+            posy = node.pos().y() + node.height
+            new_node = self.createNode('generic', name=new_name, pos=[posx, posy])
+            new_node.addNodeAttributes(**node.getNodeAttributes())
+            new_node.setSelected(True)
+            pasted_nodes.append(new_node)
+        return pasted_nodes
     
     def connectNodes(self, output, input):
         """
@@ -311,7 +352,9 @@ class NodeManager(object):
         Returns a legal node name
         """
         node_name = re.sub(r'[^a-zA-Z0-9\[\]]','_', node_name)
-        node_name = '%s1' % node_name
+        if not re.search('\d+$', node_name):
+            node_name = '%s1' % node_name
+            return node_name
         all_names = self._getNames()
         if node_name in all_names:
             node_num = int(re.search('\d+$', node_name).group())
@@ -355,9 +398,16 @@ class NodeManager(object):
             conn_data = tmp_data.get('connections', {})
             for node in node_data.keys():
                 logger.getLogger().info('building node: "%s"' % node)
-                posx = node_data.get(node).get('x')
-                posy = node_data.get(node).get('y')
-                self.createNode('generic', name=node, pos=[posx, posy], force=True)
+                posx = node_data.get(node).pop('x')
+                posy = node_data.get(node).pop('y')
+                myNode = self.createNode('generic', name=node, pos=[posx, posy], force=True)
+                
+                node_attributes = dict()
+                if node_data.get(node):
+                    for attr, val in node_data.get(node).iteritems():
+                        attr = re.sub('^__', '', attr)
+                        node_attributes.update({attr:val})
+                    myNode.addNodeAttributes(**node_attributes)
                 
             for conn in conn_data.keys():
                 cdata = conn_data.get(conn)

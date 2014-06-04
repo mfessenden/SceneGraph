@@ -20,7 +20,7 @@ class NodeBase(object):
         self.description   = None
         self.nodetype      = None
         self.nodecolor     = None
-        self._attributes   = dict(input = {}, output={})
+        self._connections   = dict(input = {}, output={})
 
     def __repr__(self):
         return '%s' % self.node_name
@@ -36,10 +36,12 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
     clickedSignal = QtCore.pyqtSignal(QtCore.QObject)
     nodeCreatedInScene = QtCore.pyqtSignal()
+    nodeChanged = QtCore.pyqtSignal(bool)
     
     def __init__(self, *args, **kwargs):
         NodeBase.__init__(self)
         
+        self._attr_ui      = None
         self.nodetype      = 'generic'
         self._node_name    = kwargs.pop('name', 'My_Node')
         self.nodeimage     = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_base_250x180.svg')
@@ -47,6 +49,9 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self.nodecolor     = None
         self.inputs        = ['input1', 'input2', 'input3']
         self.outputs       = ['output1', 'output2', 'output3'] 
+        
+        self._attributes   = dict()                 # arbitrary attributes
+        self._private      = ['width', 'height']
         
         # text attributes
         self._name_text    = None                   # QGraphicsTextItem 
@@ -116,7 +121,23 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         Set the tooltip text in the graph
         """
         self.setToolTip(self.path())
-        
+    
+    @QtCore.pyqtSlot()
+    def addNodeAttributes(self, **kwargs):
+        """
+        Add random attributes to the node
+        """
+        self._attributes.update(**kwargs)
+        self.nodeChanged.emit(True)
+    
+    @QtCore.pyqtSlot()
+    def addAttr(self, val):
+        self._attributes[val]=''
+        self.nodeChanged.emit(True)
+    
+    def getNodeAttributes(self):
+        return self._attributes
+    
     def addInputAttributes(self, *attrs):
         """
         Add input attributes to the node
@@ -134,7 +155,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
                 connection = NodeInput(self, name=attr)
                 #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
                 connection.setPos(self.sceneBoundingRect().left()-7, start_y+5)
-                self._attributes.get('input').update(**{attr:connection})
+                self._connections.get('input').update(**{attr:connection})
                 start_y+=30       
 
     def addOutputAttributes(self, *attrs):
@@ -155,26 +176,26 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
                 connection = NodeOutput(self, name=attr)
                 #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
                 connection.setPos(self.sceneBoundingRect().right()-7, start_y+5)
-                self._attributes.get('output').update(**{attr:connection})
+                self._connections.get('output').update(**{attr:connection})
                 start_y+=30       
 
     def getInputAttributes(self):
-        return self._attributes.get('input', {}).keys()     
+        return self._connections.get('input', {}).keys()     
 
     def getOutputAttributes(self):
-        return self._attributes.get('output', {}).keys()
+        return self._connections.get('output', {}).keys()
     
     def getInputConnection(self, conn_name):
         """
         Returns the input connection NODE for the given name
         """
-        return self._attributes.get('input').get(conn_name, None)
+        return self._connections.get('input').get(conn_name, None)
 
     def getOutputConnection(self, conn_name):
         """
         Returns the output connection NODE for the given name
         """
-        return self._attributes.get('output').get(conn_name, None)
+        return self._connections.get('output').get(conn_name, None)
     
     def getConnectedLines(self):
         pass
@@ -207,11 +228,19 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         data.update(y=self.sceneBoundingRect().y())
         data.update(width=self.width)
         data.update(height=self.height)
+        data.update(**self.dumpArbitraryAttributes())
         return data
+    
+    def dumpArbitraryAttributes(self):
+        result = dict()
+        for attr in sorted(self._attributes.keys()):
+            value = self._attributes.get(attr)
+            result['__%s' % attr] = value
+        return result
     
     def dump(self):
         output_data = {self.node_name:self.data}
-        json.dumps(output_data, indent=5)
+        print json.dumps(output_data, indent=5)
 
 #- CONNECTIONS -----
 
