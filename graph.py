@@ -76,8 +76,8 @@ class GraphicsView (QtGui.QGraphicsView):
 
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
-                #nodeManager.removeNode(item)
-                item.deleteNode()
+                if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
+                    item.deleteNode()
         event.accept()
        
     def get_scroll_state(self):

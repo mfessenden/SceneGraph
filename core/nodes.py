@@ -4,10 +4,6 @@ import os
 import math
 
 
-class MyPath(QtGui.QGraphicsPathItem):
-    pass
-
-
 class NodeBase(object):
     """
     Base node type
@@ -326,14 +322,6 @@ class NodeOutput(ConnectionBase, QtSvg.QGraphicsSvgItem):
         return self.sceneBoundingRect().height()
 
 
-class MyLine(QtGui.QGraphicsLineItem):
-    def __init__(self, start_item, end_item, *args, **kwargs):
-        super(MyLine, self).__init__(*args, **kwargs)
-        
-        self._start_item   = start_item
-        self._end_item     = end_item
-
-
 # Line class for connecting the nodes together
 class LineClass(QtGui.QGraphicsLineItem):
 
@@ -476,3 +464,16 @@ class LineClass(QtGui.QGraphicsLineItem):
                 painter.drawPolygon(self.arrowHead)
                 painter.drawLine(line)
                 #painter.drawCubicBezier(line)
+
+
+#- TESTING -----
+
+class MyLine(QtGui.QGraphicsLineItem):
+    def __init__(self, start_item, end_item, *args, **kwargs):
+        super(MyLine, self).__init__(*args, **kwargs)
+        
+        self._start_item   = start_item
+        self._end_item     = end_item
+
+class MyPath(QtGui.QGraphicsPathItem):
+    pass

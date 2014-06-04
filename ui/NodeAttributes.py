@@ -109,9 +109,13 @@ class NodeAttributesWidget(QtGui.QWidget):
         self.nodeUpdateAction()
 
     def _clearGrid(self):
-        for r in range(self.gridLayout.rowCount()):
-            self.deleteGridWidget(r, 0)
-            self.deleteGridWidget(r, 1)
+        """
+        Clear the current grid
+        """
+        if self.gridLayout:
+            for r in range(self.gridLayout.rowCount()):
+                self.deleteGridWidget(r, 0)
+                self.deleteGridWidget(r, 1)
 
     def deleteGridWidget(self, row, column):
         """
