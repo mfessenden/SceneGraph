@@ -217,11 +217,14 @@ class NodeManager(object):
     """
     Manages nodes in the parent graph
     """
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         
         self.viewport       = parent
-        self.scene          = self.viewport.scene()
+        self.scene          = None
         self._copied_nodes  = []
+
+        if self.viewport:
+            self.scene = self.viewport.scene()
         
     def getNodes(self):
         """
