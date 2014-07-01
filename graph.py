@@ -8,12 +8,6 @@ from . import logger
 from . import core
 reload(core)
 
-"""
-Notes:
-
-    - overloading mouseMoveEvent on QGraphicsScene not easily implemented
-
-"""
 
 
 class GraphicsView (QtGui.QGraphicsView):
@@ -117,6 +111,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def createNode(self, node_type, **kwargs):
         """
         Create a node in the current scene with the given attributes
+        
+        params:
+            node_type   - (str) node type to create
+            
+        returns:
+            (object)    - scene node
         """
         node_name   = kwargs.get('name', 'My_Node')
         node_pos    = kwargs.get('pos', [0,0])
@@ -226,6 +226,9 @@ class NodeManager(object):
     def getNodes(self):
         """
         Returns a weakref to all of the scene nodes
+        
+        returns:
+            (weakref) 
         """
         return self.scene.sceneNodes
 
@@ -354,7 +357,6 @@ class NodeManager(object):
         node_name = re.sub(r'[^a-zA-Z0-9\[\]]','_', node_name)
         if not re.search('\d+$', node_name):
             node_name = '%s1' % node_name
-            return node_name
         all_names = self._getNames()
         if node_name in all_names:
             node_num = int(re.search('\d+$', node_name).group())
