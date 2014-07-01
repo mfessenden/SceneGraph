@@ -123,7 +123,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         returns:
             (object)    - scene node
         """
-        node_name   = kwargs.get('name', 'My_Node')
+        node_name   = kwargs.get('name', 'Node')
         node_pos    = kwargs.get('pos', [0,0])
         # Now transfer the node_type (which is the base class Node) to a category or attribute node
         if node_type is "generic":
@@ -278,7 +278,7 @@ class NodeManager(object):
             (object)  - created node
         """
         force = kwargs.get('force', False)
-        node_name = kwargs.pop('name', 'My_Node')
+        node_name = kwargs.pop('name', 'Node')
         if not force:
             node_name = self._nodeNamer(node_name)
         return self.scene.createNode(node_type, name=node_name, **kwargs)

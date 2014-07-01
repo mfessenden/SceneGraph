@@ -224,7 +224,8 @@ class SceneGraph(QtGui.QMainWindow):
                 self.recent_menu.removeAction(action)
         
         # build the menu
-        self.recent_menu = QtGui.QMenu('Recent files...',self)
+        else:
+            self.recent_menu = QtGui.QMenu('Recent files...',self)
         self.menuFile.addMenu(self.recent_menu)
         self.recent_menu.setEnabled(False)
         
@@ -316,14 +317,14 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Save the current graph file
         """
-        if self._current_file:
-            self.updateStatus('saving current graph "%s"' % self._current_file)
-            self.nodeManager.write(self._current_file)
-            self.buildWindowTitle()
-        else:
-            self.updateStatus('no graph file is loaded', level='error')
+        self._current_file = self.nodeManager.getRootNode().getAttr('sceneName')
+        self.updateStatus('saving current graph "%s"' % self._current_file)
+        self.nodeManager.write(self._current_file)
+        self.buildWindowTitle()
         
-    
+        self.prefs.addFile(self._current_file)
+        self._buildRecentFilesMenu()
+   
     def readGraph(self):
         """
         Read the current graph from a json file

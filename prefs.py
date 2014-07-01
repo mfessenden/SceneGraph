@@ -38,11 +38,19 @@ class RecentFiles(object):
         self.__data.update(recent_files=recent_files)
     
     def addFile(self, filename):
-        if filename not in self.getRecentFiles():
+        if filename not in self.getRecentFiles():            
             current_index = self.getLatestFileIndex()
             ci = str(current_index)
             self.data.get('recent_files').update({ci:filename})
             self.write()        
+    
+    def removeOldestIndex(self):
+        new_data = dict()
+        self.data.get('recent_files').pop('0')
+        for idx in sorted(self.data.get('recent_files').keys()):
+            nidx = str(int(idx)-1)
+            new_data[nidx] = self.data.get('recent_files').get(idx)
+        self.data['recent_files'] = new_data
     
     def getRecentFiles(self):
         """
@@ -87,16 +95,20 @@ class RecentFiles(object):
         msg = 'writing preferences: "%s"' % filename
         if not os.path.exists(filename):
             msg = 'creating new preferences: "%s"' % filename
-
+        
+        
+        if len(self.getRecentFiles()) > self.max_items:
+            logger.getLogger().info('removing oldest index')  # DEBUG
+            self.removeOldestIndex()
+        
         # BACKUP
         if backup:
             self.backupPrefs()
         fn = open(filename, 'w')
-        output_data=self.data
         try:
             if not quiet:
                 logger.getLogger().info(msg)
-            json.dump(output_data, fn, indent=4, sort_keys=True)
+            json.dump(self.data, fn, indent=4, sort_keys=True)
             fn.close()
             return True
         except:

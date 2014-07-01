@@ -260,7 +260,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
-        self._node_name    = kwargs.pop('name', 'My_Node')
+        self._node_name    = kwargs.pop('name', 'Node')
         self.nodeimage     = os.path.join(config.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
