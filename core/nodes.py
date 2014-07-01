@@ -3,6 +3,9 @@ import simplejson as json
 import os
 import math
 
+from .. import config
+reload(config)
+
 
 class NodeBase(object):
     """
@@ -10,7 +13,9 @@ class NodeBase(object):
     """
     def __init__(self, *args, **kwargs):
         
-        self._is_node      = True 
+        self._is_node      = True
+        self.nodetype      = None                           # designates the node type
+        self._is_root      = False                          # designates a root node 
         self._node_name    = None
         self.nodeimage     = None
         self.description   = None
@@ -28,7 +33,7 @@ class NodeBase(object):
         return '/%s' % str(self._node_name)
        
 
-class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
+class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
     clickedSignal = QtCore.pyqtSignal(QtCore.QObject)
     nodeCreatedInScene = QtCore.pyqtSignal()
@@ -37,14 +42,15 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def __init__(self, *args, **kwargs):
         NodeBase.__init__(self)
         
-        self._attr_ui      = None
+        self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
-        self._node_name    = kwargs.pop('name', 'My_Node')
-        self.nodeimage     = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_base_250x180.svg')
+        self._is_root      = True
+        self._node_name    = 'Root'
+        self.nodeimage     = os.path.join(config.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
-        self.inputs        = ['input1', 'input2', 'input3']
-        self.outputs       = ['output1', 'output2', 'output3'] 
+        self.inputs        = []
+        self.outputs       = ['graph']
         
         self._attributes   = dict()                 # arbitrary attributes
         self._private      = ['width', 'height']
@@ -64,8 +70,222 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         # setup UI
         self.addInputAttributes(*self.inputs)
         self.addOutputAttributes(*self.outputs)
-        self.update()
-     
+        self.set_name()
+
+    def paint(self, painter, option, widget):
+        if self.isSelected():
+            self.setElementId("hover")
+        else:
+            self.setElementId("regular")
+        super(RootNode, self).paint(painter, option, widget)
+
+    def mousePressEvent(self, event):
+        """
+        Runs when node is selected
+        """
+        #print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
+        event.accept()
+      
+    def update(self):
+        self.set_name()
+        self.set_tooltip()
+        super(GenericNode, self).update()
+
+    #- ATTRIBUTES -----
+    def set_name(self):
+        """
+        Set the node title
+        
+        todo: should be in NodeBase
+        """
+        if not self._name_text:
+            font = QtGui.QFont("SansSerif", 14)
+            #font.setStyleHint(QtGui.QFont.Helvetica)
+            font.setStretch(100)
+            self._name_text = QtGui.QGraphicsTextItem(self._node_name, self)
+            self._name_text.setFont(font)
+            self._name_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
+            self._name_text.setPos(self.sceneBoundingRect().left(), self.sceneBoundingRect().top())
+            #self._name_text.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        else:
+            self._name_text.setPlainText(self._node_name)
+    
+    def set_tooltip(self):
+        """
+        Set the tooltip text in the graph
+        """
+        self.setToolTip(self.path())
+    
+    @QtCore.pyqtSlot()
+    def addNodeAttributes(self, **kwargs):
+        """
+        Add random attributes to the node
+        
+        todo: should be in NodeBase
+        """
+        self._attributes.update(**kwargs)
+        self.nodeChanged.emit(True)
+    
+    @QtCore.pyqtSlot()
+    def addAttr(self, val):
+        self._attributes[val]=''
+        self.nodeChanged.emit(True)
+
+    def getAttr(self, attribute):
+        """
+        Query a specific node's attribute
+        """
+        return self.getNodeAttributes().get(attribute, None)
+
+    def getNodeAttributes(self):
+        return self._attributes
+    
+    def addInputAttributes(self, *attrs):
+        """
+        Add input attributes to the node
+        
+        todo: should be in NodeBase
+        """
+        start_y = self.sceneBoundingRect().top() + 36
+        font = QtGui.QFont("SansSerif", 10)
+        font.setStretch(100)
+        for attr in attrs:
+            if attr not in self.getInputAttributes():   
+                #print '# adding attr "%s" at y: %d' % (attr, start_y)
+                attr_text = QtGui.QGraphicsTextItem(attr, self)
+                attr_text.setFont(font)
+                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
+                attr_text.setPos(self.sceneBoundingRect().left()+5, start_y)
+                connection = NodeInput(self, name=attr)
+                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
+                connection.setPos(self.sceneBoundingRect().left()-7, start_y+5)
+                self._connections.get('input').update(**{attr:connection})
+                start_y+=30       
+
+    def addOutputAttributes(self, *attrs):
+        """
+        Add input attributes to the node
+        
+        todo: should be in NodeBase
+        """
+        start_y = self.sceneBoundingRect().top() + 36
+        font = QtGui.QFont("SansSerif", 10)
+        font.setStretch(100)
+        for attr in attrs:
+            if attr not in self.getInputAttributes():   
+                #print '# adding attr "%s" at y: %d' % (attr, start_y)
+                attr_text = QtGui.QGraphicsTextItem(attr, self)
+                
+                attr_text.setFont(font)
+                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
+                attr_text.setPos(self.sceneBoundingRect().center().x()+15, start_y)
+                connection = NodeOutput(self, name=attr)
+                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
+                connection.setPos(self.sceneBoundingRect().right()-7, start_y+5)
+                self._connections.get('output').update(**{attr:connection})
+                start_y+=30       
+
+    def getInputAttributes(self):
+        return self._connections.get('input', {}).keys()     
+
+    def getOutputAttributes(self):
+        return self._connections.get('output', {}).keys()
+    
+    def getInputConnection(self, conn_name):
+        """
+        Returns the input connection NODE for the given name
+        """
+        return self._connections.get('input').get(conn_name, None)
+
+    def getOutputConnection(self, conn_name):
+        """
+        Returns the output connection NODE for the given name
+        """
+        return self._connections.get('output').get(conn_name, None)
+    
+    def getConnectedLines(self):
+        pass
+    
+    @property
+    def node_name(self):
+        return self._node_name
+    
+    @node_name.setter
+    def node_name(self, val):
+        self._node_name = val
+        self.set_name()
+    
+    @property
+    def width(self):
+        return self.sceneBoundingRect().width()
+
+    @property
+    def height(self):
+        return self.sceneBoundingRect().height()
+
+    def deleteNode(self):
+        # added only for compatibility, cannot delete this node
+        pass
+    
+    @property
+    def data(self):
+        data = dict()
+        data.update(x=self.sceneBoundingRect().x())
+        data.update(y=self.sceneBoundingRect().y())
+        data.update(width=self.width)
+        data.update(height=self.height)
+        data.update(**self.dumpArbitraryAttributes())
+        return data
+    
+    def dumpArbitraryAttributes(self):
+        result = dict()
+        for attr in sorted(self._attributes.keys()):
+            value = self._attributes.get(attr)
+            result['__%s' % attr] = value
+        return result
+    
+    def dump(self):
+        output_data = {self.node_name:self.data}
+        print json.dumps(output_data, indent=5)
+
+
+class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
+
+    clickedSignal = QtCore.pyqtSignal(QtCore.QObject)
+    nodeCreatedInScene = QtCore.pyqtSignal()
+    nodeChanged = QtCore.pyqtSignal(bool)
+    
+    def __init__(self, *args, **kwargs):
+        NodeBase.__init__(self)
+        
+        self._attr_ui      = None                       # link to UI?
+        self.nodetype      = 'generic'
+        self._node_name    = kwargs.pop('name', 'My_Node')
+        self.nodeimage     = os.path.join(config.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
+        self.description   = 'node with no specific attributes'
+        self.nodecolor     = None
+        self.inputs        = ['input1', 'input2', 'input3']
+        self.outputs       = ['output1', 'output2', 'output3'] 
+        
+        self._attributes   = dict()                 # arbitrary attributes
+        self._private      = ['width', 'height']
+        
+        # text attributes
+        self._name_text    = None                   # QGraphicsTextItem 
+        
+        args=list(args)
+        args.insert(0, self.nodeimage)
+        QtSvg.QGraphicsSvgItem.__init__(self, *args, **kwargs)
+        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setCachingEnabled(True)
+        self.setAcceptHoverEvents(True)
+        
+        self.rectF = QtCore.QRectF(0,0,100,180)        
+        
+        # setup UI        
+        self.addInputAttributes(*self.inputs)
+        self.addOutputAttributes(*self.outputs)
+        self.update()     
     
     def paint(self, painter, option, widget):
         if self.isSelected():
@@ -99,6 +319,8 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def set_name(self):
         """
         Set the node title
+        
+        todo: should be in NodeBase
         """
         if not self._name_text:
             font = QtGui.QFont("SansSerif", 14)
@@ -122,6 +344,8 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def addNodeAttributes(self, **kwargs):
         """
         Add random attributes to the node
+        
+        todo: should be in NodeBase
         """
         self._attributes.update(**kwargs)
         self.nodeChanged.emit(True)
@@ -134,9 +358,17 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def getNodeAttributes(self):
         return self._attributes
     
+    def getAttr(self, attribute):
+        """
+        Query a specific node's attribute
+        """
+        return self.getNodeAttributes().get(attribute, None)
+    
     def addInputAttributes(self, *attrs):
         """
         Add input attributes to the node
+        
+        todo: should be in NodeBase
         """
         start_y = self.sceneBoundingRect().top() + 36
         font = QtGui.QFont("SansSerif", 10)
@@ -157,6 +389,8 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def addOutputAttributes(self, *attrs):
         """
         Add input attributes to the node
+        
+        todo: should be in NodeBase
         """
         start_y = self.sceneBoundingRect().top() + 36
         font = QtGui.QFont("SansSerif", 10)
@@ -239,6 +473,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         print json.dumps(output_data, indent=5)
 
 #- CONNECTIONS -----
+
 
 class ConnectionBase(object):
     def __init__(self, *args, **kwargs):

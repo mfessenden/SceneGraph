@@ -11,7 +11,7 @@ class NodeAttributesWidget(QtGui.QWidget):
         
         self._gui           = kwargs.get('gui', None)
         self.manager        = kwargs.get('manager')
-        self._current_node  = None        
+        self._current_node  = None                              # the currently selected node
         self.gridLayout     = QtGui.QGridLayout(self)
         
     
@@ -23,8 +23,7 @@ class NodeAttributesWidget(QtGui.QWidget):
             node_item.nodeChanged.connect(partial(self.setNode, node_item))
             
             # clear the layout
-            self._clearGrid()
-                
+            self._clearGrid()                
             
             self.nameLabel = QtGui.QLabel(self)
             self.gridLayout.addWidget(self.nameLabel, 0, 0, 1, 1)
@@ -47,10 +46,14 @@ class NodeAttributesWidget(QtGui.QWidget):
             self.nameEdit.setText(node_item.node_name)
             self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
             self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
-            
+
+            # disable this attribute if the node is root
+            if node_item._is_root:
+                self.nameEdit.setEnabled(False)
+
             self.pathEdit.setText(node_item.path())
             self.pathEdit.setEnabled(False)
-            
+                        
             for attr, val in node_item.getNodeAttributes().iteritems():
                 if attr not in node_item._private:
                     attr_label = QtGui.QLabel(self)

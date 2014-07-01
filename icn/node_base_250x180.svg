@@ -1,36 +1,12 @@
 <?xml version="1.0"?>
 <svg width="180" height="250" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
  <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
- <defs>
-  <linearGradient y1="1" x1="0.792969" y2="0.136719" x2="0.390625" id="svg_1">
-   <stop offset="0.015625" stop-opacity="0.988281" stop-color="#ddc806"/>
-   <stop offset="1" stop-opacity="0.996094" stop-color="#ffffff"/>
-  </linearGradient>
-  <linearGradient y1="0.011719" x1="0.308594" y2="1" x2="0.851563" id="svg_5">
-   <stop offset="0" stop-opacity="0.996094" stop-color="#7f7c7c"/>
-   <stop offset="1" stop-opacity="0.996094" stop-color="#a5a5a5"/>
-  </linearGradient>
-  <linearGradient y2="0" x2="0.101563" y1="1" x1="0.933594" id="svg_7">
-   <stop offset="0.019531" stop-opacity="0.996094" stop-color="#3f3f3f"/>
-   <stop offset="1" stop-opacity="0.996094" stop-color="#f4f4f4"/>
-  </linearGradient>
-  <linearGradient y2="0" x2="0.101563" y1="1" x1="0.933594" id="svg_10">
-   <stop offset="0.019531" stop-opacity="0.992188" stop-color="#383851"/>
-   <stop offset="1" stop-opacity="0.992188" stop-color="#c9c9e2"/>
-  </linearGradient>
-  <linearGradient y1="0.011719" x1="0.308594" y2="1" x2="0.851563" id="svg_11">
-   <stop offset="0" stop-opacity="0.992188" stop-color="#323475"/>
-   <stop offset="1" stop-opacity="0.992188" stop-color="#515ba0"/>
-  </linearGradient>
- </defs>
-  <g id="regular">
+ <g id="regular">
   <title>regular</title>
-  <rect id="svg_4" height="250" width="180" y="0" x="0" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="1.5" stroke="#000000" fill="url(#svg_5)"/>
-  <rect id="svg_6" fill-opacity="0" height="248" width="178" y="1" x="1" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="1.5" stroke="url(#svg_7)" fill="#000000"/>
+  <rect fill="#cccccc" stroke="#e5e5e5" stroke-width="2" x="0" y="0" width="180" height="250" id="svg_1"/>
  </g>
- <g id="hover">
+  <g id="hover">
   <title>hover</title>
-  <rect id="svg_9" height="250" width="180" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="1.5" stroke="#0b1749" fill="url(#svg_11)"/>
-  <rect id="svg_8" fill-opacity="0" height="248" width="178" y="1" x="1" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="1.5" stroke="url(#svg_10)" fill="#000000"/>
+  <rect fill="#b0bce5" stroke="#e5e5e5" stroke-width="2" x="0" y="0" width="180" height="250" id="svg_1"/>
  </g>
 </svg>

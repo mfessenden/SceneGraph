@@ -9,10 +9,10 @@ from . import core
 reload(core)
 
 
-
 class GraphicsView (QtGui.QGraphicsView):
     
     tabPressed        = QtCore.pyqtSignal(bool)
+    rootSelected      = QtCore.pyqtSignal(bool)
     
     def __init__ (self, parent = None, **kwargs):
         super(GraphicsView, self).__init__ (parent)
@@ -28,7 +28,7 @@ class GraphicsView (QtGui.QGraphicsView):
         """
         Scale the viewport with the middle-mouse wheel
         """
-        super (GraphicsView, self).wheelEvent(event)
+        super(GraphicsView, self).wheelEvent(event)
         factor = 1.2
         if event.delta() < 0 :
             factor = 1.0 / factor
@@ -72,6 +72,10 @@ class GraphicsView (QtGui.QGraphicsView):
             for item in graphicsScene.selectedItems():
                 if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
                     item.deleteNode()
+                    
+        if event.key() == QtCore.Qt.Key_S:           
+            self.rootSelected.emit(True)
+
         event.accept()
        
     def get_scroll_state(self):
@@ -89,6 +93,7 @@ class GraphicsView (QtGui.QGraphicsView):
         sceneWidthPercent = centerWidth / sceneWidth if sceneWidth != 0 else 0
         sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
         return sceneWidthPercent, sceneHeightPercent
+
 
 class GraphicsScene(QtGui.QGraphicsScene):    
     """
@@ -123,6 +128,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         # Now transfer the node_type (which is the base class Node) to a category or attribute node
         if node_type is "generic":
             sceneNode = core.GenericNode(name=node_name)
+        if node_type is "root":
+            sceneNode = core.RootNode()
         #sceneNode.connectSignals()
         sceneNode.setPos(node_pos[0], node_pos[1])
         self.sceneNodes[sceneNode.node_name] = sceneNode
@@ -217,11 +224,14 @@ class NodeManager(object):
     """
     Manages nodes in the parent graph
     """
-    def __init__(self, parent):
+    def __init__(self, parent, gui):
         
         self.viewport       = parent
         self.scene          = self.viewport.scene()
+        self.root_node      = None
         self._copied_nodes  = []
+        self._startdir      = gui._startdir
+        self._default_name  = 'scene_graph_v001'            # default scene name
         
     def getNodes(self):
         """
@@ -239,7 +249,16 @@ class NodeManager(object):
         if node_name in self.getNodes():
             return self.getNodes().get(node_name)
         return
-    
+
+    def getRootNode(self):
+        """
+        Return the root node
+        
+        returns:
+            (object)  - root node
+        """
+        return self.root_node
+
     def selectedNodes(self):
         """
         Returns nodes selected in the graph
@@ -254,6 +273,9 @@ class NodeManager(object):
     def createNode(self, node_type, **kwargs):
         """
         Creates a node in the parent graph
+        
+        returns:
+            (object)  - created node
         """
         force = kwargs.get('force', False)
         node_name = kwargs.pop('name', 'My_Node')
@@ -261,6 +283,24 @@ class NodeManager(object):
             node_name = self._nodeNamer(node_name)
         return self.scene.createNode(node_type, name=node_name, **kwargs)
     
+    def createRootNode(self, hide=False, **kwargs):
+        """
+        Creates a root node
+        
+        params:
+            hide      - (bool) hide the root node when created
+    
+        returns:
+            (object)  - created node
+        """
+        import os
+        sceneName = os.path.join(self._startdir, '%s.json' % self._default_name)
+        self.root_node = self.scene.createNode('root', **kwargs)
+        if hide:
+            self.root_node.hide()
+        self.root_node.addNodeAttributes(sceneName=sceneName)
+        return self.root_node
+
     def removeNode(self, node_item):
         """
         Removes a node from the graph
@@ -342,7 +382,7 @@ class NodeManager(object):
                 self.scene.removeItem(item)
             elif isinstance(item, core.nodes.LineClass):
                 self.scene.removeItem(item)
-
+        self.createRootNode()
 
     def _getNames(self):
         """
@@ -398,19 +438,34 @@ class NodeManager(object):
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
             node_data = tmp_data.get('nodes', {})
             conn_data = tmp_data.get('connections', {})
+            
+            # BUILD NODES
             for node in node_data.keys():
                 logger.getLogger().info('building node: "%s"' % node)
                 posx = node_data.get(node).pop('x')
                 posy = node_data.get(node).pop('y')
-                myNode = self.createNode('generic', name=node, pos=[posx, posy], force=True)
-                
-                node_attributes = dict()
-                if node_data.get(node):
-                    for attr, val in node_data.get(node).iteritems():
-                        attr = re.sub('^__', '', attr)
-                        node_attributes.update({attr:val})
-                    myNode.addNodeAttributes(**node_attributes)
-                
+                if node != 'Root':
+                    myNode = self.createNode('generic', name=node, pos=[posx, posy], force=True)
+                    node_attributes = dict()
+                    if node_data.get(node):
+                        for attr, val in node_data.get(node).iteritems():
+                            attr = re.sub('^__', '', attr)
+                            node_attributes.update({attr:val})
+                        myNode.addNodeAttributes(**node_attributes)
+                else:
+                    # update root node
+                    root_attributes = dict()
+                    if not self.root_node:
+                        self.createRootNode()
+                    if node_data.get(node):
+                        for attr, val in node_data.get(node).iteritems():
+                            attr = re.sub('^__', '', attr)
+                            root_attributes.update({attr:val})
+                        self.root_node.addNodeAttributes(**root_attributes)
+                    self.root_node.setX(posx)
+                    self.root_node.setY(posy)
+
+            # BUILD CONNECTIONS
             for conn in conn_data.keys():
                 cdata = conn_data.get(conn)
                 start_str = cdata.get('start')

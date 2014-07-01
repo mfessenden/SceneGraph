@@ -7,6 +7,7 @@ reload(connections)
 reload(lines)
 
 NodeBase    = nodes.NodeBase
+RootNode    = nodes.RootNode
 GenericNode = nodes.GenericNode
 LineClass   = nodes.LineClass
 MyLine      = nodes.MyLine
