@@ -1,5 +1,5 @@
 #!/usr/bin/env xpython
-from PyQt4 import QtGui, QtCore
+from PySide import QtGui, QtCore
 from functools import partial
 import re
 

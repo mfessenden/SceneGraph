@@ -1,10 +1,11 @@
-from PyQt4 import QtGui, QtCore, QtSvg
+#!/X/tools/binlinux/xpython
+from PySide import QtGui, QtCore, QtSvg
 import simplejson as json
 import os
 import math
 
-from .. import config
-reload(config)
+from .. import options
+reload(options)
 
 
 class NodeBase(object):
@@ -35,9 +36,9 @@ class NodeBase(object):
 
 class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
-    clickedSignal = QtCore.pyqtSignal(QtCore.QObject)
-    nodeCreatedInScene = QtCore.pyqtSignal()
-    nodeChanged = QtCore.pyqtSignal(bool)
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeCreatedInScene  = QtCore.Signal()
+    nodeChanged         = QtCore.Signal(bool)
     
     def __init__(self, *args, **kwargs):
         NodeBase.__init__(self)
@@ -46,7 +47,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self.nodetype      = 'generic'
         self._is_root      = True
         self._node_name    = 'Root'
-        self.nodeimage     = os.path.join(config.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
+        self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
         self.inputs        = []
@@ -116,7 +117,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         """
         self.setToolTip(self.path())
     
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def addNodeAttributes(self, **kwargs):
         """
         Add random attributes to the node
@@ -126,7 +127,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self._attributes.update(**kwargs)
         self.nodeChanged.emit(True)
     
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def addAttr(self, val):
         self._attributes[val]=''
         self.nodeChanged.emit(True)
@@ -138,8 +139,17 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         return self.getNodeAttributes().get(attribute, None)
 
     def getNodeAttributes(self):
+        """
+        Returns a dictionary of node attributes
+        """
         return self._attributes
-    
+
+    def setNodeAttributes(self, **kwargs):
+        """
+        Set arbitrary attributes
+        """
+        self._attributes.update(**kwargs)    
+
     def addInputAttributes(self, *attrs):
         """
         Add input attributes to the node
@@ -251,9 +261,9 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
 class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
-    clickedSignal = QtCore.pyqtSignal(QtCore.QObject)
-    nodeCreatedInScene = QtCore.pyqtSignal()
-    nodeChanged = QtCore.pyqtSignal(bool)
+    clickedSignal = QtCore.Signal(QtCore.QObject)
+    nodeCreatedInScene = QtCore.Signal()
+    nodeChanged = QtCore.Signal(bool)
     
     def __init__(self, *args, **kwargs):
         NodeBase.__init__(self)
@@ -261,9 +271,11 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
         self._node_name    = kwargs.pop('name', 'Node')
-        self.nodeimage     = os.path.join(config.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
+        self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
+        
+        # inputs/outputs
         self.inputs        = ['input1', 'input2', 'input3']
         self.outputs       = ['output1', 'output2', 'output3'] 
         
@@ -340,7 +352,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         """
         self.setToolTip(self.path())
     
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def addNodeAttributes(self, **kwargs):
         """
         Add random attributes to the node
@@ -350,7 +362,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self._attributes.update(**kwargs)
         self.nodeChanged.emit(True)
     
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def addAttr(self, val):
         self._attributes[val]=''
         self.nodeChanged.emit(True)

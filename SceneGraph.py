@@ -1,14 +1,14 @@
 #!/X/tools/binlinux/xpython
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 from functools import partial
 import os
 
 from . import logger
-from . import config
+from . import options
 from . import graph
 from . import ui
 from . import prefs
-reload(config)
+reload(options)
 reload(graph)
 reload(ui)
 reload(prefs)
@@ -18,7 +18,10 @@ class SceneGraph(QtGui.QMainWindow):
     
     def __init__(self, parent=None, **kwargs):
         super(SceneGraph, self).__init__(parent)
-        
+
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
         self._current_file    = None              # current save file name (if any)
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
@@ -59,19 +62,17 @@ class SceneGraph(QtGui.QMainWindow):
         self.menubar.setGeometry(QtCore.QRect(0, 0, 978, 22))
         self.setMenuBar(self.menubar)
         self.statusbar = QtGui.QStatusBar(self)
-        self.setStatusBar(self.statusbar)
+        self.setStatusBar(self.statusbar)      
         
-
-        
-        self.setupUI()
+        self.initializeUI()
         self.connect(self.graphicsView, QtCore.SIGNAL("tabPressed"), partial(self.createTabMenu, self.graphicsView))
         
         # load saved settings
-        self.resize(self.settings.value('size').toSize())
-        self.move(self.settings.value('pos').toPoint())
+        self.resize(self.settings.value('size'))
+        self.move(self.settings.value('pos'))
         self.setMenuBar(self.menubar)        
         
-    def setupUI(self):
+    def initializeUI(self):
         """
         Set up the main UI
         """
@@ -116,12 +117,11 @@ class SceneGraph(QtGui.QMainWindow):
         self.graphicsView.rootSelected.connect(self.selectRootNodeAction)
     
     def _setupGraphicsView(self, filter=False):        
-        # scene view
-        
-        # BUILD THE NODE MANAGER
-
+        # scene view        
         self.graphicsScene = graph.GraphicsScene()
         self.graphicsView.setScene(self.graphicsScene)
+        
+        # initialize the Node Manager
         self.nodeManager = graph.NodeManager(self.graphicsView, gui=self)
         self.graphicsScene.setNodeManager(self.nodeManager)
         self.graphicsView.setSceneRect(0, 0, 1000, 1000)
@@ -243,7 +243,7 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Build the window title
         """
-        title_str = 'Scene Graph - v%s' % config.VERSION_AS_STRING
+        title_str = 'Scene Graph - v%s' % options.VERSION_AS_STRING
         if self._current_file:
             title_str = '%s - %s' % (title_str, self._current_file)
         self.setWindowTitle(title_str)

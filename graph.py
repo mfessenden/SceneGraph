@@ -1,5 +1,5 @@
 #!/X/tools/binlinux/xpython
-from PyQt4 import QtCore, QtGui, QtSvg
+from PySide import QtCore, QtGui, QtSvg
 import weakref
 import re
 import simplejson as json
@@ -11,8 +11,8 @@ reload(core)
 
 class GraphicsView (QtGui.QGraphicsView):
     
-    tabPressed        = QtCore.pyqtSignal(bool)
-    rootSelected      = QtCore.pyqtSignal(bool)
+    tabPressed        = QtCore.Signal(bool)
+    rootSelected      = QtCore.Signal(bool)
     
     def __init__ (self, parent = None, **kwargs):
         super(GraphicsView, self).__init__ (parent)

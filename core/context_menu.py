@@ -1,5 +1,5 @@
 #!/X/tools/binlinux/xpython
-from PyQt4 import QtCore, QtGui
+from PySide import QtCore, QtGui
 from functools import partial
 import simplejson as json
 

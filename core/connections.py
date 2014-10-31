@@ -1,10 +1,10 @@
-from PyQt4 import QtGui, QtCore, QtSvg
+from PySide import QtGui, QtCore, QtSvg
 import os
 
 
 class ConnectionsBase(QtSvg.QGraphicsSvgItem):
 
-    lineConnected = QtCore.pyqtSignal()
+    lineConnected = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super(ConnectionsBase, self).__init__(*args, **kwargs)
