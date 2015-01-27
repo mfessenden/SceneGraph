@@ -26,13 +26,14 @@ class SceneGraph(QtGui.QMainWindow):
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
 
-        # prefs
-        self.prefs            = prefs.RecentFiles(self)
-        self.recent_menu      = None    
+        # preferences 
+        self.prefs_key        = 'SceneGraph'
+        self.prefs            = prefs.RecentFiles(self, ui=self.prefs_key)
+        self.recent_menu      = None 
 
-        # ui settings
-        self.settings         = QtCore.QSettings('SceneGraphc.ini', QtCore.QSettings.IniFormat)
-        self.settings.setFallbacksEnabled(False)        
+        self.settings_file    = self.prefs.qtsettings
+        self.qtsettings       = QtCore.QSettings(self.settings_file, QtCore.QSettings.IniFormat)
+        self.qtsettings.setFallbacksEnabled(False)        
         
         self.menubar = QtGui.QMenuBar(self)
         self.centralwidget = QtGui.QWidget(self)
@@ -65,12 +66,8 @@ class SceneGraph(QtGui.QMainWindow):
         self.setStatusBar(self.statusbar)      
         
         self.initializeUI()
-        self.connect(self.graphicsView, QtCore.SIGNAL("tabPressed"), partial(self.createTabMenu, self.graphicsView))
-        
-        # load saved settings
-        self.resize(self.settings.value('size'))
-        self.move(self.settings.value('pos'))
-        self.setMenuBar(self.menubar)        
+        self.readSettings()
+        self.connect(self.graphicsView, QtCore.SIGNAL("tabPressed"), partial(self.createTabMenu, self.graphicsView))     
         
     def initializeUI(self):
         """
@@ -291,14 +288,14 @@ class SceneGraph(QtGui.QMainWindow):
         root_node = self.nodeManager.getRootNode()
         if not filename:
             if self._current_file:
-                filename = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._current_file, "JSON files (*.json)")
+                filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._current_file, "JSON files (*.json)")
             else:
                 default_name = root_node.getAttr('sceneName')
-                filename = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", default_name, "JSON files (*.json)")
+                filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", default_name, "JSON files (*.json)")
             if filename == "":
                 return          
         
-        filename = str(filename)
+        filename = str(os.path.normpath(filename))
         self.updateStatus('saving current graph "%s"' % filename)   
         
         # update the root node     
@@ -330,7 +327,7 @@ class SceneGraph(QtGui.QMainWindow):
         Read the current graph from a json file
         """
         import os
-        filename = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
         if filename == "":
             return
         
@@ -402,7 +399,14 @@ class SceneGraph(QtGui.QMainWindow):
             root_node.show()
             root_node.setSelected(True)
 
-    #- EVENTS ----
+    #- Events ----
+    def closeEvent(self, event):
+        """ 
+        Write window prefs when UI is closed
+        """
+        self.writeSettings()
+        event.accept()
+
     def graphicsView_wheelEvent(self, event):
         factor = 1.41 ** ((event.delta()*.5) / 240.0)
         self.graphicsView.scale(factor, factor)
@@ -410,7 +414,7 @@ class SceneGraph(QtGui.QMainWindow):
     def graphicsView_resizeEvent(self, event):
         self.graphicsScene.setSceneRect(0, 0, self.graphicsView.width(), self.graphicsView.height())
        
-    #- MENUS -----
+    #- Menus -----
     def createTabMenu(self, parent):
         """ build a context menu for the lights list """
         print '# Creating tab menu...'
@@ -419,13 +423,26 @@ class SceneGraph(QtGui.QMainWindow):
         reset_action = menu.addAction('Reset options to default')
         menu.exec_(parent.scenePos())
 
-    def closeEvent(self, event):
-        """ 
-        Write window prefs when UI is closed
+    #- Settings -----
+    def readSettings(self):
         """
-        self.settings.setValue('size', self.size())
-        self.settings.setValue('pos', self.pos())
-        event.accept()
+        Read Qt settings from file
+        """
+        self.qtsettings.beginGroup(self.prefs_key)
+        self.resize(self.qtsettings.value("size", QtCore.QSize(400, 256)))
+        self.move(self.qtsettings.value("pos", QtCore.QPoint(200, 200)))
+        self.qtsettings.endGroup()
+
+    def writeSettings(self):
+        """
+        Write Qt settings to file
+        """
+        self.qtsettings.beginGroup(self.prefs_key)
+        width = self.width()
+        height = self.height()
+        self.qtsettings.setValue("size", QtCore.QSize(width, height))
+        self.qtsettings.setValue("pos", self.pos())
+        self.qtsettings.endGroup()
 
 
 class MouseEventFilter(QtCore.QObject):

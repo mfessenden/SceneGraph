@@ -14,6 +14,8 @@ RootNode    		= nodes.RootNode
 GenericNode 		= nodes.GenericNode
 LineClass   		= nodes.LineClass
 MyLine      		= nodes.MyLine
+BezierLine			= nodes.BezierLine
+
 
 StringAttribute     = attributes.StringAttribute
 IntegerAttribute    = attributes.IntegerAttribute
