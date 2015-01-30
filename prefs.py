@@ -13,12 +13,14 @@ class RecentFiles(object):
     """
     def __init__(self, parent=None, **kwargs):
         
+        self._ui                = kwargs.get('ui', 'SceneGraph')
         self.__parent           = parent
         self.__package_path     = os.path.dirname(__file__)
         self.__package          = os.path.split(os.path.dirname(__file__))[-1]
         self.__prefsdir         = os.path.join(os.getenv('HOME'), '.mrx', self.__package)
         self.__prefsfile        = kwargs.get('filename', os.path.join(self.__prefsdir, 'recent_files.json'))
         self.__backupprefs      = '%s-BAK' % self.__prefsfile
+        self.__qtsettings       = os.path.join(self.prefsdir, '%s.ini' % self._ui)
         self.__max_items        = kwargs.get('max', 10)
         
         self.initializeData()
@@ -148,6 +150,10 @@ class RecentFiles(object):
         return self.__prefsfile
 
     @property
+    def prefsdir(self):
+        return self.__prefsdir
+
+    @property
     def backupprefs(self):
         return self.backupprefs
 
@@ -155,3 +161,6 @@ class RecentFiles(object):
     def max_items(self):
         return self.__max_items
 
+    @property
+    def qtsettings(self):
+        return self.__qtsettings

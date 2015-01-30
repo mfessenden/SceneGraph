@@ -23,6 +23,7 @@ class GraphicsView (QtGui.QGraphicsView):
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         self.renderer = QtSvg.QSvgRenderer()
+        self.setRenderHint(QtGui.QPainter.Antialiasing)
     
     def wheelEvent (self, event):
         """
@@ -298,38 +299,50 @@ class NodeManager(object):
             (object)  - created node
         """
         import os
-        sceneName = os.path.join(self._startdir, '%s.json' % self._default_name)
+        sceneName = os.path.normpath(os.path.join(self._startdir, '%s.json' % self._default_name))
         self.root_node = self.scene.createNode('root', **kwargs)
         if hide:
             self.root_node.hide()
         self.root_node.addNodeAttributes(sceneName=sceneName)
         return self.root_node
 
-    def removeNode(self, node_item):
+    def removeNode(self, node):
         """
         Removes a node from the graph
+
+        params:
+            node    - (obj) node object
+    
+        returns:
+            (object)  - removed node
         """
-        node_name = node_item.node_name
+        node_name = node.node_name
         logger.getLogger().info('Removing node: "%s"' % node_name)
-        self.scene.removeItem(node_item)
+        self.scene.removeItem(node)
         if node_name in self.scene.sceneNodes.keys():
-            self.scene.sceneNodes.pop(node_name)
+            return self.scene.sceneNodes.pop(node_name)
+        return
     
     def renameNode(self, old_name, new_name):
         """
         Rename a node in the graph
-        
-        Returns the renamed node
+
+        params:
+            old_name    - (str) name to replace
+            new_name    - (str) name to with
+
+        returns:
+            (object)  - renamed node
         """
         if new_name in self._getNames():
             logger.getLogger().error('"%s" is not unique' % new_name)
             return
 
-        item=self.scene.sceneNodes.pop(old_name)
-        item.node_name = new_name
-        self.scene.sceneNodes[item.node_name]=item
-        item.update()
-        return item
+        node=self.scene.sceneNodes.pop(old_name)
+        node.node_name = new_name
+        self.scene.sceneNodes[node.node_name]=node
+        node.update()
+        return node
 
     def copyNodes(self, nodes):
         """
@@ -370,6 +383,7 @@ class NodeManager(object):
         if input_conn_node and output_conn_node:
             connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
             self.scene.addItem(connectionLine)
+            connectionLine.updatePosition()
         else:
             if not input_conn_node:
                 logger.getLogger().error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))

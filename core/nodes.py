@@ -14,8 +14,8 @@ class NodeBase(object):
     """
     def __init__(self, *args, **kwargs):
         
-        self._is_node      = True
         self.nodetype      = None                           # designates the node type
+        self._is_node      = True
         self._is_root      = False                          # designates a root node 
         self._node_name    = None
         self.nodeimage     = None
@@ -90,7 +90,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
     def update(self):
         self.set_name()
         self.set_tooltip()
-        super(GenericNode, self).update()
+        super(RootNode, self).update()
 
     #- ATTRIBUTES -----
     def set_name(self):
@@ -214,7 +214,15 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         return self._connections.get('output').get(conn_name, None)
     
     def getConnectedLines(self):
-        pass
+        result = []
+        for typ, values in self._connections.iteritems():
+            if values:
+                for node_name, node in values.iteritems():                
+                    if node.connectedLine:
+                        for line in node.connectedLine:
+                            if line not in result:
+                                result.append(line)
+        return result
     
     @property
     def node_name(self):
@@ -440,7 +448,15 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         return self._connections.get('output').get(conn_name, None)
     
     def getConnectedLines(self):
-        pass
+        result = []
+        for typ, values in self._connections.iteritems():
+            if values:
+                for node_name, node in values.iteritems():                
+                    if node.connectedLine:
+                        for line in node.connectedLine:
+                            if line not in result:
+                                result.append(line)
+        return result
     
     @property
     def node_name(self):
@@ -461,6 +477,9 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
 
     def deleteNode(self):
         # disconnection logic here
+        if self.getConnectedLines():
+            for node in self.getConnectedLines():
+                self.scene().nodeManager.removeNode(node)
         self.scene().nodeManager.removeNode(self)
     
     @property
@@ -512,14 +531,16 @@ class ConnectionBase(object):
     
 
 #ConnectAttributeNode
-class NodeInput(ConnectionBase, QtSvg.QGraphicsSvgItem):
-
+class ConnectionNode(ConnectionBase, QtSvg.QGraphicsSvgItem):
+    """
+    Represents a node input connector
+    """
     def __init__(self, *args, **kwargs):
         ConnectionBase.__init__(self, *args, **kwargs)
         
         self._parent            = args[0]
-        self.nodeimage          = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_input.svg')
-        self.isInputConnection  = True
+        self.nodeimage          = os.path.join(os.path.dirname(__file__), '../', 'icn', 'connection.svg')
+        self.isInputConnection  = False
         self.isOutputConnection = False        
         
         args=list(args)
@@ -538,36 +559,25 @@ class NodeInput(ConnectionBase, QtSvg.QGraphicsSvgItem):
 
     def height(self):
         return self.sceneBoundingRect().height()
+    
+    def center(self):
+        return self.sceneBoundingRect().center()
 
 
-#ConnectAttributeNode
-class NodeOutput(ConnectionBase, QtSvg.QGraphicsSvgItem):
-
+class NodeInput(ConnectionNode):
     def __init__(self, *args, **kwargs):
-        ConnectionBase.__init__(self, *args, **kwargs)
+        super(NodeInput, self).__init__(*args, **kwargs)
         
-        self._parent            = args[0]
-        self.nodeimage          = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_output.svg')
-        self.isInputConnection  = False
+        self.nodeimage = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_input.svg')
+        self.isInputConnection = True
+        
+class NodeOutput(ConnectionNode):
+    def __init__(self, *args, **kwargs):
+        super(NodeOutput, self).__init__(*args, **kwargs)
+
+        self.nodeimage = os.path.join(os.path.dirname(__file__), '../', 'icn', 'node_output.svg')
         self.isOutputConnection = True
-               
-        args=list(args)
-        args.insert(0, self.nodeimage)
-        QtSvg.QGraphicsSvgItem.__init__(self, *args)
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable )
-        self.rectF = QtCore.QRectF(0,0,14,14)
-        self.setAcceptsHoverEvents(True)
         
-    def mousePressEvent(self, event):
-        pass
-        #print self.connectedLine
-
-    def width(self):
-        return self.sceneBoundingRect().width()
-
-    def height(self):
-        return self.sceneBoundingRect().height()
-
 
 # Line class for connecting the nodes together
 class LineClass(QtGui.QGraphicsLineItem):
@@ -576,15 +586,21 @@ class LineClass(QtGui.QGraphicsLineItem):
         super(LineClass, self).__init__(*args, **kwargs)
 
         # The arrow that's drawn in the center of the line
-        self._is_node = False
-        self.arrowHead = QtGui.QPolygonF()
-        self.myColor = QtCore.Qt.white
-        self.myStartItem = startItem
-        self.myEndItem = endItem
+        self._is_node       = False
+        self.arrowHead      = QtGui.QPolygonF()
+        self.myColor        = QtCore.Qt.white
+        self.myStartItem    = startItem
+        self.myEndItem      = endItem
+               
+        self.sourcePoint    = QtCore.QPointF(self.myStartItem.center())
+        self.destPoint      = QtCore.QPointF(self.myEndItem.center())
+        self.centerPoint    = QtCore.QPointF()  # for bezier lines
+        
         self.setZValue(-1.0)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
         self.setPen(QtGui.QPen(self.myColor, 2, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
-
+        
+        self.node_name = "%s.%s" % (self.myStartItem, self.myEndItem)
         '''
         This if statement is making all of the connections consistent. The startItem will always be the
         beginning of the line. The arrow will always point to the end item, no matter which way the user
@@ -611,7 +627,6 @@ class LineClass(QtGui.QGraphicsLineItem):
             self.myStartItem.connectedLine.remove(self)
             self.myEndItem.connectedLine.remove(self)
 
-
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Delete:
             self.deleteNode()
@@ -625,11 +640,23 @@ class LineClass(QtGui.QGraphicsLineItem):
         centerY = (line.p1().y() + line.p2().y())/2
         return QtCore.QPointF(centerX, centerY)
 
+    def getBezierPath(self, center=None):
+        """
+        Returns a bezier path
+        """       
+        sp = self.myStartItem.sceneBoundingRect().center()
+        ep = self.myEndItem.sceneBoundingRect().center()
+        path = QtGui.QPainterPath(sp)
+        center = QtCore.QPoint((sp.x() + ep.x()/2 ), (sp.y() + ep.y()/2))
+        #center = self.getCenterPoint()
+        #print 'center:   (  %d, %d  )' % ( center.x(), center.y())
+        path.cubicTo(sp, center, ep)
+        return path
+
     def getLine(self):
         p1 = self.myStartItem.sceneBoundingRect().center()
         p2 = self.myEndItem.sceneBoundingRect().center()
         return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
-
 
     def getEndItem(self):
         return self.myEndItem.parentItem()
@@ -650,24 +677,31 @@ class LineClass(QtGui.QGraphicsLineItem):
         return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
-        path = super(LineClass, self).shape()
-        path.addPolygon(self.arrowHead)
-        return path
+        cp = QtCore.QPoint((self.sourcePoint.x() + self.destPoint.x()/2 ), (self.sourcePoint.y() + self.destPoint.y()/2)) 
+        path = QtGui.QPainterPath(self.sourcePoint)
+        path.lineTo(self.destPoint)
+        path.cubicTo(self.sourcePoint, cp, self.destPoint)
+        
+        stroker = QtGui.QPainterPathStroker()
+        stroker.setWidth(2)
+        stroked = stroker.createStroke(path)
+        # Add a square at the tip
+        stroked.addRect(self.destPoint.x()-10, self.destPoint.y()-10, 20, 20)
+        return stroked
 
     def paint(self, painter, option, widget=None):
         arrowSize = 20.0
         line = self.getLine()
-        painter.setBrush(self.myColor)
+        #painter.setBrush(self.myColor)
         myPen = self.pen()
         myPen.setColor(self.myColor)
         painter.setPen(myPen)
 
         if self.isSelected():
-            painter.setBrush(QtCore.Qt.yellow)
+            #painter.setBrush(QtCore.Qt.yellow)
             myPen.setColor(QtCore.Qt.yellow)
             myPen.setStyle(QtCore.Qt.DashLine)
             painter.setPen(myPen)
-
 
         ####################################
         # This is Calculating the angle between the x-axis and the line of the arrow.
@@ -708,12 +742,104 @@ class LineClass(QtGui.QGraphicsLineItem):
                 self.arrowHead.append(point)
 
             if line:
-                painter.drawPolygon(self.arrowHead)
-                painter.drawLine(line)
+                #painter.drawPolygon(self.arrowHead)        
+                bpath = self.getBezierPath(centerPoint)
+                center_element =  bpath.elementAt(bpath.elementCount()/2)
+                bpath_center = QtCore.QPointF(center_element.x, center_element.y)
+                
+                painter.drawPath(bpath)
+                painter.setBackgroundMode(QtCore.Qt.TransparentMode)
+                #painter.drawLine(line)
                 #painter.drawCubicBezier(line)
 
 
-#- TESTING -----
+#- Testing -----
+class SimpleNode(QtGui.QGraphicsItem):
+    
+    Type                = QtGui.QGraphicsItem.UserType + 3
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeCreatedInScene  = QtCore.Signal()
+    nodeChanged         = QtCore.Signal(bool)
+
+    def __init__(self, name='Node1', width=100, height=175, font='Consolas'):
+        QtGui.QGraphicsItem.__init__(self)
+        
+        self.name            = name
+        self.width           = width
+        self.height          = height
+        
+        # buffers
+        self.bufferX         = 3
+        self.bufferY         = 3
+        self.color           = [180, 180, 180]
+        
+        self.label           = QtGui.QGraphicsSimpleTextItem(parent=self)
+        self._font_family    = font
+        self._font_size      = 10
+        self._font_bold      = False
+        self._font_italic    = False
+        self.font            = QtGui.QFont(self._font_family)
+        self._is_node        = True
+        
+        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setAcceptHoverEvents(True)
+
+        self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+        self.setCacheMode(self.DeviceCoordinateCache)
+        self.setZValue(-1)        
+
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return SimpleNode.Type
+
+    def boundingRect(self):
+        """
+        Defines the clickable hit-box.  Simply returns a rectangle instead of
+        a rounded rectangle for speed purposes.
+        """
+        return QtCore.QRectF(-self.width/2  - self.bufferX,  -self.height/2 - self.bufferY,
+                              self.width  + 3 + self.bufferX, self.height + 3 + self.bufferY)
+    
+    # Label formatting -----
+    def setLabelItalic(self, val=False):
+        self._font_italic = val
+
+    def setLabelBold(self, val=False):
+        self._font_bold = val
+
+    def buildNodeLabel(self):
+        self.label.setX(-(self.width/2 - self.bufferX))
+        self.label.setY(-(self.height/2 - self.bufferY))
+        self.font = QtGui.QFont(self._font_family)
+        self.font.setPointSize(self._font_size)
+        self.font.setBold(self._font_bold)
+        self.font.setItalic(self._font_italic)
+        self.label.setFont(self.font)
+        self.label.setText(self.name)
+    
+    def getLabelLine(self):
+        p1 = self.boundingRect().topLeft()
+        p1.setY(p1.y() + self.bufferY*8)
+        p2 = self.boundingRect().topRight()
+        p2.setY(p2.y() + self.bufferY*8)
+        return QtCore.QLineF(p1, p2)
+    
+    def paint(self, painter, option, widget):
+        """
+        Draw the node.
+        """
+        # label & line
+        self.buildNodeLabel()        
+        label_line = self.getLabelLine()
+       
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
+        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
+        painter.drawRect(self.boundingRect())
+        painter.drawLine(label_line)
+        #painter.drawText(self.boundingRect().x()+self.buffer, self.boundingRect().y()+self.buffer, self.name)
+
 
 class MyLine(QtGui.QGraphicsLineItem):
     def __init__(self, start_item, end_item, *args, **kwargs):
@@ -721,6 +847,7 @@ class MyLine(QtGui.QGraphicsLineItem):
         
         self._start_item   = start_item
         self._end_item     = end_item
+
 
 class MyPath(QtGui.QGraphicsPathItem):
     pass
