@@ -70,7 +70,7 @@ class Attribute(object):
         """
         if not self.is_locked:
             if self._has_override:
-                return self._value_override = value
+                return self._value_override
             else:
                 self._value = value
         return self.value
@@ -137,7 +137,7 @@ class StringAttribute(Attribute):
     @value.setter
     def value(self, value=None):
         if value: value = str(value)
-            self.value = value
+        self.value = value
 
 
 class IntegerAttribute(Attribute):
@@ -152,7 +152,7 @@ class IntegerAttribute(Attribute):
     @value.setter
     def value(self, value=None):
         if value: value = int(value)
-            self.value = value
+        self.value = value
 
         
 class FloatAttribute(Attribute):
@@ -167,4 +167,4 @@ class FloatAttribute(Attribute):
     @value.setter
     def value(self, value=None):
         if value: value = float(value)
-            self.value = value
+        self.value = value
