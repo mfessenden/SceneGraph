@@ -73,7 +73,11 @@ class GraphicsView (QtGui.QGraphicsView):
                 if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
                     item.deleteNode()
                     
-        if event.key() == QtCore.Qt.Key_S:           
+        elif event.key() == QtCore.Qt.Key_Tab:
+            print '# tab pressed'
+            self.tabPressed.emit(True)
+                    
+        elif event.key() == QtCore.Qt.Key_S:           
             self.rootSelected.emit(True)
 
         event.accept()

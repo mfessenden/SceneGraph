@@ -331,6 +331,7 @@ class SceneGraph(QtGui.QMainWindow):
         """
         import os
         filename = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
+        print 'result: ', filename
         if filename == "":
             return
         
