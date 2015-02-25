@@ -4,14 +4,14 @@ import uuid
 from SceneGraph import util
 
 
-__all__  = [StringAttribute, IntegerAttribute, FloatAttribute]
+__all__  = ['StringAttribute', 'IntegerAttribute', 'FloatAttribute']
 
 
 class Attribute(object):
 
     def __init__(name, value=None, parent=None, index=0):
 
-        self._name            = name        
+        self._name            = name
         self._parent          = parent
 
         # value & overrides
@@ -21,10 +21,10 @@ class Attribute(object):
 
         # indexing
         self._index           = index       # internal index (for recalling in order)
-        self._type            = None        # attribute type (int, float, string, etc.)   
-        
+        self._type            = None        # attribute type (int, float, string, etc.)
+
         self._is_locked       = False       # attribute cannot be changed
-        self._is_private      = False       # attribute is private & hidden from the ui  
+        self._is_private      = False       # attribute is private & hidden from the ui
 
 
     def __repr__(self):
@@ -55,7 +55,7 @@ class Attribute(object):
     @property
     def value(self):
         """
-        Returns the current value. If the attribute has an override, 
+        Returns the current value. If the attribute has an override,
         return that instead.
         """
         if self._has_override:
@@ -65,7 +65,7 @@ class Attribute(object):
     @value.setter
     def value(self, value=None):
         """
-        Set the current value - If the attribute currently 
+        Set the current value - If the attribute currently
         has an override, set that.
         """
         if not self.is_locked:
@@ -92,7 +92,7 @@ class Attribute(object):
 
     def clearOverride(self):
         """
-        Remove the override flag - but stash any override 
+        Remove the override flag - but stash any override
         value for future use.
         """
         if not self._is_locked:
@@ -124,13 +124,13 @@ class Attribute(object):
             return True
         return False
 
-    
+
 class StringAttribute(Attribute):
     def __init__(self, name, value=None, parent=None, **kwargs):
-        super(StringAttribute, self).__init__(name, value=value, parent=parent, **kwargs)        
+        super(StringAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
         self._type = 'string'
-    
-    @property 
+
+    @property
     def value(self):
         return str(self.value)
 
@@ -142,10 +142,10 @@ class StringAttribute(Attribute):
 
 class IntegerAttribute(Attribute):
     def __init__(self, name, value=None, parent=None, **kwargs):
-        super(IntegerAttribute, self).__init__(name, value=value, parent=parent, **kwargs)        
+        super(IntegerAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
         self._type  = 'int'
 
-    @property 
+    @property
     def value(self):
         return int(self.value)
 
@@ -154,13 +154,13 @@ class IntegerAttribute(Attribute):
         if value: value = int(value)
         self.value = value
 
-        
+
 class FloatAttribute(Attribute):
     def __init__(self, name, value=None, parent=None, **kwargs):
-        super(FloatAttribute, self).__init__(name, value=value, parent=parent, **kwargs)        
+        super(FloatAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
         self._type  = 'float'
 
-    @property 
+    @property
     def value(self):
         return float(self.value)
 
