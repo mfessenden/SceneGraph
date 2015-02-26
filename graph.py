@@ -11,8 +11,8 @@ reload(core)
 
 class GraphicsView (QtGui.QGraphicsView):
 
-    menuRequested     = QtCore.Signal(bool)
-    rootSelected      = QtCore.Signal(bool)
+    tabPressed          = QtCore.Signal()
+    rootSelected        = QtCore.Signal(bool)
 
     def __init__(self, parent = None, **kwargs):
         super(GraphicsView, self).__init__(parent)
@@ -45,6 +45,14 @@ class GraphicsView (QtGui.QGraphicsView):
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         super(GraphicsView, self).mousePressEvent(event)
 
+    def event(self, event):
+        """
+        Capture the tab key press event.
+        """
+        if (event.type()==QtCore.QEvent.KeyPress) and (event.key()==QtCore.Qt.Key_Tab):
+            self.tabPressed.emit()
+        return super(GraphicsView, self).event(event)
+
     def keyPressEvent(self, event):
         """
         Fit the viewport if the 'A' key is pressed
@@ -59,10 +67,6 @@ class GraphicsView (QtGui.QGraphicsView):
             self.setSceneRect(boundsRect)
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
-
-        elif event.key() == QtCore.Qt.Key_M:
-            print '# requesting menu...'
-            self.menuRequested.emit(True)
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = nodeManager.selectedNodes()

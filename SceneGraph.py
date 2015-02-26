@@ -67,7 +67,7 @@ class SceneGraph(QtGui.QMainWindow):
 
         self.initializeUI()
         self.readSettings()
-
+        self.setupConnections()
 
     def initializeUI(self):
         """
@@ -90,8 +90,6 @@ class SceneGraph(QtGui.QMainWindow):
         self._setupOptions()
 
         self._buildMenuBar()
-        self.setupConnections()
-
         self.resetStatus()
 
     def setupFonts(self, font='SansSerif', size=9):
@@ -112,7 +110,7 @@ class SceneGraph(QtGui.QMainWindow):
         """
         self.timer.timeout.connect(self.resetStatus)
         self.graphicsView.rootSelected.connect(self.selectRootNodeAction)
-        self.graphicsView.menuRequested.connect(partial(self.createTabMenu, self.graphicsView))
+        self.graphicsView.tabPressed.connect(partial(self.createTabMenu, self.graphicsView))
 
     def _setupGraphicsView(self, filter=False):
         # scene view
@@ -415,7 +413,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.graphicsScene.setSceneRect(0, 0, self.graphicsView.width(), self.graphicsView.height())
 
     #- Menus -----
-    def createTabMenu(self, parent, arg):
+    def createTabMenu(self, parent):
         """
         Build a context menu at the current pointer pos.
         """
