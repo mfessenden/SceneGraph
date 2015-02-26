@@ -10,31 +10,31 @@ reload(core)
 
 
 class GraphicsView (QtGui.QGraphicsView):
-    
-    tabPressed        = QtCore.Signal(bool)
+
+    menuRequested     = QtCore.Signal(bool)
     rootSelected      = QtCore.Signal(bool)
-    
-    def __init__ (self, parent = None, **kwargs):
-        super(GraphicsView, self).__init__ (parent)
-        
+
+    def __init__(self, parent = None, **kwargs):
+        super(GraphicsView, self).__init__(parent)
+
         self.gui    = kwargs.get('gui')
         self.parent = parent
-        
+
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         self.renderer = QtSvg.QSvgRenderer()
         self.setRenderHint(QtGui.QPainter.Antialiasing)
-    
-    def wheelEvent (self, event):
+
+    def wheelEvent(self, event):
         """
         Scale the viewport with the middle-mouse wheel
         """
         super(GraphicsView, self).wheelEvent(event)
         factor = 1.2
-        if event.delta() < 0 :
+        if event.delta() < 0:
             factor = 1.0 / factor
         self.scale(factor, factor)
-    
+
     def mousePressEvent(self, event):
         """
         Pan the viewport if the control key is pressed
@@ -51,14 +51,18 @@ class GraphicsView (QtGui.QGraphicsView):
         """
         graphicsScene = self.scene()
         nodeManager = graphicsScene.nodeManager
-        
-        if event.key() == QtCore.Qt.Key_A:           
+
+        if event.key() == QtCore.Qt.Key_A:
             # get the bounding rect of the graphics scene
             boundsRect = graphicsScene.itemsBoundingRect()
-            # set it to the GraphicsView scene rect...        
+            # set it to the GraphicsView scene rect...
             self.setSceneRect(boundsRect)
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
+
+        elif event.key() == QtCore.Qt.Key_M:
+            print '# requesting menu...'
+            self.menuRequested.emit(True)
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = nodeManager.selectedNodes()
@@ -73,16 +77,12 @@ class GraphicsView (QtGui.QGraphicsView):
             for item in graphicsScene.selectedItems():
                 if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
                     item.deleteNode()
-                    
-        elif event.key() == QtCore.Qt.Key_Tab:
-            print '# tab pressed'
-            self.tabPressed.emit(True)
-                    
-        elif event.key() == QtCore.Qt.Key_S:           
+
+        elif event.key() == QtCore.Qt.Key_S:
             self.rootSelected.emit(True)
 
-        event.accept()
-       
+        return super(GraphicsView, self).keyPressEvent(event)
+
     def get_scroll_state(self):
         """
         Returns a tuple of scene extents percentages
@@ -94,37 +94,37 @@ class GraphicsView (QtGui.QGraphicsView):
         centerHeight = centerPoint.y() - sceneRect.top()
         sceneWidth =  sceneRect.width()
         sceneHeight = sceneRect.height()
-    
+
         sceneWidthPercent = centerWidth / sceneWidth if sceneWidth != 0 else 0
         sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
         return sceneWidthPercent, sceneHeightPercent
 
 
-class GraphicsScene(QtGui.QGraphicsScene):    
+class GraphicsScene(QtGui.QGraphicsScene):
     """
     Notes:
-    
+
     self.itemsBoundingRect() - returns the maximum boundingbox for all nodes
-    
+
     """
-     
-    def __init__ (self, parent=None):
-        super(GraphicsScene, self).__init__ (parent)
-        
-        self.line        = None    
+
+    def __init__(self, parent=None):
+        super(GraphicsScene, self).__init__(parent)
+
+        self.line        = None
         self.sceneNodes  = weakref.WeakValueDictionary()
-        self.nodeManager = None    
-    
+        self.nodeManager = None
+
     def setNodeManager(self, val):
         self.nodeManager = val
-    
+
     def createNode(self, node_type, **kwargs):
         """
         Create a node in the current scene with the given attributes
-        
+
         params:
             node_type   - (str) node type to create
-            
+
         returns:
             (object)    - scene node
         """
@@ -143,14 +143,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def dropEvent(self, event):
         newPos = event.scenePos()
-    
+
     def mouseDoubleClickEvent(self, event):
         super(GraphicsScene, self).mouseDoubleClickEvent(event)
-    
+
     """
     # CONNECTING NODES:
-         
-         - we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent methods  
+
+         - we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent methods
     """
     def mousePressEvent(self, event):
         """
@@ -187,16 +187,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 self.addItem(connectionLine)
                 # Now use that previous line created and update its position, giving it the proper length and etc...
                 connectionLine.updatePosition()
-                
+
                 ###  NEED TO IMPLEMENT THIS< OR DELETE ###
-                
                 # Sending the data downstream. The start item is the upstream node ALWAYS. The end item is the downstream node ALWAYS.
                 #connectionLine.getEndItem().getWidgetMenu().receiveFrom(connectionLine.getStartItem(), delete=False)
                 #connectionLine.getStartItem().getWidgetMenu().sendData(connectionLine.getStartItem().getWidgetMenu().packageData())
                 # Emitting the "justConnected" signal (That is on all connection points)
                 #connectionLine.myEndItem.lineConnected.emit()
                 #connectionLine.myStartItem.lineConnected.emit()
-                
                 ### ###
         self.line = None
         super(GraphicsScene, self).mouseReleaseEvent(event)
@@ -230,20 +228,20 @@ class NodeManager(object):
     Manages nodes in the parent graph
     """
     def __init__(self, parent, gui):
-        
+
         self.viewport       = parent
         self.scene          = self.viewport.scene()
         self.root_node      = None
         self._copied_nodes  = []
         self._startdir      = gui._startdir
         self._default_name  = 'scene_graph_v001'            # default scene name
-        
+
     def getNodes(self):
         """
         Returns a weakref to all of the scene nodes
-        
+
         returns:
-            (weakref) 
+            (weakref)
         """
         return self.scene.sceneNodes
 
@@ -258,7 +256,7 @@ class NodeManager(object):
     def getRootNode(self):
         """
         Return the root node
-        
+
         returns:
             (object)  - root node
         """
@@ -274,11 +272,11 @@ class NodeManager(object):
             if node.isSelected():
                 selected_nodes.append(node)
         return selected_nodes
-    
+
     def createNode(self, node_type, **kwargs):
         """
         Creates a node in the parent graph
-        
+
         returns:
             (object)  - created node
         """
@@ -287,14 +285,14 @@ class NodeManager(object):
         if not force:
             node_name = self._nodeNamer(node_name)
         return self.scene.createNode(node_type, name=node_name, **kwargs)
-    
+
     def createRootNode(self, hide=False, **kwargs):
         """
         Creates a root node
-        
+
         params:
             hide      - (bool) hide the root node when created
-    
+
         returns:
             (object)  - created node
         """
@@ -312,7 +310,7 @@ class NodeManager(object):
 
         params:
             node    - (obj) node object
-    
+
         returns:
             (object)  - removed node
         """
@@ -322,7 +320,7 @@ class NodeManager(object):
         if node_name in self.scene.sceneNodes.keys():
             return self.scene.sceneNodes.pop(node_name)
         return
-    
+
     def renameNode(self, old_name, new_name):
         """
         Rename a node in the graph
@@ -367,7 +365,7 @@ class NodeManager(object):
             new_node.setSelected(True)
             pasted_nodes.append(new_node)
         return pasted_nodes
-    
+
     def connectNodes(self, output, input):
         """
         Connect two nodes via a "Node.attribute" string
@@ -376,10 +374,10 @@ class NodeManager(object):
         output_name, output_conn = output.split('.')
         input_node = self.getNode(input_name)
         output_node = self.getNode(output_name)
-        
+
         input_conn_node  = input_node.getInputConnection(input_conn)
         output_conn_node = output_node.getOutputConnection(output_conn)
-        
+
         if input_conn_node and output_conn_node:
             connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
             self.scene.addItem(connectionLine)
@@ -390,7 +388,7 @@ class NodeManager(object):
 
             if not output_conn_node:
                 logger.getLogger().error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
-    
+
     def reset(self):
         """
         Remove all node & connection data
@@ -407,7 +405,7 @@ class NodeManager(object):
         Returns the names of all the current nodes
         """
         return sorted(self.getNodes().keys())
-    
+
     def _nodeNamer(self, node_name):
         """
         Returns a legal node name
@@ -419,12 +417,12 @@ class NodeManager(object):
         if node_name in all_names:
             node_num = int(re.search('\d+$', node_name).group())
             node_base = node_name.split(str(node_num))[0]
-            for i in range(node_num+1, 9999):                
+            for i in range(node_num+1, 9999):
                 if '%s%d' % (node_base, i) not in all_names:
                     node_name = '%s%d' % (node_base, i)
                     break
         return node_name
-    
+
     def write(self, filename='/tmp/scene_graph_output.json'):
         """
         Write the graph to scene file
@@ -445,7 +443,7 @@ class NodeManager(object):
         output_data=data
         json.dump(output_data, fn, indent=4)
         fn.close()
-        
+
     def read(self, filename='/tmp/scene_graph_output.json'):
         """
         Read a graph from a saved scene
@@ -456,7 +454,7 @@ class NodeManager(object):
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
             node_data = tmp_data.get('nodes', {})
             conn_data = tmp_data.get('connections', {})
-            
+
             # BUILD NODES
             for node in node_data.keys():
                 logger.getLogger().info('building node: "%s"' % node)
@@ -490,11 +488,10 @@ class NodeManager(object):
                 end_str = cdata.get('end')
                 logger.getLogger().info('connecting: %s >> %s' % (start_str, end_str))
                 self.connectNodes(start_str, end_str)
-            
+
             self.viewport.setSceneRect(self.scene.itemsBoundingRect())
-                    
+
         else:
             logger.getLogger().error('filename "%s" does not exist' % filename)
-                
-    
-        
+
+
