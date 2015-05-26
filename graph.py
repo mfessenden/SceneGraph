@@ -1,4 +1,4 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 from PySide import QtCore, QtGui, QtSvg
 import weakref
 import re

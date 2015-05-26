@@ -1,8 +1,8 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 import os
 import simplejson as json
 from . import logger
-
+from . import options
 
 
 class RecentFiles(object):
@@ -15,9 +15,9 @@ class RecentFiles(object):
         
         self._ui                = kwargs.get('ui', 'SceneGraph')
         self.__parent           = parent
-        self.__package_path     = os.path.dirname(__file__)
+        self.__package_path     = options.SCENEGRAPH_PATH
         self.__package          = os.path.split(os.path.dirname(__file__))[-1]
-        self.__prefsdir         = os.path.join(os.getenv('HOME'), '.mrx', self.__package)
+        self.__prefsdir         = options.SCENEGRAPH_PREFS_PATH
         self.__prefsfile        = kwargs.get('filename', os.path.join(self.__prefsdir, 'recent_files.json'))
         self.__backupprefs      = '%s-BAK' % self.__prefsfile
         self.__qtsettings       = os.path.join(self.prefsdir, '%s.ini' % self._ui)

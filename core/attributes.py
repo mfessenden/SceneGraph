@@ -1,4 +1,4 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 import simplejson as json
 import uuid
 from SceneGraph import util

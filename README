@@ -1,6 +1,0 @@
-# Project: SceneGraph
-
-
-Notes:
-
-    - overloading mouseMoveEvent on QGraphicsScene not easily implemented

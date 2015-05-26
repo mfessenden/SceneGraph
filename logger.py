@@ -1,7 +1,6 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 # adapted from scene_builder
 import logging
-from . import options
 
 
 LOGGER_INITIALIZED = False
@@ -10,6 +9,7 @@ LOGGER_LEVEL = logging.INFO
 
 def getLogger():
     """ Returns logger object for use in this package """
+    from . import options
     global LOGGER_INITIALIZED
     logger = logging.getLogger(options.PACKAGE)
     if not LOGGER_INITIALIZED:
@@ -51,7 +51,7 @@ def disableDebugging():
 def getLogFile():
     """ Returns the user log file """
     import os
-    PREFS_DIR=os.path.join(os.environ.get('HOME'), '.mrx', options.PACKAGE)
-    if not os.path.exists(PREFS_DIR):
-        os.makedirs(PREFS_DIR)
-    return os.path.join(PREFS_DIR, '%s.log' % options.PACKAGE)
+    from . import options
+    if not os.path.exists(options.SCENEGRAPH_PREFS_PATH):
+        os.makedirs(options.SCENEGRAPH_PREFS_PATH)
+    return os.path.join(options.SCENEGRAPH_PREFS_PATH, '%s.log' % options.PACKAGE)

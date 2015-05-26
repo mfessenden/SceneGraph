@@ -1,4 +1,4 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 from . import nodes
 from . import connections
 from . import attributes

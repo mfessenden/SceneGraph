@@ -1,4 +1,4 @@
-#!/X/tools/binlinux/xpython
+#!/usr/bin/env python
 from PySide import QtGui, QtCore, QtSvg
 import simplejson as json
 import os
