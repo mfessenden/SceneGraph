@@ -11,11 +11,11 @@
 	# work with the graph
 	from SceneGraph.core import nodes
 	
-	# access the node manager
-	nodemgr = sgui.nodeManager
+	# access the node graph
+	graph = sgui.graph
 	
 	# access the root node
-	root = nodemgr.root_node
+	root = graph.root_node
 	
 	# select it
 	root.setSelected(True)
@@ -24,7 +24,7 @@
 	node.getNodeAttributes()
 	
 	# return a named node
-	node=nodemgr.getNode('Node1')
+	node = graph.getNode('node1')
 	
 	# set arbitrary attributes
 	node.setNodeAttributes(env='maya', version='2014')

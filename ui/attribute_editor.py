@@ -4,7 +4,7 @@ from functools import partial
 import re
 
 
-class NodeAttributesWidget(QtGui.QWidget):
+class AttributeEditor(QtGui.QWidget):
 
     def __init__(self, parent=None, **kwargs):
         QtGui.QWidget.__init__(self, parent)

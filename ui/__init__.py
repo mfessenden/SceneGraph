@@ -1,4 +1,9 @@
-from . import NodeAttributes
-reload(NodeAttributes)
+from . import attribute_editor
+from . import graphics
 
-NodeAttributesWidget = NodeAttributes.NodeAttributesWidget
+reload(attribute_editor)
+reload(graphics)
+
+AttributeEditor = attribute_editor.AttributeEditor
+GraphicsView	= graphics.GraphicsView
+GraphicsScene   = graphics.GraphicsScene

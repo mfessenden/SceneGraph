@@ -5,12 +5,12 @@ import os
 
 from . import logger
 from . import options
-from . import graph
+from . import core
 from . import ui
 from . import prefs
 
 reload(options)
-reload(graph)
+reload(core)
 reload(ui)
 reload(prefs)
 
@@ -36,6 +36,16 @@ class SceneGraph(QtGui.QMainWindow):
         self.qtsettings       = QtCore.QSettings(self.settings_file, QtCore.QSettings.IniFormat)
         self.qtsettings.setFallbacksEnabled(False)
 
+        # stylesheet
+        self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        self.setStyleSheet(str(ssf.readAll()))
+        ssf.close()
+
+        # icon
+        self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
+
         self.menubar = QtGui.QMenuBar(self)
         self.centralwidget = QtGui.QWidget(self)
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
@@ -46,7 +56,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.main_splitter.setOrientation(QtCore.Qt.Horizontal)
 
         # Node view
-        self.graphicsView = graph.GraphicsView(self.main_splitter, gui=self)
+        self.view = ui.GraphicsView(self.main_splitter, gui=self)
         self.right_splitter = QtGui.QSplitter(self.main_splitter)
         self.right_splitter.setOrientation(QtCore.Qt.Vertical)
 
@@ -110,32 +120,32 @@ class SceneGraph(QtGui.QMainWindow):
         Set up widget signals/slots
         """
         self.timer.timeout.connect(self.resetStatus)
-        self.graphicsView.rootSelected.connect(self.selectRootNodeAction)
-        self.graphicsView.tabPressed.connect(partial(self.createTabMenu, self.graphicsView))
+        self.view.rootSelected.connect(self.selectRootNodeAction)
+        self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
 
     def _setupGraphicsView(self, filter=False):
         # scene view
-        self.graphicsScene = graph.GraphicsScene()
-        self.graphicsView.setScene(self.graphicsScene)
+        self.scene = ui.GraphicsScene()
+        self.view.setScene(self.scene)
 
         # initialize the Node Manager
-        self.nodeManager = graph.NodeManager(self.graphicsView, gui=self)
-        self.graphicsScene.setNodeManager(self.nodeManager)
-        self.graphicsView.setSceneRect(0, 0, 1000, 1000)
-        #self.graphicsView.setSceneRect(-10000, -10000, 20000, 20000)
+        self.graph = core.Graph(self.view, gui=self)
+        self.scene.setNodeManager(self.graph)
+        self.view.setSceneRect(0, 0, 1000, 1000)
+        #self.view.setSceneRect(-10000, -10000, 20000, 20000)
 
         # graphics View
-        self.graphicsView.wheelEvent = self.graphicsView_wheelEvent
-        self.graphicsView.resizeEvent = self.graphicsView_resizeEvent
-        self.graphicsView.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
+        self.view.wheelEvent = self.graphicsView_wheelEvent
+        self.view.resizeEvent = self.graphicsView_resizeEvent
+        self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
 
-        self.graphicsView.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # event filter
         if filter:
-            self.viewEventFilter = MouseEventFilter(self.graphicsView)
-            self.graphicsView.viewport().installEventFilter(self.viewEventFilter)
-        self.graphicsScene.selectionChanged.connect(self.nodesSelectedAction)
-        self.nodeManager.createRootNode()
+            self.viewEventFilter = MouseEventFilter(self.view)
+            self.view.viewport().installEventFilter(self.viewEventFilter)
+        self.scene.selectionChanged.connect(self.nodesSelectedAction)
+        self.graph.createRootNode()
 
     def _setupNodeAttributes(self):
         self.detailGroup.setTitle('Node Attributes')
@@ -196,7 +206,7 @@ class SceneGraph(QtGui.QMainWindow):
         self.action_add_generic = QtGui.QAction(self)
         self.menuGraph.addAction(self.action_add_generic)
         self.action_add_generic.setText("Add Generic node...")
-        self.action_add_generic.triggered.connect(partial(self.graphicsScene.nodeManager.createNode, 'generic'))
+        self.action_add_generic.triggered.connect(partial(self.scene.graph.addNode, 'generic'))
 
         self.menubar.addAction(self.menuGraph.menuAction())
 
@@ -283,7 +293,7 @@ class SceneGraph(QtGui.QMainWindow):
             filename  - (str) file path
         """
         import os
-        root_node = self.nodeManager.getRootNode()
+        root_node = self.graph.getRootNode()
         if not filename:
             if self._current_file:
                 filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._current_file, "JSON files (*.json)")
@@ -299,7 +309,7 @@ class SceneGraph(QtGui.QMainWindow):
         # update the root node
         root_node.addNodeAttributes(**{'sceneName':filename})
 
-        self.graphicsScene.nodeManager.write(filename)
+        self.scene.graph.write(filename)
         self._current_file = str(filename)
         self.action_save.setEnabled(True)
         self.buildWindowTitle()
@@ -312,9 +322,9 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Save the current graph file
         """
-        self._current_file = self.nodeManager.getRootNode().getAttr('sceneName')
+        self._current_file = self.graph.getRootNode().getAttr('sceneName')
         self.updateStatus('saving current graph "%s"' % self._current_file)
-        self.nodeManager.write(self._current_file)
+        self.graph.write(self._current_file)
         self.buildWindowTitle()
 
         self.prefs.addFile(self._current_file)
@@ -330,7 +340,7 @@ class SceneGraph(QtGui.QMainWindow):
 
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
-        self.graphicsScene.nodeManager.read(filename)
+        self.scene.graph.read(filename)
         self._current_file = str(filename)
         self.action_save.setEnabled(True)
         self.buildWindowTitle()
@@ -339,7 +349,7 @@ class SceneGraph(QtGui.QMainWindow):
     def readRecentGraph(self, filename):
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
-        self.graphicsScene.nodeManager.read(filename)
+        self.scene.graph.read(filename)
         self._current_file = filename
         self.action_save.setEnabled(True)
         self.buildWindowTitle()
@@ -348,7 +358,7 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Reset the current graph
         """
-        self.graphicsScene.nodeManager.reset()
+        self.scene.graph.reset()
         self._current_file = None
         self.action_save.setEnabled(False)
         self.buildWindowTitle()
@@ -371,11 +381,11 @@ class SceneGraph(QtGui.QMainWindow):
         Action that runs whenever a node is selected in the UI
         """
         self.removeDetailWidgets()
-        nodes = self.graphicsScene.selectedItems()
+        nodes = self.scene.selectedItems()
         if len(nodes) == 1:
             node = nodes[0]
             if node._is_node:
-                nodeAttrWidget = ui.NodeAttributesWidget(self.detailGroup, manager=self.graphicsScene.nodeManager, gui=self)
+                nodeAttrWidget = ui.AttributeEditor(self.detailGroup, manager=self.scene.graph, gui=self)
                 nodeAttrWidget.setNode(node)
                 self.detailGroupLayout.addWidget(nodeAttrWidget)
 
@@ -383,17 +393,17 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Action to select the current scene's root node.
         """
-        root_node = self.nodeManager.getRootNode()
+        root_node = self.graph.getRootNode()
         if root_node:
             self.removeDetailWidgets()
-            nodeAttrWidget = ui.NodeAttributesWidget(self.detailGroup, manager=self.graphicsScene.nodeManager, gui=self)
+            nodeAttrWidget = ui.AttributeEditor(self.detailGroup, manager=self.scene.graph, gui=self)
             nodeAttrWidget.setNode(root_node)
             self.detailGroupLayout.addWidget(nodeAttrWidget)
         else:
-            logger.getLogger().warning('NodeManager does not have a root node')
+            logger.getLogger().warning('Graph does not have a root node')
 
     def showRootNodeAction(self):
-        root_node = self.nodeManager.getRootNode()
+        root_node = self.graph.getRootNode()
         if root_node:
             root_node.show()
             root_node.setSelected(True)
@@ -408,10 +418,10 @@ class SceneGraph(QtGui.QMainWindow):
 
     def graphicsView_wheelEvent(self, event):
         factor = 1.41 ** ((event.delta()*.5) / 240.0)
-        self.graphicsView.scale(factor, factor)
+        self.view.scale(factor, factor)
 
     def graphicsView_resizeEvent(self, event):
-        self.graphicsScene.setSceneRect(0, 0, self.graphicsView.width(), self.graphicsView.height())
+        self.scene.setSceneRect(0, 0, self.view.width(), self.view.height())
 
     #- Menus -----
     def createTabMenu(self, parent):
@@ -421,7 +431,7 @@ class SceneGraph(QtGui.QMainWindow):
         menu=QtGui.QMenu(parent)
         menu.clear()
         add_action = menu.addAction('Add generic node')
-        add_action.triggered.connect(partial(self.graphicsScene.nodeManager.createNode, 'generic'))
+        add_action.triggered.connect(partial(self.scene.graph.addNode, 'generic'))
         qcurs=QtGui.QCursor()
         menu.exec_(qcurs.pos())
 

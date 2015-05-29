@@ -46,7 +46,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
         self._is_root      = True
-        self._node_name    = 'Root'
+        self._node_name    = 'root'
         self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
@@ -278,7 +278,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
-        self._node_name    = kwargs.pop('name', 'Node')
+        self._node_name    = kwargs.pop('name', 'node')
         self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
@@ -479,8 +479,8 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         # disconnection logic here
         if self.getConnectedLines():
             for node in self.getConnectedLines():
-                self.scene().nodeManager.removeNode(node)
-        self.scene().nodeManager.removeNode(self)
+                self.scene().graph.removeNode(node)
+        self.scene().graph.removeNode(self)
     
     @property
     def data(self):

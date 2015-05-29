@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>SceneGraph</class>
+ <widget class="QMainWindow" name="SceneGraph">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,11 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>SceneGraph</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -24,9 +28,9 @@
        <attribute name="title">
         <string>Scene View</string>
        </attribute>
-       <layout class="QGridLayout" name="gridLayout_2">
-        <item row="0" column="0">
-         <widget class="QSplitter" name="main_splitter">
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QSplitter" name="splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -35,15 +39,43 @@
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
-           <widget class="QGroupBox" name="detailGroup">
-            <property name="title">
-             <string>Node Details</string>
+           <widget class="QDockWidget" name="attrEditorWidget">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
             </property>
+            <property name="baseSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="windowTitle">
+             <string>Attributes</string>
+            </property>
+            <widget class="QWidget" name="attrEditorContents">
+             <property name="baseSize">
+              <size>
+               <width>175</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
            </widget>
-           <widget class="QGroupBox" name="optionsBox">
-            <property name="title">
-             <string>GroupBox</string>
+           <widget class="QDockWidget" name="sceneWidget">
+            <property name="windowTitle">
+             <string>Scene</string>
             </property>
+            <widget class="QWidget" name="sceneWidgetContents">
+             <property name="baseSize">
+              <size>
+               <width>175</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
            </widget>
           </widget>
          </widget>
@@ -60,11 +92,88 @@
      <x>0</x>
      <y>0</y>
      <width>978</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuRecent_files">
+     <property name="title">
+      <string>Recent files...</string>
+     </property>
+     <addaction name="action_recent1"/>
+    </widget>
+    <addaction name="action_save_graph"/>
+    <addaction name="action_save_graph_as"/>
+    <addaction name="separator"/>
+    <addaction name="action_read_graph"/>
+    <addaction name="separator"/>
+    <addaction name="action_clear_graph"/>
+    <addaction name="menuRecent_files"/>
+   </widget>
+   <widget class="QMenu" name="menuGraph">
+    <property name="title">
+     <string>Graph</string>
+    </property>
+    <widget class="QMenu" name="menu_add_Node">
+     <property name="title">
+      <string>Add Node...</string>
+     </property>
+     <addaction name="action_generic"/>
+    </widget>
+    <addaction name="action_select_root"/>
+    <addaction name="menu_add_Node"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuGraph"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_save_graph">
+   <property name="text">
+    <string>Save graph...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+   <property name="softKeyRole">
+    <enum>QAction::NoSoftKey</enum>
+   </property>
+  </action>
+  <action name="action_save_graph_as">
+   <property name="text">
+    <string>Save graph as...</string>
+   </property>
+  </action>
+  <action name="action_read_graph">
+   <property name="text">
+    <string>Read graph...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="action_select_root">
+   <property name="text">
+    <string>Select root</string>
+   </property>
+  </action>
+  <action name="action_generic">
+   <property name="text">
+    <string>generic</string>
+   </property>
+  </action>
+  <action name="action_clear_graph">
+   <property name="text">
+    <string>Clear graph</string>
+   </property>
+  </action>
+  <action name="action_recent1">
+   <property name="text">
+    <string>graph_v001.json</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
