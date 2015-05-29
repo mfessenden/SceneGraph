@@ -9,5 +9,4 @@ class ContextMenu(object):
     Creates a custom context menu from a data file
     """
     def __init__(self, parent, data):
-        
-        
+        pass

@@ -22,7 +22,7 @@ class NodeBase(object):
         self.description   = None
         self.nodetype      = None
         self.nodecolor     = None
-        self._connections   = dict(input = {}, output={})
+        self._connections  = dict(input = {}, output={})
 
     def __repr__(self):
         return '%s' % self.node_name
@@ -640,19 +640,6 @@ class LineClass(QtGui.QGraphicsLineItem):
         centerY = (line.p1().y() + line.p2().y())/2
         return QtCore.QPointF(centerX, centerY)
 
-    def getBezierPath(self, center=None):
-        """
-        Returns a bezier path
-        """       
-        sp = self.myStartItem.sceneBoundingRect().center()
-        ep = self.myEndItem.sceneBoundingRect().center()
-        path = QtGui.QPainterPath(sp)
-        center = QtCore.QPoint((sp.x() + ep.x()/2 ), (sp.y() + ep.y()/2))
-        #center = self.getCenterPoint()
-        #print 'center:   (  %d, %d  )' % ( center.x(), center.y())
-        path.cubicTo(sp, center, ep)
-        return path
-
     def getLine(self):
         p1 = self.myStartItem.sceneBoundingRect().center()
         p2 = self.myEndItem.sceneBoundingRect().center()
@@ -677,28 +664,20 @@ class LineClass(QtGui.QGraphicsLineItem):
         return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
-        cp = QtCore.QPoint((self.sourcePoint.x() + self.destPoint.x()/2 ), (self.sourcePoint.y() + self.destPoint.y()/2)) 
-        path = QtGui.QPainterPath(self.sourcePoint)
-        path.lineTo(self.destPoint)
-        path.cubicTo(self.sourcePoint, cp, self.destPoint)
-        
-        stroker = QtGui.QPainterPathStroker()
-        stroker.setWidth(2)
-        stroked = stroker.createStroke(path)
-        # Add a square at the tip
-        stroked.addRect(self.destPoint.x()-10, self.destPoint.y()-10, 20, 20)
-        return stroked
+        path = super(LineClass, self).shape()
+        path.addPolygon(self.arrowHead)
+        return path
 
     def paint(self, painter, option, widget=None):
         arrowSize = 20.0
         line = self.getLine()
-        #painter.setBrush(self.myColor)
+        painter.setBrush(self.myColor)
         myPen = self.pen()
         myPen.setColor(self.myColor)
         painter.setPen(myPen)
 
         if self.isSelected():
-            #painter.setBrush(QtCore.Qt.yellow)
+            painter.setBrush(QtCore.Qt.yellow)
             myPen.setColor(QtCore.Qt.yellow)
             myPen.setStyle(QtCore.Qt.DashLine)
             painter.setPen(myPen)
@@ -742,14 +721,8 @@ class LineClass(QtGui.QGraphicsLineItem):
                 self.arrowHead.append(point)
 
             if line:
-                #painter.drawPolygon(self.arrowHead)        
-                bpath = self.getBezierPath(centerPoint)
-                center_element =  bpath.elementAt(bpath.elementCount()/2)
-                bpath_center = QtCore.QPointF(center_element.x, center_element.y)
-                
-                painter.drawPath(bpath)
-                painter.setBackgroundMode(QtCore.Qt.TransparentMode)
-                #painter.drawLine(line)
+                painter.drawPolygon(self.arrowHead)
+                painter.drawLine(line)
                 #painter.drawCubicBezier(line)
 
 

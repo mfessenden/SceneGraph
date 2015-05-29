@@ -134,9 +134,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         node_name   = kwargs.get('name', 'Node')
         node_pos    = kwargs.get('pos', [0,0])
+        
+        sceneNode = core.GenericNode(name=node_name)
+        
         # Now transfer the node_type (which is the base class Node) to a category or attribute node
-        if node_type is "generic":
-            sceneNode = core.GenericNode(name=node_name)
         if node_type is "root":
             sceneNode = core.RootNode()
         #sceneNode.connectSignals()
@@ -239,7 +240,16 @@ class NodeManager(object):
         self._copied_nodes  = []
         self._startdir      = gui._startdir
         self._default_name  = 'scene_graph_v001'            # default scene name
-
+    
+    def listNodes(self):
+        """
+        Returns a list of nodes in the scene
+        
+        returns:
+            (list)
+        """
+        return self.scene.sceneNodes.keys()
+    
     def getNodes(self):
         """
         Returns a weakref to all of the scene nodes
@@ -497,5 +507,13 @@ class NodeManager(object):
 
         else:
             logger.getLogger().error('filename "%s" does not exist' % filename)
+
+    #- CONNECTIONS ----
+    def connect(self, source, dest):
+        """
+        Connect two nodes
+        """
+        source_node, source_conn = source.split('.')
+        dest_node, dest_conn = dest.split('.')
 
 

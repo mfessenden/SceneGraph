@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+from PySide import QtCore, QtGui
+
+
+if __name__ == "__main__":
+    from SceneGraph import SceneGraph
+    reload(SceneGraph)
+    sgui=SceneGraph.SceneGraph()
+    sgui.show()

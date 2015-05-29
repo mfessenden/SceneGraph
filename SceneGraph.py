@@ -8,6 +8,7 @@ from . import options
 from . import graph
 from . import ui
 from . import prefs
+
 reload(options)
 reload(graph)
 reload(ui)
@@ -19,7 +20,7 @@ class SceneGraph(QtGui.QMainWindow):
     def __init__(self, parent=None, **kwargs):
         super(SceneGraph, self).__init__(parent)
 
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self._current_file    = None              # current save file name (if any)
