@@ -8,15 +8,24 @@ class DagNode(QtGui.QGraphicsItem):
     """
     
     Type = QtGui.QGraphicsItem.UserType + 1
-
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeCreatedInScene  = QtCore.Signal()
+    nodeChanged         = QtCore.Signal(bool)
 
     def __init__(self, dagNode):
         """
         """
         QtGui.QGraphicsItem.__init__(self)
-
+        
+        self._is_node = True
+        self._private = ['width', 'height']
+        
         # The corresponding DAG node
         self.dagNode = dagNode
+        self.node_name = 'node'
+
+        if 'name' in dagNode:
+            self.node_name = dagNode.get('name')
 
         # Input and output edges
         self.incomingDrawEdgeList = list()
@@ -33,7 +42,7 @@ class DagNode(QtGui.QGraphicsItem):
         self.setZValue(-1)
         
         self.width = 150
-        self.height = 20
+        self.height = 170
 
         # For handling movement undo/redos of groups of objects
         # This is a little strange to be handled by the node itself 
@@ -41,16 +50,23 @@ class DagNode(QtGui.QGraphicsItem):
         self.clickSnap = None
         self.clickPosition = None
 
-        if type(self.dagNode) == dict:
-            self.width = 15
-            self.height = 15
-
     def type(self):
         """
         Assistance for the QT windowing toolkit.
         """
         return DrawNode.Type
+    
+    def path(self):
+        """
+        Returns a path relative to the base (parenting not yet implemented)
+        """
+        return '/%s' % str(self.node_name)
 
+    def getNodeAttributes(self):
+        """
+        Returns a dictionary of node attributes
+        """
+        return self.dagNode
 
     def removeDrawEdge(self, edge):
         """
@@ -63,7 +79,6 @@ class DagNode(QtGui.QGraphicsItem):
         else:
             raise RuntimeError("Attempting to remove drawEdge that doesn't exist from node %s." % self.dagNode.name)
             
-
     def addDrawEdge(self, edge):
         """
         Add a given draw edge to this node.
@@ -74,13 +89,11 @@ class DagNode(QtGui.QGraphicsItem):
             self.outgoingDrawEdgeList.append(edge)
         edge.adjust()
 
-
     def drawEdges(self):
         """
         Return all incoming and outgoing edges in a list.
         """
         return (self.incomingDrawEdgeList + self.outgoingDrawEdgeList)
-
 
     def incomingDrawEdges(self):
         """
@@ -88,13 +101,11 @@ class DagNode(QtGui.QGraphicsItem):
         """
         return self.incomingDrawEdgeList
 
-
     def outgoingDrawEdges(self):
         """
         Return only outgoing edges in a list.
         """
         return self.outgoingDrawEdgeList
-
 
     def boundingRect(self):
         """
@@ -122,7 +133,6 @@ class DagNode(QtGui.QGraphicsItem):
         path.addRoundedRect(QtCore.QRectF(-self.width/2, -self.height/2, self.width, self.height), 5, 5)
         return path
 
-
     def paint(self, painter, option, widget):
         """
         Draw the node, whether it's in the highlight list, selected or 
@@ -130,8 +140,8 @@ class DagNode(QtGui.QGraphicsItem):
         little light denoting if it already has data present and/or if it is
         in a "stale" state.
         """
-        inputsFulfilled = self.scene().dag.nodeAllInputsDataPresent(self.dagNode)
-        
+        #inputsFulfilled = self.scene().dag.nodeAllInputsDataPresent(self.dagNode)
+        inputsFulfilled = True
         # Draw the box
         gradient = QtGui.QLinearGradient(0, -self.height/2, 0, self.height/2)
         if option.state & QtGui.QStyle.State_Selected:
@@ -143,47 +153,23 @@ class DagNode(QtGui.QGraphicsItem):
             gradient.setColorAt(0, QtGui.QColor(topGrey, topGrey, topGrey))
             gradient.setColorAt(1, QtGui.QColor(bottomGrey, bottomGrey, bottomGrey))
 
-        # Draw a fat, bright outline if it's a highlighted node
-        if self in self.scene().highlightNodes:
-            highlightColor = QtGui.QColor(0, 128, 255)
-            if self.scene().highlightIntensities:
-                intensityIndex = self.scene().highlightIntensities[self.scene().highlightNodes.index(self)]
-                highlightColor.setGreen(highlightColor.green() * intensityIndex)
-                highlightColor.setBlue(highlightColor.blue() * intensityIndex)
-            painter.setPen(QtGui.QPen(highlightColor, 3))
-        else:
-            painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
+        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
         painter.setBrush(QtGui.QBrush(gradient))
         fullRect = QtCore.QRectF(-self.width/2, -self.height/2, self.width, self.height)
         painter.drawRoundedRect(fullRect, 5, 5)
 
-        # No lights or text for dot nodes
-        if type(self.dagNode) == depends_node.DagNodeDot:
-            return
-
         # The "data present" light
-        painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0), 0.25))
-        for output in self.dagNode.outputs():
-            if self.scene().dag.nodeOutputDataPacket(self.dagNode, output).dataPresent():
-                painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 255, 0)))
-            else:
-                painter.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0)))
-                break
-
-        # The stale light overrides all
-        if self.scene().dag.nodeStaleState(self.dagNode):
-            painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 59, 174)))
-        painter.drawRect(QtCore.QRectF(-self.width/2+5, -self.height/2+5, 5, 5))
+        #painter.setBrush(QtGui.QBrush(QtGui.QColor(255, 0, 0)))
+        #painter.drawRect(QtCore.QRectF(-self.width/2+5, -self.height/2+5, 5, 5))
 
         # Text (none for dot nodes)
         textRect = QtCore.QRectF(self.boundingRect().left() + 4,  self.boundingRect().top(),
-                                 self.boundingRect().width() - 4, self.boundingRect().height())
+                                 self.boundingRect().width() - 4, self.boundingRect().top() + self.height)
         font = painter.font()
         font.setPointSize(10)
         painter.setFont(font)
         painter.setPen(QtCore.Qt.black)
-        painter.drawText(textRect, QtCore.Qt.AlignCenter, self.dagNode.name)
-
+        painter.drawText(textRect, QtCore.Qt.AlignCenter, self.node_name)
 
     def mousePressEvent(self, event):
         """
@@ -191,23 +177,14 @@ class DagNode(QtGui.QGraphicsItem):
         """
         # Note: This works without an 'if' because the only mouse button that 
         #       comes through here is the left
-        QtGui.QGraphicsItem.mousePressEvent(self, event)
-        
-        # Let the QT parent class handle the selection process before querying what's selected
-        self.clickSnap = self.scene().dag.snapshot(nodeMetaDict=self.scene().nodeMetaDict(), connectionMetaDict=self.scene().connectionMetaDict())
-        self.clickPosition = self.pos()
-        
+        QtGui.QGraphicsItem.mousePressEvent(self, event)        
+        self.clickPosition = self.pos()        
 
     def mouseReleaseEvent(self, event):
         """
         Help manage mouse movement undo/redos.
         """
-        # Don't register undos for selections without moves
-        if self.pos() != self.clickPosition:
-            currentSnap = self.scene().dag.snapshot(nodeMetaDict=self.scene().nodeMetaDict(), connectionMetaDict=self.scene().connectionMetaDict())
-            self.scene().undoStack().push(depends_undo_commands.SceneOnlyUndoCommand(self.clickSnap, currentSnap, self.scene()))
         QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
-
 
     def itemChange(self, change, value):
         """
@@ -217,3 +194,4 @@ class DagNode(QtGui.QGraphicsItem):
             for edge in self.drawEdges():
                 edge.adjust()
         return QtGui.QGraphicsItem.itemChange(self, change, value)
+    

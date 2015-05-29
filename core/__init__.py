@@ -16,10 +16,10 @@ Graph 				= graph.Graph
 
 # nodes
 NodeBase    		= nodes.NodeBase
-RootNode    		= nodes.RootNode
 GenericNode 		= nodes.GenericNode
 LineClass   		= nodes.LineClass
 MyLine      		= nodes.MyLine
+SimpleNode 			= nodes.SimpleNode
 
 # attributes
 StringAttribute     = attributes.StringAttribute

@@ -20,7 +20,8 @@ class AttributeEditor(QtGui.QWidget):
         Set the currently focused node
         """
         if node_item:
-            node_item.nodeChanged.connect(partial(self.setNode, node_item))
+            # removed for testing
+            #node_item.nodeChanged.connect(partial(self.setNode, node_item))
             
             # clear the layout
             self._clearGrid()                
@@ -43,13 +44,9 @@ class AttributeEditor(QtGui.QWidget):
             self.pathLabel.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
             
             self._current_node = node_item
-            self.nameEdit.setText(node_item.node_name)
+            self.nameEdit.setText(node_item.name)
             self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
             self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
-
-            # disable this attribute if the node is root
-            if node_item._is_root:
-                self.nameEdit.setEnabled(False)
 
             self.pathEdit.setText(node_item.path())
             self.pathEdit.setEnabled(False)
@@ -83,7 +80,7 @@ class AttributeEditor(QtGui.QWidget):
         """
         new_name = str(self.nameEdit.text())
         if self._current_node:
-            newNode = self.manager.renameNode(self._current_node.node_name, new_name)
+            newNode = self.manager.renameNode(self._current_node.name, new_name)
             self.setNode(newNode)
     
     def updateNodeAttribute(self, lineEdit, attribute):

@@ -17,7 +17,7 @@ class NodeBase(object):
         self.nodetype      = None                           # designates the node type
         self._is_node      = True
         self._is_root      = False                          # designates a root node 
-        self._node_name    = None
+        self.name          = None
         self.nodeimage     = None
         self.description   = None
         self.nodetype      = None
@@ -31,7 +31,7 @@ class NodeBase(object):
         """
         Returns a path relative to the base (parenting not yet implemented)
         """
-        return '/%s' % str(self._node_name)
+        return '/%s' % str(self.name)
        
 
 class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
@@ -45,8 +45,7 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
         
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
-        self._is_root      = True
-        self._node_name    = 'root'
+        self.name          = 'root'
         self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
@@ -78,19 +77,19 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
             self.setElementId("hover")
         else:
             self.setElementId("regular")
-        super(RootNode, self).paint(painter, option, widget)
+        QtSvg.QGraphicsSvgItem.paint(painter, option, widget)
 
     def mousePressEvent(self, event):
         """
         Runs when node is selected
         """
-        #print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
+        #print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
         event.accept()
       
     def update(self):
         self.set_name()
         self.set_tooltip()
-        super(RootNode, self).update()
+        QtSvg.QGraphicsSvgItem.update()
 
     #- ATTRIBUTES -----
     def set_name(self):
@@ -103,13 +102,13 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
             font = QtGui.QFont("SansSerif", 14)
             #font.setStyleHint(QtGui.QFont.Helvetica)
             font.setStretch(100)
-            self._name_text = QtGui.QGraphicsTextItem(self._node_name, self)
+            self._name_text = QtGui.QGraphicsTextItem(self.name, self)
             self._name_text.setFont(font)
             self._name_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
             self._name_text.setPos(self.sceneBoundingRect().left(), self.sceneBoundingRect().top())
             #self._name_text.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
         else:
-            self._name_text.setPlainText(self._node_name)
+            self._name_text.setPlainText(self.name)
     
     def set_tooltip(self):
         """
@@ -226,11 +225,11 @@ class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
     
     @property
     def node_name(self):
-        return self._node_name
+        return self.name
     
     @node_name.setter
     def node_name(self, val):
-        self._node_name = val
+        self.name = val
         self.set_name()
     
     @property
@@ -278,7 +277,7 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         
         self._attr_ui      = None                       # link to UI?
         self.nodetype      = 'generic'
-        self._node_name    = kwargs.pop('name', 'node')
+        self.name    = kwargs.pop('name', 'node')
         self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
         self.description   = 'node with no specific attributes'
         self.nodecolor     = None
@@ -312,13 +311,13 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
             self.setElementId("hover")
         else:
             self.setElementId("regular")
-        super(GenericNode, self).paint(painter, option, widget)
+        QtSvg.QGraphicsSvgItem.paint(painter, option, widget)
     
     def mousePressEvent(self, event):
         """
         Runs when node is selected
         """
-        #print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
+        #print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
         event.accept()
    
     '''
@@ -326,14 +325,14 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
         """
         Runs when node is selected
         """
-        print '# "%s" x: %s, y: %s' % (self._node_name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
+        print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
         event.accept()
     '''
     
     def update(self):
         self.set_name()
         self.set_tooltip()
-        super(GenericNode, self).update()
+        QtSvg.QGraphicsSvgItem.update()
 
     #- ATTRIBUTES -----
     def set_name(self):
@@ -346,13 +345,13 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
             font = QtGui.QFont("SansSerif", 14)
             #font.setStyleHint(QtGui.QFont.Helvetica)
             font.setStretch(100)
-            self._name_text = QtGui.QGraphicsTextItem(self._node_name, self)
+            self._name_text = QtGui.QGraphicsTextItem(self.name, self)
             self._name_text.setFont(font)
             self._name_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
             self._name_text.setPos(self.sceneBoundingRect().left(), self.sceneBoundingRect().top())
             #self._name_text.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
         else:
-            self._name_text.setPlainText(self._node_name)
+            self._name_text.setPlainText(self.name)
     
     def set_tooltip(self):
         """
@@ -460,11 +459,11 @@ class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
     
     @property
     def node_name(self):
-        return self._node_name
+        return self.name
     
     @node_name.setter
     def node_name(self, val):
-        self._node_name = val
+        self.name = val
         self.set_name()
     
     @property
@@ -510,7 +509,7 @@ class ConnectionBase(object):
     def __init__(self, *args, **kwargs):
         
         self._is_node           = False                         # this is a connection, not a scene graph node
-        self._node_name         = kwargs.pop('name', None)
+        self.name         = kwargs.pop('name', None)
         self._parent            = None
         self.nodeimage          = None
         self.isInputConnection  = False
@@ -524,7 +523,7 @@ class ConnectionBase(object):
     
     @property
     def node_name(self):
-        return str(self._node_name)
+        return str(self.name)
     
     def path(self):
         return '%s.%s' % (self._parent.path(), self.node_name)
@@ -734,7 +733,7 @@ class SimpleNode(QtGui.QGraphicsItem):
     nodeCreatedInScene  = QtCore.Signal()
     nodeChanged         = QtCore.Signal(bool)
 
-    def __init__(self, name='Node1', width=100, height=175, font='Consolas'):
+    def __init__(self, name='node1', width=100, height=175, font='Consolas'):
         QtGui.QGraphicsItem.__init__(self)
         
         self.name            = name
@@ -767,6 +766,9 @@ class SimpleNode(QtGui.QGraphicsItem):
         """
         return SimpleNode.Type
 
+    def path(self):
+        return '/%s' % self.name
+
     def boundingRect(self):
         """
         Defines the clickable hit-box.  Simply returns a rectangle instead of
@@ -783,6 +785,9 @@ class SimpleNode(QtGui.QGraphicsItem):
         self._font_bold = val
 
     def buildNodeLabel(self):
+        """
+        Build the node's label attribute.
+        """
         self.label.setX(-(self.width/2 - self.bufferX))
         self.label.setY(-(self.height/2 - self.bufferY))
         self.font = QtGui.QFont(self._font_family)
@@ -809,7 +814,10 @@ class SimpleNode(QtGui.QGraphicsItem):
        
         painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
         painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
-        painter.drawRect(self.boundingRect())
+        #fullRect = QtCore.QRectF(-self.width/2, - self.height/2, self.width, self.height)
+        #painter.drawRect(self.boundingRect())
+        fullRect = self.boundingRect()
+        painter.drawRoundedRect(fullRect, 3, 3)
         painter.drawLine(label_line)
         #painter.drawText(self.boundingRect().x()+self.buffer, self.boundingRect().y()+self.buffer, self.name)
 

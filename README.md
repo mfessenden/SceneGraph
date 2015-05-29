@@ -13,19 +13,13 @@
 	
 	# access the node graph
 	graph = sgui.graph
-	
-	# access the root node
-	root = graph.root_node
-	
-	# select it
-	root.setSelected(True)
-	
-	# get node attributes
-	node.getNodeAttributes()
-	
+
 	# return a named node
 	node = graph.getNode('node1')
-	
+
+	# get node attributes
+	node.getNodeAttributes()
+		
 	# set arbitrary attributes
 	node.setNodeAttributes(env='maya', version='2014')
 

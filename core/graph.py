@@ -13,7 +13,6 @@ class Graph(object):
 
         self.viewport       = parent
         self.scene          = self.viewport.scene()
-        self.root_node      = None
         self._copied_nodes  = []
         self._startdir      = gui._startdir
         self._default_name  = 'scene_graph_v001'            # default scene name
@@ -44,15 +43,6 @@ class Graph(object):
             return self.getNodes().get(node_name)
         return
 
-    def getRootNode(self):
-        """
-        Return the root node
-
-        returns:
-            (object)  - root node
-        """
-        return self.root_node
-
     def selectedNodes(self):
         """
         Returns nodes selected in the graph
@@ -76,24 +66,6 @@ class Graph(object):
         if not force:
             node_name = self._nodeNamer(node_name)
         return self.scene.addNode(node_type, name=node_name, **kwargs)
-
-    def createRootNode(self, hide=False, **kwargs):
-        """
-        Creates a root node
-
-        params:
-            hide      - (bool) hide the root node when created
-
-        returns:
-            (object)  - created node
-        """
-        import os
-        sceneName = os.path.normpath(os.path.join(self._startdir, '%s.json' % self._default_name))
-        self.root_node = self.scene.addNode('root', **kwargs)
-        if hide:
-            self.root_node.hide()
-        self.root_node.addNodeAttributes(sceneName=sceneName)
-        return self.root_node
 
     def removeNode(self, node):
         """
@@ -192,7 +164,6 @@ class Graph(object):
                 self.scene.removeItem(item)
             elif isinstance(item, core.nodes.LineClass):
                 self.scene.removeItem(item)
-        self.createRootNode()
 
     def _getNames(self):
         """
@@ -255,26 +226,18 @@ class Graph(object):
                 logger.getLogger().info('building node: "%s"' % node)
                 posx = node_data.get(node).pop('x')
                 posy = node_data.get(node).pop('y')
-                if node != 'Root':
-                    myNode = self.addNode('generic', name=node, pos=[posx, posy], force=True)
-                    node_attributes = dict()
-                    if node_data.get(node):
-                        for attr, val in node_data.get(node).iteritems():
-                            attr = re.sub('^__', '', attr)
-                            node_attributes.update({attr:val})
-                        myNode.addNodeAttributes(**node_attributes)
-                else:
-                    # update root node
-                    root_attributes = dict()
-                    if not self.root_node:
-                        self.createRootNode()
-                    if node_data.get(node):
-                        for attr, val in node_data.get(node).iteritems():
-                            attr = re.sub('^__', '', attr)
-                            root_attributes.update({attr:val})
-                        self.root_node.addNodeAttributes(**root_attributes)
-                    self.root_node.setX(posx)
-                    self.root_node.setY(posy)
+
+                myNode = self.addNode('generic', name=node, pos=[posx, posy], force=True)
+
+                node_attributes = dict()
+                if node_data.get(node):
+                    for attr, val in node_data.get(node).iteritems():
+                        attr = re.sub('^__', '', attr)
+                        node_attributes.update({attr:val})
+                    myNode.addNodeAttributes(**node_attributes)
+
+                myNode.setX(posx)
+                myNode.setY(posy)
 
             # BUILD CONNECTIONS
             for conn in conn_data.keys():

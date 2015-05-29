@@ -133,10 +133,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         node_pos    = kwargs.get('pos', [0,0])
         
         sceneNode = core.GenericNode(name=node_name)
-        
-        # Now transfer the node_type (which is the base class Node) to a category or attribute node
-        if node_type is "root":
-            sceneNode = core.RootNode()
         #sceneNode.connectSignals()
         sceneNode.setPos(node_pos[0], node_pos[1])
         self.sceneNodes[sceneNode.node_name] = sceneNode

@@ -120,7 +120,6 @@ class SceneGraph(QtGui.QMainWindow):
         Set up widget signals/slots
         """
         self.timer.timeout.connect(self.resetStatus)
-        self.view.rootSelected.connect(self.selectRootNodeAction)
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
 
     def _setupGraphicsView(self, filter=False):
@@ -145,7 +144,6 @@ class SceneGraph(QtGui.QMainWindow):
             self.viewEventFilter = MouseEventFilter(self.view)
             self.view.viewport().installEventFilter(self.viewEventFilter)
         self.scene.selectionChanged.connect(self.nodesSelectedAction)
-        self.graph.createRootNode()
 
     def _setupNodeAttributes(self):
         self.detailGroup.setTitle('Node Attributes')
@@ -188,19 +186,6 @@ class SceneGraph(QtGui.QMainWindow):
         # GRAPH MENU
         self.menuGraph = QtGui.QMenu(self.menubar)
         self.menuGraph.setTitle("Graph")
-
-        # Get root node
-        self.action_get_root = QtGui.QAction(self)
-        self.menuGraph.addAction(self.action_get_root)
-        self.action_get_root.setText("Select Root...")
-        self.action_get_root.triggered.connect(self.selectRootNodeAction)
-
-        # show the root node (for debugging)
-        if os.getenv('USER') in ['michaelf']:
-            self.action_show_root = QtGui.QAction(self)
-            self.menuGraph.addAction(self.action_show_root)
-            self.action_show_root.setText("show Root...")
-            self.action_show_root.triggered.connect(self.showRootNodeAction)
 
         # Add generic node
         self.action_add_generic = QtGui.QAction(self)
@@ -293,21 +278,17 @@ class SceneGraph(QtGui.QMainWindow):
             filename  - (str) file path
         """
         import os
-        root_node = self.graph.getRootNode()
         if not filename:
             if self._current_file:
                 filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self._current_file, "JSON files (*.json)")
-            else:
-                default_name = root_node.getAttr('sceneName')
-                filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", default_name, "JSON files (*.json)")
-            if filename == "":
-                return
+                if filename == "":
+                    return
 
         filename = str(os.path.normpath(filename))
         self.updateStatus('saving current graph "%s"' % filename)
 
-        # update the root node
-        root_node.addNodeAttributes(**{'sceneName':filename})
+        # update the graph attributes
+        #root_node.addNodeAttributes(**{'sceneName':filename})
 
         self.scene.graph.write(filename)
         self._current_file = str(filename)
@@ -322,7 +303,7 @@ class SceneGraph(QtGui.QMainWindow):
         """
         Save the current graph file
         """
-        self._current_file = self.graph.getRootNode().getAttr('sceneName')
+        self._current_file = '/home/%s/graphs/scene_graph_v001.json' % os.getenv('USER')
         self.updateStatus('saving current graph "%s"' % self._current_file)
         self.graph.write(self._current_file)
         self.buildWindowTitle()
@@ -388,25 +369,6 @@ class SceneGraph(QtGui.QMainWindow):
                 nodeAttrWidget = ui.AttributeEditor(self.detailGroup, manager=self.scene.graph, gui=self)
                 nodeAttrWidget.setNode(node)
                 self.detailGroupLayout.addWidget(nodeAttrWidget)
-
-    def selectRootNodeAction(self):
-        """
-        Action to select the current scene's root node.
-        """
-        root_node = self.graph.getRootNode()
-        if root_node:
-            self.removeDetailWidgets()
-            nodeAttrWidget = ui.AttributeEditor(self.detailGroup, manager=self.scene.graph, gui=self)
-            nodeAttrWidget.setNode(root_node)
-            self.detailGroupLayout.addWidget(nodeAttrWidget)
-        else:
-            logger.getLogger().warning('Graph does not have a root node')
-
-    def showRootNodeAction(self):
-        root_node = self.graph.getRootNode()
-        if root_node:
-            root_node.show()
-            root_node.setSelected(True)
 
     #- Events ----
     def closeEvent(self, event):
