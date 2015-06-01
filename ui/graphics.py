@@ -129,13 +129,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         returns:
             (object)    - scene node
         """
-        node_name   = kwargs.get('name', 'node')
+        name   = kwargs.get('name', 'node')
         node_pos    = kwargs.get('pos', [0,0])
         
-        sceneNode = core.GenericNode(name=node_name)
+        sceneNode = core.NodeBase(name=name)
         #sceneNode.connectSignals()
         sceneNode.setPos(node_pos[0], node_pos[1])
-        self.sceneNodes[sceneNode.node_name] = sceneNode
+        self.sceneNodes[sceneNode.name] = sceneNode
         self.addItem(sceneNode)
         return sceneNode
 

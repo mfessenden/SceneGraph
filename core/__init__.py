@@ -15,11 +15,9 @@ reload(attributes)
 Graph 				= graph.Graph
 
 # nodes
-NodeBase    		= nodes.NodeBase
-GenericNode 		= nodes.GenericNode
 LineClass   		= nodes.LineClass
 MyLine      		= nodes.MyLine
-SimpleNode 			= nodes.SimpleNode
+NodeBase 			= nodes.NodeBase
 
 # attributes
 StringAttribute     = attributes.StringAttribute

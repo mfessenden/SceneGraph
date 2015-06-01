@@ -27,3 +27,4 @@
 ##### Dependencies:
 
 - simplejson
+- NetoworkX 1.9.1

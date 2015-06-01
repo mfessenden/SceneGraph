@@ -22,10 +22,10 @@ class DagNode(QtGui.QGraphicsItem):
         
         # The corresponding DAG node
         self.dagNode = dagNode
-        self.node_name = 'node'
+        self.name    = 'node'
 
         if 'name' in dagNode:
-            self.node_name = dagNode.get('name')
+            self.name = dagNode.get('name')
 
         # Input and output edges
         self.incomingDrawEdgeList = list()
@@ -60,7 +60,7 @@ class DagNode(QtGui.QGraphicsItem):
         """
         Returns a path relative to the base (parenting not yet implemented)
         """
-        return '/%s' % str(self.node_name)
+        return '/%s' % str(self.name)
 
     def getNodeAttributes(self):
         """
@@ -169,7 +169,7 @@ class DagNode(QtGui.QGraphicsItem):
         font.setPointSize(10)
         painter.setFont(font)
         painter.setPen(QtCore.Qt.black)
-        painter.drawText(textRect, QtCore.Qt.AlignCenter, self.node_name)
+        painter.drawText(textRect, QtCore.Qt.AlignCenter, self.name)
 
     def mousePressEvent(self, event):
         """

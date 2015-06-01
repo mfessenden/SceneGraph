@@ -1,22 +1,52 @@
 #!/usr/bin/env python
+import os
 import re
 import simplejson as json
+import networkx as nx
 
 from .. import logger
 
 
 class Graph(object):
     """
-    Manages nodes in the parent graph
+    Wrapper for Netowrkx graph
     """
     def __init__(self, parent, gui):
 
         self.viewport       = parent
         self.scene          = self.viewport.scene()
+        
+        self.network        = nx.Graph()
+
         self._copied_nodes  = []
         self._startdir      = gui._startdir
         self._default_name  = 'scene_graph_v001'            # default scene name
-    
+
+        # add the current scene attribute
+        self.network.graph['scene'] = os.path.join(os.getenv('HOME'), 'graphs', '%s.json' % self._default_name)
+
+    def getScene(self):
+        """
+        Return the current graphs' scene attribute
+        
+        returns:
+            (str)
+        """
+        return self.network.graph.get('scene', os.path.join(os.getenv('HOME'), 'graphs', '%s.json' % self._default_name))
+
+    def setScene(self, scene):
+        """
+        Set the current scene value.
+
+        params:
+            scene (str)
+
+        returns:
+            scene (str)
+        """
+        self.network.graph['scene'] = scene
+        return self.getScene()
+
     def listNodes(self):
         """
         Returns a list of nodes in the scene
@@ -35,17 +65,20 @@ class Graph(object):
         """
         return self.scene.sceneNodes
 
-    def getNode(self, node_name):
+    def getNode(self, name):
         """
         Get a node by name
         """
-        if node_name in self.getNodes():
-            return self.getNodes().get(node_name)
+        if name in self.getNodes():
+            return self.getNodes().get(name)
         return
 
     def selectedNodes(self):
         """
         Returns nodes selected in the graph
+
+        returns:
+            (list)
         """
         selected_nodes = []
         for nn in self.getNodes():
@@ -54,18 +87,15 @@ class Graph(object):
                 selected_nodes.append(node)
         return selected_nodes
 
-    def addNode(self, node_type, **kwargs):
+    def addNode(self, name, node_type, **kwargs):
         """
         Creates a node in the parent graph
 
         returns:
             (object)  - created node
         """
-        force = kwargs.get('force', False)
-        node_name = kwargs.pop('name', 'node')
-        if not force:
-            node_name = self._nodeNamer(node_name)
-        return self.scene.addNode(node_type, name=node_name, **kwargs)
+        name = self._nodeNamer(name)
+        return self.scene.addNode(node_type, name=name, **kwargs)
 
     def removeNode(self, node):
         """
@@ -77,11 +107,11 @@ class Graph(object):
         returns:
             (object)  - removed node
         """
-        node_name = node.node_name
-        logger.getLogger().info('Removing node: "%s"' % node_name)
+        name = node.name
+        logger.getLogger().info('Removing node: "%s"' % name)
         self.scene.removeItem(node)
-        if node_name in self.scene.sceneNodes.keys():
-            return self.scene.sceneNodes.pop(node_name)
+        if name in self.scene.sceneNodes.keys():
+            return self.scene.sceneNodes.pop(name)
         return
 
     def renameNode(self, old_name, new_name):
@@ -100,8 +130,8 @@ class Graph(object):
             return
 
         node=self.scene.sceneNodes.pop(old_name)
-        node.node_name = new_name
-        self.scene.sceneNodes[node.node_name]=node
+        node.name = new_name
+        self.scene.sceneNodes[node.name]=node
         node.update()
         return node
 
@@ -120,7 +150,7 @@ class Graph(object):
         pasted_nodes = []
         for node in self._copied_nodes:
             node.setSelected(False)
-            new_name = self._nodeNamer(node.node_name)
+            new_name = self._nodeNamer(node.name)
             posx = node.pos().x() + node.width
             posy = node.pos().y() + node.height
             new_node = self.addNode('generic', name=new_name, pos=[posx, posy])
@@ -158,6 +188,8 @@ class Graph(object):
         """
         Remove all node & connection data
         """
+        # clear the Graph
+        self.network.graph.clear()
         from SceneGraph import core
         for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):
@@ -171,22 +203,22 @@ class Graph(object):
         """
         return sorted(self.getNodes().keys())
 
-    def _nodeNamer(self, node_name):
+    def _nodeNamer(self, name):
         """
         Returns a legal node name
         """
-        node_name = re.sub(r'[^a-zA-Z0-9\[\]]','_', node_name)
-        if not re.search('\d+$', node_name):
-            node_name = '%s1' % node_name
+        name = re.sub(r'[^a-zA-Z0-9\[\]]','_', name)
+        if not re.search('\d+$', name):
+            name = '%s1' % name
         all_names = self._getNames()
-        if node_name in all_names:
-            node_num = int(re.search('\d+$', node_name).group())
-            node_base = node_name.split(str(node_num))[0]
+        if name in all_names:
+            node_num = int(re.search('\d+$', name).group())
+            node_base = name.split(str(node_num))[0]
             for i in range(node_num+1, 9999):
                 if '%s%d' % (node_base, i) not in all_names:
-                    node_name = '%s%d' % (node_base, i)
+                    name = '%s%d' % (node_base, i)
                     break
-        return node_name
+        return name
 
     def write(self, filename='/tmp/scene_graph_output.json'):
         """
@@ -199,7 +231,7 @@ class Graph(object):
         conn_idx = 0
         for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):
-                data.get('nodes').update(**{item.node_name:item.data})
+                data.get('nodes').update(**{item.name:item.data})
             elif isinstance(item, core.nodes.LineClass):
                 startItem = str(item.myStartItem)
                 endItem = str(item.myEndItem)

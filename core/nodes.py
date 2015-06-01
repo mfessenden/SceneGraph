@@ -1,515 +1,131 @@
 #!/usr/bin/env python
-from PySide import QtGui, QtCore, QtSvg
-import simplejson as json
 import os
 import math
+import uuid
+from PySide import QtGui, QtCore, QtSvg
+import simplejson as json
 
 from .. import options
 reload(options)
 
 
-class NodeBase(object):
-    """
-    Base node type
-    """
-    def __init__(self, *args, **kwargs):
-        
-        self.nodetype      = None                           # designates the node type
-        self._is_node      = True
-        self._is_root      = False                          # designates a root node 
-        self.name          = None
-        self.nodeimage     = None
-        self.description   = None
-        self.nodetype      = None
-        self.nodecolor     = None
-        self._connections  = dict(input = {}, output={})
-
-    def __repr__(self):
-        return '%s' % self.node_name
-
-    def path(self):
-        """
-        Returns a path relative to the base (parenting not yet implemented)
-        """
-        return '/%s' % str(self.name)
-       
-
-class RootNode(NodeBase, QtSvg.QGraphicsSvgItem):
-
+class NodeBase(QtGui.QGraphicsItem):
+    
+    Type                = QtGui.QGraphicsItem.UserType + 3
     clickedSignal       = QtCore.Signal(QtCore.QObject)
     nodeCreatedInScene  = QtCore.Signal()
     nodeChanged         = QtCore.Signal(bool)
-    
-    def __init__(self, *args, **kwargs):
-        NodeBase.__init__(self)
+
+    def __init__(self, name='node1', node_type=None, width=100, height=175, font='Consolas', UUID=None):
+        QtGui.QGraphicsItem.__init__(self)
         
-        self._attr_ui      = None                       # link to UI?
-        self.nodetype      = 'generic'
-        self.name          = 'root'
-        self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_root_100x180.svg')
-        self.description   = 'node with no specific attributes'
-        self.nodecolor     = None
-        self.inputs        = []
-        self.outputs       = ['graph']
+        self.name            = name
+        self.node_type       = node_type
+        self.uuid            = UUID if UUID else uuid.uuid4()
         
-        self._attributes   = dict()                 # arbitrary attributes
-        self._private      = ['width', 'height']
+        self.width           = width
+        self.height          = height
         
-        # text attributes
-        self._name_text    = None                   # QGraphicsTextItem 
+        # buffers
+        self.bufferX         = 3
+        self.bufferY         = 3
+        self.color           = [180, 180, 180]
         
-        args=list(args)
-        args.insert(0, self.nodeimage)
-        QtSvg.QGraphicsSvgItem.__init__(self, *args, **kwargs)
+        self.label           = QtGui.QGraphicsSimpleTextItem(parent=self)
+        self._font_family    = font
+        self._font_size      = 10
+        self._font_bold      = False
+        self._font_italic    = False
+        self.font            = QtGui.QFont(self._font_family)
+        self._is_node        = True
+        
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setCachingEnabled(True)
         self.setAcceptHoverEvents(True)
-        
-        self.rectF = QtCore.QRectF(0,0,250,180)        
-        
-        # setup UI
-        self.addInputAttributes(*self.inputs)
-        self.addOutputAttributes(*self.outputs)
-        self.set_name()
 
-    def paint(self, painter, option, widget):
-        if self.isSelected():
-            self.setElementId("hover")
-        else:
-            self.setElementId("regular")
-        QtSvg.QGraphicsSvgItem.paint(painter, option, widget)
+        self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+        self.setCacheMode(self.DeviceCoordinateCache)
+        self.setZValue(-1)        
 
-    def mousePressEvent(self, event):
-        """
-        Runs when node is selected
-        """
-        #print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
-        event.accept()
-      
-    def update(self):
-        self.set_name()
-        self.set_tooltip()
-        QtSvg.QGraphicsSvgItem.update()
+    def __str__(self):
+        return "name:%s  type:%s  uuid:%s" % (self.name, type(self).__name__, str(self.uuid))
 
-    #- ATTRIBUTES -----
-    def set_name(self):
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def __hash__(self):
+        return hash(self.uuid)
+
+    def type(self):
         """
-        Set the node title
-        
-        todo: should be in NodeBase
+        Assistance for the QT windowing toolkit.
         """
-        if not self._name_text:
-            font = QtGui.QFont("SansSerif", 14)
-            #font.setStyleHint(QtGui.QFont.Helvetica)
-            font.setStretch(100)
-            self._name_text = QtGui.QGraphicsTextItem(self.name, self)
-            self._name_text.setFont(font)
-            self._name_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-            self._name_text.setPos(self.sceneBoundingRect().left(), self.sceneBoundingRect().top())
-            #self._name_text.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-        else:
-            self._name_text.setPlainText(self.name)
+        return NodeBase.Type
+
+    def path(self):
+        return '/%s' % self.name
+
+    def boundingRect(self):
+        """
+        Defines the clickable hit-box.  Simply returns a rectangle instead of
+        a rounded rectangle for speed purposes.
+        """
+        return QtCore.QRectF(-self.width/2  - self.bufferX,  -self.height/2 - self.bufferY,
+                              self.width  + 3 + self.bufferX, self.height + 3 + self.bufferY)
     
-    def set_tooltip(self):
+    # Label formatting -----
+    def setLabelItalic(self, val=False):
+        self._font_italic = val
+
+    def setLabelBold(self, val=False):
+        self._font_bold = val
+
+    def buildNodeLabel(self):
         """
-        Set the tooltip text in the graph
+        Build the node's label attribute.
         """
-        self.setToolTip(self.path())
+        self.label.setX(-(self.width/2 - self.bufferX))
+        self.label.setY(-(self.height/2 - self.bufferY))
+        self.font = QtGui.QFont(self._font_family)
+        self.font.setPointSize(self._font_size)
+        self.font.setBold(self._font_bold)
+        self.font.setItalic(self._font_italic)
+        self.label.setFont(self.font)
+        self.label.setText(self.name)
     
-    @QtCore.Slot()
-    def addNodeAttributes(self, **kwargs):
-        """
-        Add random attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        self._attributes.update(**kwargs)
-        self.nodeChanged.emit(True)
-    
-    @QtCore.Slot()
-    def addAttr(self, val):
-        self._attributes[val]=''
-        self.nodeChanged.emit(True)
-
-    def getAttr(self, attribute):
-        """
-        Query a specific node's attribute
-        """
-        return self.getNodeAttributes().get(attribute, None)
-
-    def getNodeAttributes(self):
-        """
-        Returns a dictionary of node attributes
-        """
-        return self._attributes
-
-    def setNodeAttributes(self, **kwargs):
-        """
-        Set arbitrary attributes
-        """
-        self._attributes.update(**kwargs)    
-
-    def addInputAttributes(self, *attrs):
-        """
-        Add input attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        start_y = self.sceneBoundingRect().top() + 36
-        font = QtGui.QFont("SansSerif", 10)
-        font.setStretch(100)
-        for attr in attrs:
-            if attr not in self.getInputAttributes():   
-                #print '# adding attr "%s" at y: %d' % (attr, start_y)
-                attr_text = QtGui.QGraphicsTextItem(attr, self)
-                attr_text.setFont(font)
-                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-                attr_text.setPos(self.sceneBoundingRect().left()+5, start_y)
-                connection = NodeInput(self, name=attr)
-                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
-                connection.setPos(self.sceneBoundingRect().left()-7, start_y+5)
-                self._connections.get('input').update(**{attr:connection})
-                start_y+=30       
-
-    def addOutputAttributes(self, *attrs):
-        """
-        Add input attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        start_y = self.sceneBoundingRect().top() + 36
-        font = QtGui.QFont("SansSerif", 10)
-        font.setStretch(100)
-        for attr in attrs:
-            if attr not in self.getInputAttributes():   
-                #print '# adding attr "%s" at y: %d' % (attr, start_y)
-                attr_text = QtGui.QGraphicsTextItem(attr, self)
-                
-                attr_text.setFont(font)
-                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-                attr_text.setPos(self.sceneBoundingRect().center().x()+15, start_y)
-                connection = NodeOutput(self, name=attr)
-                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
-                connection.setPos(self.sceneBoundingRect().right()-7, start_y+5)
-                self._connections.get('output').update(**{attr:connection})
-                start_y+=30       
-
-    def getInputAttributes(self):
-        return self._connections.get('input', {}).keys()     
-
-    def getOutputAttributes(self):
-        return self._connections.get('output', {}).keys()
-    
-    def getInputConnection(self, conn_name):
-        """
-        Returns the input connection NODE for the given name
-        """
-        return self._connections.get('input').get(conn_name, None)
-
-    def getOutputConnection(self, conn_name):
-        """
-        Returns the output connection NODE for the given name
-        """
-        return self._connections.get('output').get(conn_name, None)
-    
-    def getConnectedLines(self):
-        result = []
-        for typ, values in self._connections.iteritems():
-            if values:
-                for node_name, node in values.iteritems():                
-                    if node.connectedLine:
-                        for line in node.connectedLine:
-                            if line not in result:
-                                result.append(line)
-        return result
-    
-    @property
-    def node_name(self):
-        return self.name
-    
-    @node_name.setter
-    def node_name(self, val):
-        self.name = val
-        self.set_name()
-    
-    @property
-    def width(self):
-        return self.sceneBoundingRect().width()
-
-    @property
-    def height(self):
-        return self.sceneBoundingRect().height()
-
-    def deleteNode(self):
-        # added only for compatibility, cannot delete this node
-        pass
-    
-    @property
-    def data(self):
-        data = dict()
-        data.update(x=self.sceneBoundingRect().x())
-        data.update(y=self.sceneBoundingRect().y())
-        data.update(width=self.width)
-        data.update(height=self.height)
-        data.update(**self.dumpArbitraryAttributes())
-        return data
-    
-    def dumpArbitraryAttributes(self):
-        result = dict()
-        for attr in sorted(self._attributes.keys()):
-            value = self._attributes.get(attr)
-            result['__%s' % attr] = value
-        return result
-    
-    def dump(self):
-        output_data = {self.node_name:self.data}
-        print json.dumps(output_data, indent=5)
-
-
-class GenericNode(NodeBase, QtSvg.QGraphicsSvgItem):
-
-    clickedSignal = QtCore.Signal(QtCore.QObject)
-    nodeCreatedInScene = QtCore.Signal()
-    nodeChanged = QtCore.Signal(bool)
-    
-    def __init__(self, *args, **kwargs):
-        NodeBase.__init__(self)
-        
-        self._attr_ui      = None                       # link to UI?
-        self.nodetype      = 'generic'
-        self.name    = kwargs.pop('name', 'node')
-        self.nodeimage     = os.path.join(options.SCENEGRAPH_ICON_PATH, 'node_base_250x180.svg')
-        self.description   = 'node with no specific attributes'
-        self.nodecolor     = None
-        
-        # inputs/outputs
-        self.inputs        = ['input1', 'input2', 'input3']
-        self.outputs       = ['output1', 'output2', 'output3'] 
-        
-        self._attributes   = dict()                 # arbitrary attributes
-        self._private      = ['width', 'height']
-        
-        # text attributes
-        self._name_text    = None                   # QGraphicsTextItem 
-        
-        args=list(args)
-        args.insert(0, self.nodeimage)
-        QtSvg.QGraphicsSvgItem.__init__(self, *args, **kwargs)
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setCachingEnabled(True)
-        self.setAcceptHoverEvents(True)
-        
-        self.rectF = QtCore.QRectF(0,0,100,180)        
-        
-        # setup UI        
-        self.addInputAttributes(*self.inputs)
-        self.addOutputAttributes(*self.outputs)
-        self.update()     
+    def getLabelLine(self):
+        p1 = self.boundingRect().topLeft()
+        p1.setY(p1.y() + self.bufferY*8)
+        p2 = self.boundingRect().topRight()
+        p2.setY(p2.y() + self.bufferY*8)
+        return QtCore.QLineF(p1, p2)
     
     def paint(self, painter, option, widget):
-        if self.isSelected():
-            self.setElementId("hover")
-        else:
-            self.setElementId("regular")
-        QtSvg.QGraphicsSvgItem.paint(painter, option, widget)
-    
-    def mousePressEvent(self, event):
         """
-        Runs when node is selected
+        Draw the node.
         """
-        #print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
-        event.accept()
-   
-    '''
-    def mouseMoveEvent(self, event):
-        """
-        Runs when node is selected
-        """
-        print '# "%s" x: %s, y: %s' % (self.name, str(self.sceneBoundingRect().left()), str(self.sceneBoundingRect().top()))
-        event.accept()
-    '''
-    
-    def update(self):
-        self.set_name()
-        self.set_tooltip()
-        QtSvg.QGraphicsSvgItem.update()
-
-    #- ATTRIBUTES -----
-    def set_name(self):
-        """
-        Set the node title
+        # label & line
+        self.buildNodeLabel()        
+        label_line = self.getLabelLine()
+       
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
+        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
+        #fullRect = QtCore.QRectF(-self.width/2, - self.height/2, self.width, self.height)
+        #painter.drawRect(self.boundingRect())
+        fullRect = self.boundingRect()
+        painter.drawRoundedRect(fullRect, 3, 3)
+        painter.drawLine(label_line)
+        #painter.drawText(self.boundingRect().x()+self.buffer, self.boundingRect().y()+self.buffer, self.name)
         
-        todo: should be in NodeBase
-        """
-        if not self._name_text:
-            font = QtGui.QFont("SansSerif", 14)
-            #font.setStyleHint(QtGui.QFont.Helvetica)
-            font.setStretch(100)
-            self._name_text = QtGui.QGraphicsTextItem(self.name, self)
-            self._name_text.setFont(font)
-            self._name_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-            self._name_text.setPos(self.sceneBoundingRect().left(), self.sceneBoundingRect().top())
-            #self._name_text.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-        else:
-            self._name_text.setPlainText(self.name)
-    
-    def set_tooltip(self):
-        """
-        Set the tooltip text in the graph
-        """
-        self.setToolTip(self.path())
-    
-    @QtCore.Slot()
-    def addNodeAttributes(self, **kwargs):
-        """
-        Add random attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        self._attributes.update(**kwargs)
-        self.nodeChanged.emit(True)
-    
-    @QtCore.Slot()
-    def addAttr(self, val):
-        self._attributes[val]=''
-        self.nodeChanged.emit(True)
-    
-    def getNodeAttributes(self):
-        return self._attributes
-    
-    def getAttr(self, attribute):
-        """
-        Query a specific node's attribute
-        """
-        return self.getNodeAttributes().get(attribute, None)
-    
-    def addInputAttributes(self, *attrs):
-        """
-        Add input attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        start_y = self.sceneBoundingRect().top() + 36
-        font = QtGui.QFont("SansSerif", 10)
-        font.setStretch(100)
-        for attr in attrs:
-            if attr not in self.getInputAttributes():   
-                #print '# adding attr "%s" at y: %d' % (attr, start_y)
-                attr_text = QtGui.QGraphicsTextItem(attr, self)
-                attr_text.setFont(font)
-                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-                attr_text.setPos(self.sceneBoundingRect().left()+5, start_y)
-                connection = NodeInput(self, name=attr)
-                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
-                connection.setPos(self.sceneBoundingRect().left()-7, start_y+5)
-                self._connections.get('input').update(**{attr:connection})
-                start_y+=30       
-
-    def addOutputAttributes(self, *attrs):
-        """
-        Add input attributes to the node
-        
-        todo: should be in NodeBase
-        """
-        start_y = self.sceneBoundingRect().top() + 36
-        font = QtGui.QFont("SansSerif", 10)
-        font.setStretch(100)
-        for attr in attrs:
-            if attr not in self.getInputAttributes():   
-                #print '# adding attr "%s" at y: %d' % (attr, start_y)
-                attr_text = QtGui.QGraphicsTextItem(attr, self)
-                
-                attr_text.setFont(font)
-                attr_text.setDefaultTextColor(QtGui.QColor(QtCore.Qt.black))
-                attr_text.setPos(self.sceneBoundingRect().center().x()+15, start_y)
-                connection = NodeOutput(self, name=attr)
-                #input_node.setPos(-input_node.width()/2, input_node.height()/2 + 9)
-                connection.setPos(self.sceneBoundingRect().right()-7, start_y+5)
-                self._connections.get('output').update(**{attr:connection})
-                start_y+=30       
-
-    def getInputAttributes(self):
-        return self._connections.get('input', {}).keys()     
-
-    def getOutputAttributes(self):
-        return self._connections.get('output', {}).keys()
-    
-    def getInputConnection(self, conn_name):
-        """
-        Returns the input connection NODE for the given name
-        """
-        return self._connections.get('input').get(conn_name, None)
-
-    def getOutputConnection(self, conn_name):
-        """
-        Returns the output connection NODE for the given name
-        """
-        return self._connections.get('output').get(conn_name, None)
-    
-    def getConnectedLines(self):
-        result = []
-        for typ, values in self._connections.iteritems():
-            if values:
-                for node_name, node in values.iteritems():                
-                    if node.connectedLine:
-                        for line in node.connectedLine:
-                            if line not in result:
-                                result.append(line)
-        return result
-    
-    @property
-    def node_name(self):
-        return self.name
-    
-    @node_name.setter
-    def node_name(self, val):
-        self.name = val
-        self.set_name()
-    
-    @property
-    def width(self):
-        return self.sceneBoundingRect().width()
-
-    @property
-    def height(self):
-        return self.sceneBoundingRect().height()
-
-    def deleteNode(self):
-        # disconnection logic here
-        if self.getConnectedLines():
-            for node in self.getConnectedLines():
-                self.scene().graph.removeNode(node)
-        self.scene().graph.removeNode(self)
-    
-    @property
-    def data(self):
-        data = dict()
-        data.update(x=self.sceneBoundingRect().x())
-        data.update(y=self.sceneBoundingRect().y())
-        data.update(width=self.width)
-        data.update(height=self.height)
-        data.update(**self.dumpArbitraryAttributes())
-        return data
-    
-    def dumpArbitraryAttributes(self):
-        result = dict()
-        for attr in sorted(self._attributes.keys()):
-            value = self._attributes.get(attr)
-            result['__%s' % attr] = value
-        return result
-    
-    def dump(self):
-        output_data = {self.node_name:self.data}
-        print json.dumps(output_data, indent=5)
 
 #- CONNECTIONS -----
 
 
 class ConnectionBase(object):
     def __init__(self, *args, **kwargs):
-        
+
+        self.name               = kwargs.pop('name', None)
         self._is_node           = False                         # this is a connection, not a scene graph node
-        self.name         = kwargs.pop('name', None)
+        
         self._parent            = None
         self.nodeimage          = None
         self.isInputConnection  = False
@@ -519,14 +135,10 @@ class ConnectionBase(object):
         # json output functions
     
     def __repr__(self):
-        return '%s.%s' % (self._parent.node_name, self.node_name)
-    
-    @property
-    def node_name(self):
-        return str(self.name)
-    
+        return '%s.%s' % (self._parent.name, self.name)
+        
     def path(self):
-        return '%s.%s' % (self._parent.path(), self.node_name)
+        return '%s.%s' % (self._parent.path(), self.name)
     
 
 #ConnectAttributeNode
@@ -599,7 +211,7 @@ class LineClass(QtGui.QGraphicsLineItem):
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
         self.setPen(QtGui.QPen(self.myColor, 2, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
         
-        self.node_name = "%s.%s" % (self.myStartItem, self.myEndItem)
+        self.name = "%s.%s" % (self.myStartItem, self.myEndItem)
         '''
         This if statement is making all of the connections consistent. The startItem will always be the
         beginning of the line. The arrow will always point to the end item, no matter which way the user
@@ -725,101 +337,8 @@ class LineClass(QtGui.QGraphicsLineItem):
                 #painter.drawCubicBezier(line)
 
 
+
 #- Testing -----
-class SimpleNode(QtGui.QGraphicsItem):
-    
-    Type                = QtGui.QGraphicsItem.UserType + 3
-    clickedSignal       = QtCore.Signal(QtCore.QObject)
-    nodeCreatedInScene  = QtCore.Signal()
-    nodeChanged         = QtCore.Signal(bool)
-
-    def __init__(self, name='node1', width=100, height=175, font='Consolas'):
-        QtGui.QGraphicsItem.__init__(self)
-        
-        self.name            = name
-        self.width           = width
-        self.height          = height
-        
-        # buffers
-        self.bufferX         = 3
-        self.bufferY         = 3
-        self.color           = [180, 180, 180]
-        
-        self.label           = QtGui.QGraphicsSimpleTextItem(parent=self)
-        self._font_family    = font
-        self._font_size      = 10
-        self._font_bold      = False
-        self._font_italic    = False
-        self.font            = QtGui.QFont(self._font_family)
-        self._is_node        = True
-        
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setAcceptHoverEvents(True)
-
-        self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
-        self.setCacheMode(self.DeviceCoordinateCache)
-        self.setZValue(-1)        
-
-    def type(self):
-        """
-        Assistance for the QT windowing toolkit.
-        """
-        return SimpleNode.Type
-
-    def path(self):
-        return '/%s' % self.name
-
-    def boundingRect(self):
-        """
-        Defines the clickable hit-box.  Simply returns a rectangle instead of
-        a rounded rectangle for speed purposes.
-        """
-        return QtCore.QRectF(-self.width/2  - self.bufferX,  -self.height/2 - self.bufferY,
-                              self.width  + 3 + self.bufferX, self.height + 3 + self.bufferY)
-    
-    # Label formatting -----
-    def setLabelItalic(self, val=False):
-        self._font_italic = val
-
-    def setLabelBold(self, val=False):
-        self._font_bold = val
-
-    def buildNodeLabel(self):
-        """
-        Build the node's label attribute.
-        """
-        self.label.setX(-(self.width/2 - self.bufferX))
-        self.label.setY(-(self.height/2 - self.bufferY))
-        self.font = QtGui.QFont(self._font_family)
-        self.font.setPointSize(self._font_size)
-        self.font.setBold(self._font_bold)
-        self.font.setItalic(self._font_italic)
-        self.label.setFont(self.font)
-        self.label.setText(self.name)
-    
-    def getLabelLine(self):
-        p1 = self.boundingRect().topLeft()
-        p1.setY(p1.y() + self.bufferY*8)
-        p2 = self.boundingRect().topRight()
-        p2.setY(p2.y() + self.bufferY*8)
-        return QtCore.QLineF(p1, p2)
-    
-    def paint(self, painter, option, widget):
-        """
-        Draw the node.
-        """
-        # label & line
-        self.buildNodeLabel()        
-        label_line = self.getLabelLine()
-       
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
-        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
-        #fullRect = QtCore.QRectF(-self.width/2, - self.height/2, self.width, self.height)
-        #painter.drawRect(self.boundingRect())
-        fullRect = self.boundingRect()
-        painter.drawRoundedRect(fullRect, 3, 3)
-        painter.drawLine(label_line)
-        #painter.drawText(self.boundingRect().x()+self.buffer, self.boundingRect().y()+self.buffer, self.name)
 
 
 class MyLine(QtGui.QGraphicsLineItem):

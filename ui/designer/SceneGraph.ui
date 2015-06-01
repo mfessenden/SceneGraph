@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>978</width>
-    <height>854</height>
+    <width>983</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,11 +30,13 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QSplitter" name="splitter">
+         <widget class="QSplitter" name="main_splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QGraphicsView" name="graphicsView"/>
+          <widget class="QWidget" name="gview" native="true">
+           <layout class="QVBoxLayout" name="gviewLayout"/>
+          </widget>
           <widget class="QSplitter" name="right_splitter">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
@@ -52,6 +54,15 @@
               <height>0</height>
              </size>
             </property>
+            <property name="floating">
+             <bool>false</bool>
+            </property>
+            <property name="features">
+             <set>QDockWidget::AllDockWidgetFeatures</set>
+            </property>
+            <property name="allowedAreas">
+             <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+            </property>
             <property name="windowTitle">
              <string>Attributes</string>
             </property>
@@ -65,6 +76,12 @@
             </widget>
            </widget>
            <widget class="QDockWidget" name="sceneWidget">
+            <property name="floating">
+             <bool>false</bool>
+            </property>
+            <property name="allowedAreas">
+             <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+            </property>
             <property name="windowTitle">
              <string>Scene</string>
             </property>
@@ -91,7 +108,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>978</width>
+     <width>983</width>
      <height>25</height>
     </rect>
    </property>
@@ -99,7 +116,7 @@
     <property name="title">
      <string>File</string>
     </property>
-    <widget class="QMenu" name="menuRecent_files">
+    <widget class="QMenu" name="menu_recent_files">
      <property name="title">
       <string>Recent files...</string>
      </property>
@@ -111,23 +128,31 @@
     <addaction name="action_read_graph"/>
     <addaction name="separator"/>
     <addaction name="action_clear_graph"/>
-    <addaction name="menuRecent_files"/>
+    <addaction name="menu_recent_files"/>
+    <addaction name="separator"/>
+    <addaction name="action_exit"/>
    </widget>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
      <string>Graph</string>
     </property>
-    <widget class="QMenu" name="menu_add_Node">
+    <addaction name="action_reset_ui"/>
+   </widget>
+   <widget class="QMenu" name="menu_nodes">
+    <property name="title">
+     <string>Nodes</string>
+    </property>
+    <widget class="QMenu" name="menu_add_node">
      <property name="title">
-      <string>Add Node...</string>
+      <string>Add node...</string>
      </property>
-     <addaction name="action_generic"/>
+     <addaction name="action_add_default"/>
     </widget>
-    <addaction name="action_select_root"/>
-    <addaction name="menu_add_Node"/>
+    <addaction name="menu_add_node"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
+   <addaction name="menu_nodes"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_save_graph">
@@ -174,7 +199,58 @@
     <string>graph_v001.json</string>
    </property>
   </action>
+  <action name="action_exit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_reset_ui">
+   <property name="text">
+    <string>Reset UI</string>
+   </property>
+  </action>
+  <action name="action_add_default">
+   <property name="text">
+    <string>default</string>
+   </property>
+  </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>action_reset_ui</sender>
+   <signal>triggered()</signal>
+   <receiver>attrEditorWidget</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>847</x>
+     <y>257</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_reset_ui</sender>
+   <signal>triggered()</signal>
+   <receiver>sceneWidget</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>847</x>
+     <y>627</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
