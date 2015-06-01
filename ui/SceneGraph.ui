@@ -99,6 +99,34 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="outputTab">
+       <attribute name="title">
+        <string>Output</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="outputTabLayout">
+        <item>
+         <widget class="QTextBrowser" name="outputTextBrowser"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="outputButtonsLayout">
+          <item>
+           <widget class="QPushButton" name="button_clear">
+            <property name="text">
+             <string>Clear</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_refresh">
+            <property name="text">
+             <string>Refresh</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>

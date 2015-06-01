@@ -13,14 +13,16 @@ class GraphicsView(QtGui.QGraphicsView):
     def __init__(self, parent = None, **kwargs):
         super(GraphicsView, self).__init__(parent)
 
-        self.gui    = kwargs.get('gui')
-        self.parent = parent
-        self._scale = 1
+        self.gui                 = kwargs.get('gui')
+        self.parent              = parent
+        self._scale              = 1
+        self.current_cursor_pos  = QtCore.QPointF(0, 0)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         self.renderer = QtSvg.QSvgRenderer()
         self.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.setMouseTracking(True)
 
     def wheelEvent(self, event):
         """
@@ -32,6 +34,30 @@ class GraphicsView(QtGui.QGraphicsView):
             factor = 1.0 / factor
         self.scale(factor, factor)
         self._scale = factor
+
+    def mouseMoveEvent(self, event):
+        """
+        Panning the viewport around and CTRL+mouse drag behavior.
+        """
+        # Panning
+        self.current_cursor_pos = event.pos()
+        if event.buttons() & QtCore.Qt.MiddleButton:
+            delta = event.pos() - self.lastMousePos
+            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
+            self.current_cursor_pos = event.pos()
+        else:
+            self.current_cursor_pos = event.pos()
+        
+        # Handle Modifier+MouseClick box behavior
+        if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
+            if self.boxing:
+                self.modifierBox.setGeometry(QtCore.QRect(self.modifierBoxOrigin, event.pos()).normalized())
+                self.modifierBox.show()
+                event.accept()
+                return
+
+        QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event):
         """
@@ -116,26 +142,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def setNodeManager(self, val):
         self.graph = val
-
-    def addNode(self, node_type, **kwargs):
-        """
-        Create a node in the current scene with the given attributes
-
-        params:
-            node_type   - (str) node type to create
-
-        returns:
-            (object)    - scene node
-        """
-        name   = kwargs.get('name', 'node')
-        node_pos    = kwargs.get('pos', [0,0])
-        
-        sceneNode = core.NodeBase(name=name)
-        #sceneNode.connectSignals()
-        sceneNode.setPos(node_pos[0], node_pos[1])
-        self.sceneNodes[sceneNode.name] = sceneNode
-        self.addItem(sceneNode)
-        return sceneNode
 
     def dropEvent(self, event):
         newPos = event.scenePos()

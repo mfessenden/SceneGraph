@@ -25,6 +25,7 @@ class Graph(object):
         # add the current scene attribute
         self.network.graph['scene'] = os.path.join(os.getenv('HOME'), 'graphs', '%s.json' % self._default_name)
 
+    #-- NetworkX Stuff -----
     def getScene(self):
         """
         Return the current graphs' scene attribute
@@ -54,7 +55,22 @@ class Graph(object):
         returns:
             (list)
         """
-        return self.scene.sceneNodes.keys()
+        return self.network.nodes(data=True)
+
+    def listNodeNames(self):
+        """
+        Returns a list of node names in the scene
+        
+        returns:
+            (list)
+        """
+        node_names = []
+        if self.network.nodes():
+            for node in self.network.nodes(data=True):
+                id, data = node
+                name = data.get('name')
+                node_names.append(name)
+        return node_names
     
     def getNodes(self):
         """
@@ -87,28 +103,48 @@ class Graph(object):
                 selected_nodes.append(node)
         return selected_nodes
 
-    def addNode(self, name, node_type, **kwargs):
+    def addNode(self, node_type, **kwargs):
         """
         Creates a node in the parent graph
 
         returns:
             (object)  - created node
         """
+        from SceneGraph import core
+        from SceneGraph import ui
+        reload(core)
+        reload(ui)
+
+        name   = kwargs.get('name', 'node1')
+        pos    = kwargs.get('pos', [0,0])
+        print '# adding at pos: ', pos
         name = self._nodeNamer(name)
-        return self.scene.addNode(node_type, name=name, **kwargs)
+
+        dag = core.NodeBase(name=name, node_type=node_type)
+        node = ui.NodeWidget(dag)
+
+        self.network.add_node(str(dag.uuid))
+        nn = self.network.node[str(dag.uuid)]
+
+        nn['name'] = name
+        nn['node_type'] = node_type
+
+        self.scene.addItem(node)
+        node.setPos(pos[0], pos[1])
+        return node
 
     def removeNode(self, node):
         """
         Removes a node from the graph
 
         params:
-            node    - (obj) node object
+            node    - (str) node name
 
         returns:
             (object)  - removed node
         """
-        name = node.name
         logger.getLogger().info('Removing node: "%s"' % name)
+
         self.scene.removeItem(node)
         if name in self.scene.sceneNodes.keys():
             return self.scene.sceneNodes.pop(name)
@@ -197,25 +233,28 @@ class Graph(object):
             elif isinstance(item, core.nodes.LineClass):
                 self.scene.removeItem(item)
 
-    def _getNames(self):
+    def validNodeName(self, name):
         """
-        Returns the names of all the current nodes
+        Returns true if name not already assigned to a node.
         """
-        return sorted(self.getNodes().keys())
+        return name not in self.listNodeNames()
 
     def _nodeNamer(self, name):
         """
         Returns a legal node name
+
+        params:
+            name (str) - node name to query
         """
         name = re.sub(r'[^a-zA-Z0-9\[\]]','_', name)
         if not re.search('\d+$', name):
             name = '%s1' % name
-        all_names = self._getNames()
-        if name in all_names:
+
+        while not self.validNodeName(name):
             node_num = int(re.search('\d+$', name).group())
             node_base = name.split(str(node_num))[0]
             for i in range(node_num+1, 9999):
-                if '%s%d' % (node_base, i) not in all_names:
+                if '%s%d' % (node_base, i) not in self.listNodeNames():
                     name = '%s%d' % (node_base, i)
                     break
         return name

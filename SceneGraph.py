@@ -89,13 +89,6 @@ class SceneGraph(form_class, base_class):
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
 
-        '''
-        # Node view
-        self.view = ui.GraphicsView(self.main_splitter, gui=self)
-        self.right_splitter = QtGui.QSplitter(self.main_splitter)
-        self.right_splitter.setOrientation(QtCore.Qt.Vertical)
-        '''
-
         self.initializeUI()
         self.readSettings()
         self.setupConnections()
@@ -118,7 +111,7 @@ class SceneGraph(form_class, base_class):
         # build the graph
         self._setupGraphicsView()
 
-        self._buildMenuBar()
+        self._setupMenuConnectios()
         self.buildWindowTitle()
         self.resetStatus()
 
@@ -172,7 +165,7 @@ class SceneGraph(form_class, base_class):
         # TESTING: disable
         #self.scene.selectionChanged.connect(self.nodesSelectedAction)
 
-    def _buildMenuBar(self):
+    def _setupMenuConnectios(self):
         """
         Build the main menubar
         """
@@ -183,7 +176,9 @@ class SceneGraph(form_class, base_class):
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_reset_scale.triggered.connect(self.resetScale)
 
-        #self.action_add_default.triggered.connect(partial(self.scene.graph.addNode, 'generic'))
+        current_pos = QtGui.QCursor().pos()
+        print 'pos: ', current_pos
+        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos=current_pos))
 
     def _buildRecentFilesMenu(self):
         """
@@ -362,11 +357,11 @@ class SceneGraph(form_class, base_class):
         """
         menu=QtGui.QMenu(parent)
         menu.clear()
-        add_action = menu.addAction('Add generic node')
-        add_action.triggered.connect(partial(self.scene.graph.addNode, 'generic'))
+        add_action = menu.addAction('Add default node')        
         qcurs=QtGui.QCursor()
+        view_pos =  self.view.current_cursor_pos
+        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos=[view_pos.x(), view_pos.y()]))
         menu.exec_(qcurs.pos())
-
 
     #- Settings -----
     def readSettings(self):

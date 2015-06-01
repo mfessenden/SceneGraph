@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# adapted from scene_builder
 import logging
 
 
