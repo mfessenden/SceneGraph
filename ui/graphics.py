@@ -6,16 +6,16 @@ from SceneGraph import core
 reload(core)
 
 
-class GraphicsView (QtGui.QGraphicsView):
+class GraphicsView(QtGui.QGraphicsView):
 
     tabPressed          = QtCore.Signal()
-    rootSelected        = QtCore.Signal(bool)
 
     def __init__(self, parent = None, **kwargs):
         super(GraphicsView, self).__init__(parent)
 
         self.gui    = kwargs.get('gui')
         self.parent = parent
+        self._scale = 1
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
@@ -31,6 +31,7 @@ class GraphicsView (QtGui.QGraphicsView):
         if event.delta() < 0:
             factor = 1.0 / factor
         self.scale(factor, factor)
+        self._scale = factor
 
     def mousePressEvent(self, event):
         """
@@ -78,9 +79,6 @@ class GraphicsView (QtGui.QGraphicsView):
             for item in graphicsScene.selectedItems():
                 if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
                     item.deleteNode()
-
-        elif event.key() == QtCore.Qt.Key_S:
-            self.rootSelected.emit(True)
 
         return super(GraphicsView, self).keyPressEvent(event)
 

@@ -109,7 +109,6 @@ class SceneGraph(form_class, base_class):
         # event filter
         self.eventFilter = MouseEventFilter(self)
         self.installEventFilter(self.eventFilter)
-
         
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
@@ -182,6 +181,7 @@ class SceneGraph(form_class, base_class):
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
+        self.action_reset_scale.triggered.connect(self.resetScale)
 
         #self.action_add_default.triggered.connect(partial(self.scene.graph.addNode, 'generic'))
 
@@ -307,8 +307,12 @@ class SceneGraph(form_class, base_class):
         Reset the current graph
         """
         self.graph.reset()
+        self.view.scene().clear()
         self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
+
+    def resetScale(self):
+        self.view.resetMatrix()
 
     def sizeHint(self):
         return QtCore.QSize(1070, 800)

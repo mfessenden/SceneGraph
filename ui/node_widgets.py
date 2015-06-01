@@ -21,8 +21,13 @@ class NodeWidget(QtGui.QGraphicsItem):
         
         self.dagnode         = node
         self.width           = width
+
+        # flag for an expanded node
         self.expanded        = expanded
-        self.height          = height
+        self.expand_widget   = None   
+        self.hidden_widget   = None    
+
+        self.height          = height if expanded else 15
         
         # buffers
         self.bufferX         = 3
@@ -62,10 +67,18 @@ class NodeWidget(QtGui.QGraphicsItem):
     
     # Label formatting -----
     def setLabelItalic(self, val=False):
+        """
+        Set the label font italic
+        """
         self._font_italic = val
+        self.update()
 
     def setLabelBold(self, val=False):
+        """
+        Set the label font bold
+        """
         self._font_bold = val
+        self.update()
 
     def buildNodeLabel(self, shadow=True):
         """
@@ -88,12 +101,19 @@ class NodeWidget(QtGui.QGraphicsItem):
         if shadow:
             dropshd = QtGui.QGraphicsDropShadowEffect()
             dropshd.setBlurRadius(6)
-            dropshd.setColor(QtGui.QColor(0,0,0, 180))
+            dropshd.setColor(QtGui.QColor(0,0,0,90))
             dropshd.setOffset(2,3)
-
             self.label.setGraphicsEffect(dropshd)
 
+        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        label_doc = self.label.document()
+        label_doc.contentsChanged.connect(self.nodeNameChanged)
     
+    def nodeNameChanged(self):
+        node_name = self.label.document().toPlainText()
+        if node_name != self.dagnode.name:
+            self.dagnode.name = node_name
+
     def getLabelLine(self):
         """
         Draw a line for the node label area
@@ -104,6 +124,46 @@ class NodeWidget(QtGui.QGraphicsItem):
         p2.setY(p2.y() + self.bufferY*8)
         return QtCore.QLineF(p1, p2)
     
+    def getHiddenIcon(self):
+        """
+        Returns an icon for the hidden state of the node
+        """
+        # expanded icon
+        tr = self.boundingRect().topRight()
+        top_rx = tr.x()
+        top_ry = tr.y()
+
+        buf = 2
+        triw = 8
+
+        p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf) + (triw / 2))
+        p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf) + (triw / 2))
+        p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf - (triw / 2)) + (triw / 2))
+
+        tripoly = QtGui.QPolygonF([p1, p2, p3])
+        triangle = QtGui.QGraphicsPolygonItem(tripoly, self, None)
+        return triangle
+
+    def getExpandedIcon(self):
+        """
+        Returns an icon for the expanded state of the node
+        """
+        # expanded icon
+        tr = self.boundingRect().topRight()
+        top_rx = tr.x()
+        top_ry = tr.y()
+
+        buf = 2
+        triw = 8
+
+        p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf))
+        p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf))
+        p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf + (triw / 2)))
+
+        tripoly = QtGui.QPolygonF([p1, p2, p3])
+        triangle = QtGui.QGraphicsPolygonItem(tripoly, self, None)
+        return triangle
+
     def labelRect(self):
         """
         Return the nodes' label rectangle
@@ -130,19 +190,43 @@ class NodeWidget(QtGui.QGraphicsItem):
             gradient.setColorAt(0, QtGui.QColor(topGrey, topGrey, topGrey))
             gradient.setColorAt(1, QtGui.QColor(bottomGrey, bottomGrey, bottomGrey))
 
-        painter.setBrush(QtGui.QBrush(gradient))
-        #painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
-        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
-        #fullRect = QtCore.QRectF(-self.width/2, - self.height/2, self.width, self.height)
-        #painter.drawRect(self.boundingRect())
-        fullRect = self.boundingRect()
-        painter.drawRoundedRect(fullRect, 3, 3)
-        painter.drawLine(label_line)
-        #painter.drawText(self.boundingRect().x()+self.buffer, self.boundingRect().y()+self.buffer, self.dagnode.name)
-
         # drop shadow
         dropshd = QtGui.QGraphicsDropShadowEffect()
         dropshd.setBlurRadius(12)
         dropshd.setColor(QtGui.QColor(0,0,0, 90))
         dropshd.setOffset(8,8)
         self.setGraphicsEffect(dropshd)
+
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setBrush(QtGui.QBrush(gradient))
+        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
+
+        fullRect = self.boundingRect()
+        painter.drawRoundedRect(fullRect, 3, 3)
+        painter.drawLine(label_line)
+
+        # widgets to expand/hide node attributes
+        painter.setPen(QtGui.QPen(QtGui.QColor(0,0,0,0)))
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(71,71,71)))
+
+        # expanded icon
+        tr = self.boundingRect().topRight()
+        top_rx = tr.x()
+        top_ry = tr.y()
+
+        buf = 2
+        triw = 8
+
+        if self.expanded:
+            p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf))
+            p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf))
+            p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf + (triw / 2)))
+        else:
+            p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf) + (triw / 2))
+            p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf) + (triw / 2))
+            p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf - (triw / 2)) + (triw / 2))
+
+
+        poly = QtGui.QPolygonF([p1, p2, p3])
+        painter.drawPolygon(poly)
+

@@ -127,7 +127,6 @@
     <addaction name="separator"/>
     <addaction name="action_read_graph"/>
     <addaction name="separator"/>
-    <addaction name="action_clear_graph"/>
     <addaction name="menu_recent_files"/>
     <addaction name="separator"/>
     <addaction name="action_exit"/>
@@ -136,7 +135,8 @@
     <property name="title">
      <string>Graph</string>
     </property>
-    <addaction name="action_reset_ui"/>
+    <addaction name="action_clear_graph"/>
+    <addaction name="action_reset_scale"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
     <property name="title">
@@ -150,9 +150,16 @@
     </widget>
     <addaction name="menu_add_node"/>
    </widget>
+   <widget class="QMenu" name="menu_ui">
+    <property name="title">
+     <string>UI</string>
+    </property>
+    <addaction name="action_reset_ui"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
    <addaction name="menu_nodes"/>
+   <addaction name="menu_ui"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_save_graph">
@@ -189,11 +196,6 @@
     <string>generic</string>
    </property>
   </action>
-  <action name="action_clear_graph">
-   <property name="text">
-    <string>Clear graph</string>
-   </property>
-  </action>
   <action name="action_recent1">
    <property name="text">
     <string>graph_v001.json</string>
@@ -207,14 +209,24 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="action_reset_ui">
-   <property name="text">
-    <string>Reset UI</string>
-   </property>
-  </action>
   <action name="action_add_default">
    <property name="text">
     <string>default</string>
+   </property>
+  </action>
+  <action name="action_clear_graph">
+   <property name="text">
+    <string>Clear graph</string>
+   </property>
+  </action>
+  <action name="action_reset_scale">
+   <property name="text">
+    <string>Reset scale...</string>
+   </property>
+  </action>
+  <action name="action_reset_ui">
+   <property name="text">
+    <string>Reset UI</string>
    </property>
   </action>
  </widget>
@@ -231,8 +243,8 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>847</x>
-     <y>257</y>
+     <x>581</x>
+     <y>269</y>
     </hint>
    </hints>
   </connection>
@@ -247,8 +259,8 @@
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>847</x>
-     <y>627</y>
+     <x>581</x>
+     <y>662</y>
     </hint>
    </hints>
   </connection>
