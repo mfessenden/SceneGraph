@@ -9,17 +9,18 @@ from .. import options
 reload(options)
 
 
-class NodeWidget(QtGui.QGraphicsItem):
+class NodeWidget(QtGui.QGraphicsObject):
     
-    Type                = QtGui.QGraphicsItem.UserType + 3
+    Type                = QtGui.QGraphicsObject.UserType + 3
     clickedSignal       = QtCore.Signal(QtCore.QObject)
     nodeCreatedInScene  = QtCore.Signal()
-    nodeChanged         = QtCore.Signal(bool)
+    nodeChanged         = QtCore.Signal(str, dict)
 
-    def __init__(self, node, width=100, height=175, expanded=False, font='Monospace', UUID=None):
-        QtGui.QGraphicsItem.__init__(self)
+    def __init__(self, node, width=100, height=175, expanded=False, font='Monospace', UUID=None, pos_x=0, pos_y=0):
+        QtGui.QGraphicsObject.__init__(self)
         
         self.dagnode         = node
+        self.uuid            = UUID
         self.width           = width
 
         # flag for an expanded node
@@ -44,18 +45,39 @@ class NodeWidget(QtGui.QGraphicsItem):
         self.font            = QtGui.QFont(self._font_family)
         self._is_node        = True
         
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsObject.ItemIsMovable | QtGui.QGraphicsObject.ItemIsFocusable)
         self.setAcceptHoverEvents(True)
 
         self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
         self.setCacheMode(self.DeviceCoordinateCache)
-        self.setZValue(-1)        
+        self.setZValue(-1)
+
+        self.setPos(pos_x, pos_y)  
 
     def type(self):
         """
         Assistance for the QT windowing toolkit.
         """
         return NodeWidget.Type
+    
+    @QtCore.Slot()
+    def updateDagNode(self):
+        """
+        Update dag node attributes
+        """
+        attrs = dict()
+        attrs.update(pos_x=self.pos().x())
+        attrs.update(pos_y=self.pos().y())
+        attrs.update(width=self.width)
+        attrs.update(height=self.height)
+        attrs.update(expanded=self.expanded)
+        self.dagnode.addNodeAttributes(**attrs)
+        self.nodeChanged.emit(self.uuid, attrs)
+
+    def shape(self):
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(QtCore.QRectF(-self.width/2, -self.height/2, self.width, self.height), 5, 5)
+        return path
 
     def boundingRect(self):
         """
@@ -107,12 +129,21 @@ class NodeWidget(QtGui.QGraphicsItem):
 
         self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
         label_doc = self.label.document()
+        label_doc.setMaximumBlockCount(1)
         label_doc.contentsChanged.connect(self.nodeNameChanged)
     
+    @QtCore.Slot()
     def nodeNameChanged(self):
+        """
+        Runs when the label text is edited.
+        """
         node_name = self.label.document().toPlainText()
-        if node_name != self.dagnode.name:
+        cur_name = self.dagnode.name
+        uuid = self.dagnode.uuid
+        if node_name != cur_name:
             self.dagnode.name = node_name
+            self.nodeChanged.emit(uuid, {'name':node_name})
+            self.updateDagNode()
 
     def getLabelLine(self):
         """

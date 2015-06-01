@@ -3,6 +3,8 @@ import os
 import re
 import simplejson as json
 import networkx as nx
+from functools import partial
+from PySide import QtCore
 
 from .. import logger
 
@@ -114,26 +116,64 @@ class Graph(object):
         from SceneGraph import ui
         reload(core)
         reload(ui)
-
+        uuid = kwargs.get('UUID', None)
         name   = kwargs.get('name', 'node1')
+        logger.getLogger().info('adding node "%s"' % name)
         pos    = kwargs.get('pos', [0,0])
-        print '# adding at pos: ', pos
-        name = self._nodeNamer(name)
+        width = kwargs.get('width', 100)
+        height = kwargs.get('height', 175)
 
-        dag = core.NodeBase(name=name, node_type=node_type)
-        node = ui.NodeWidget(dag)
+        if not self.validNodeName(name):
+            name = self._nodeNamer(name)
+
+        dag = core.NodeBase(name=name, node_type=node_type, UUID=uuid, width=width, height=height)
+        node = ui.NodeWidget(dag, UUID=str(dag.uuid), pos_x=pos[0], pos_y=pos[1], width=width, height=height)
 
         self.network.add_node(str(dag.uuid))
         nn = self.network.node[str(dag.uuid)]
 
         nn['name'] = name
         nn['node_type'] = node_type
+        nn['pos_x'] = node.pos().x()
+        nn['pos_y'] = node.pos().y()
+        nn['width'] = node.width
+        nn['height'] = node.height
 
         self.scene.addItem(node)
         node.setPos(pos[0], pos[1])
         return node
 
-    def removeNode(self, node):
+    def getNodeID(self, name):
+        """
+        Return the node given a name.
+
+        params:
+            name - (str) node name
+        """
+        result = None
+        for node in self.network.nodes(data=True):
+            uuid, data = node
+            if 'name' in data:
+                if data['name'] == name:
+                    result = uuid
+        return result 
+
+    def getNode(self, name):
+        """
+        Return the node given a name.
+
+        params:
+            name - (str) node name
+        """
+        result = None
+        for node in self.network.nodes(data=True):
+            uuid, data = node
+            if 'name' in data:
+                if data['name'] == name:
+                    result = node
+        return result
+
+    def removeNode(self, name):
         """
         Removes a node from the graph
 
@@ -258,30 +298,28 @@ class Graph(object):
                     name = '%s%d' % (node_base, i)
                     break
         return name
-
-    def write(self, filename='/tmp/scene_graph_output.json'):
+    
+    #- Actions ----
+    def nodeChangedAction(self, uuid, **kwargs):
+        """
+        Runs when a node is changed in the graph.
+        """
+        print '# Graph: node changed: ', uuid
+        print kwargs
+        
+    #- Reading & Writing -----
+    
+    def write(self, filename):
         """
         Write the graph to scene file
         """
-        from SceneGraph import core
-        data = {}
-        data.update(nodes={})
-        data.update(connections={})
-        conn_idx = 0
-        for item in self.scene.items():
-            if isinstance(item, core.nodes.NodeBase):
-                data.get('nodes').update(**{item.name:item.data})
-            elif isinstance(item, core.nodes.LineClass):
-                startItem = str(item.myStartItem)
-                endItem = str(item.myEndItem)
-                data.get('connections').update(**{'connection%d' % conn_idx: {'start':startItem, 'end':endItem}})
-                conn_idx+=1
+        import networkx.readwrite.json_graph as nxj
+        graph_data = nxj.node_link_data(self.network)
         fn = open(filename, 'w')
-        output_data=data
-        json.dump(output_data, fn, indent=4)
+        json.dump(graph_data, fn, indent=4)
         fn.close()
 
-    def read(self, filename='/tmp/scene_graph_output.json'):
+    def read(self, filename):
         """
         Read a graph from a saved scene
         """
@@ -289,36 +327,28 @@ class Graph(object):
         if os.path.exists(filename):
             raw_data = open(filename).read()
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
-            node_data = tmp_data.get('nodes', {})
-            conn_data = tmp_data.get('connections', {})
 
-            # BUILD NODES
-            for node in node_data.keys():
-                logger.getLogger().info('building node: "%s"' % node)
-                posx = node_data.get(node).pop('x')
-                posy = node_data.get(node).pop('y')
+            graph_data = tmp_data.get('graph', [])
+            nodes = tmp_data.get('nodes', [])
 
-                myNode = self.addNode('generic', name=node, pos=[posx, posy], force=True)
+            # build graph attributes
+            for gdata in graph_data:
+                if len(gdata):
+                    self.network.graph[gdata[0]]=gdata[1]
 
-                node_attributes = dict()
-                if node_data.get(node):
-                    for attr, val in node_data.get(node).iteritems():
-                        attr = re.sub('^__', '', attr)
-                        node_attributes.update({attr:val})
-                    myNode.addNodeAttributes(**node_attributes)
+            # build nodes from data
+            for node in nodes:                
 
-                myNode.setX(posx)
-                myNode.setY(posy)
+                uuid = node.get('id')
+                name = node.get('name')
+                node_type = node.get('node_type', 'default')
+                posx = node.get('pos_x')
+                posy = node.get('pos_y')
 
-            # BUILD CONNECTIONS
-            for conn in conn_data.keys():
-                cdata = conn_data.get(conn)
-                start_str = cdata.get('start')
-                end_str = cdata.get('end')
-                logger.getLogger().info('connecting: %s >> %s' % (start_str, end_str))
-                self.connectNodes(start_str, end_str)
+                width = node.get('width')
+                height = node.get('height')
 
-            self.viewport.setSceneRect(self.scene.itemsBoundingRect())
+                myNode = self.addNode(node_type, name=name, pos=[posx, posy], width=width, height=height)
 
         else:
             logger.getLogger().error('filename "%s" does not exist' % filename)

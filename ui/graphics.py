@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from PySide import QtCore, QtGui, QtSvg
+from functools import partial
 import weakref
 
 from SceneGraph import core
@@ -132,6 +133,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
     self.itemsBoundingRect() - returns the maximum boundingbox for all nodes
 
     """
+    nodeAdded          = QtCore.Signal(object)
+    nodeChanged        = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         super(GraphicsScene, self).__init__(parent)
@@ -142,6 +145,20 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def setNodeManager(self, val):
         self.graph = val
+
+    def addItem(self, item):
+        """
+        item = NodeWidget
+        """
+        self.nodeAdded.emit(item)
+        self.sceneNodes[item.uuid] = item
+        item.nodeChanged.connect(self.nodeChangedAction)
+        super(GraphicsScene, self).addItem(item)
+
+    def nodeChangedAction(self, uuid, **kwargs):
+        node = self.sceneNodes.get(uuid, None)
+        if node:
+            self.nodeChanged.emit(node)
 
     def dropEvent(self, event):
         newPos = event.scenePos()

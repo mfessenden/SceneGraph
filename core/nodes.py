@@ -10,15 +10,11 @@ from .. import options
 reload(options)
 
 
-class NodeBase(QtGui.QGraphicsItem):
+class NodeBase(object):
     
     Type                = QtGui.QGraphicsItem.UserType + 3
-    clickedSignal       = QtCore.Signal(QtCore.QObject)
-    nodeCreatedInScene  = QtCore.Signal()
-    nodeChanged         = QtCore.Signal(bool)
 
     def __init__(self, name='node1', node_type=None, width=100, height=175, font='Consolas', UUID=None):
-        QtGui.QGraphicsItem.__init__(self)
         
         self.name            = name
         self.node_type       = node_type
@@ -57,10 +53,16 @@ class NodeBase(QtGui.QGraphicsItem):
         return '/%s' % self.name
 
     def addNodeAttributes(self, **kwargs):
+        """
+        Add arbitrary attributes to the node.
+        """
         for attr, val in kwargs.iteritems():
             self.data[attr] = val
 
     def removeNodeAttributes(self, *args):
+        """
+        Remove arbitrary attributes to the node.
+        """
         for arg in args:
             if arg in self.data:
                 self.data.pop(arg)

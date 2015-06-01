@@ -6,3 +6,20 @@ QWidget{
     color: #b1b1b1;
     background-color: #323232;
 }
+
+QDockWidget::title{
+    text-align: left;
+    spacing: 3px; /* spacing between items in the tool bar */
+    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #323232, stop: 0.5 #242424, stop:1 #323232);
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+QTabBar{
+    font-weight: bold;
+    font-size: 12;
+}
+
+QPushButton{
+    font-weight: bold;
+}

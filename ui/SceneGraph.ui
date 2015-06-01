@@ -105,7 +105,16 @@
        </attribute>
        <layout class="QVBoxLayout" name="outputTabLayout">
         <item>
-         <widget class="QTextBrowser" name="outputTextBrowser"/>
+         <widget class="QPlainTextEdit" name="outputPlainTextEdit">
+          <property name="font">
+           <font>
+            <family>Monospace</family>
+           </font>
+          </property>
+          <property name="plainText">
+           <string/>
+          </property>
+         </widget>
         </item>
         <item>
          <layout class="QHBoxLayout" name="outputButtonsLayout">
@@ -189,7 +198,14 @@
    <addaction name="menu_nodes"/>
    <addaction name="menu_ui"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="font">
+    <font>
+     <family>Monospace</family>
+     <pointsize>9</pointsize>
+    </font>
+   </property>
+  </widget>
   <action name="action_save_graph">
    <property name="text">
     <string>Save graph...</string>

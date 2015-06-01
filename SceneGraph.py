@@ -79,6 +79,13 @@ class SceneGraph(form_class, base_class):
         self.qtsettings       = QtCore.QSettings(self.settings_file, QtCore.QSettings.IniFormat)
         self.qtsettings.setFallbacksEnabled(False)
 
+        # icon
+        self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
+
+        self.readSettings()
+        self.initializeUI()        
+        self.connectSignals()
+
         # stylesheet
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
         ssf = QtCore.QFile(self.stylesheet)
@@ -86,19 +93,12 @@ class SceneGraph(form_class, base_class):
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
-        # icon
-        self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
-
-        self.initializeUI()
-        self.readSettings()
-        self.setupConnections()
-
     def initializeUI(self):
         """
         Set up the main UI
         """
         self.setupFonts()
-        self.statusBar().setFont(self.fonts.get('status'))
+        
         # event filter
         self.eventFilter = MouseEventFilter(self)
         self.installEventFilter(self.eventFilter)
@@ -111,7 +111,9 @@ class SceneGraph(form_class, base_class):
         # build the graph
         self._setupGraphicsView()
 
-        self._setupMenuConnectios()
+        self.statusBar().setFont(self.fonts.get('status'))
+        self.outputPlainTextEdit.setFont(self.fonts.get('output'))
+
         self.buildWindowTitle()
         self.resetStatus()
 
@@ -126,20 +128,18 @@ class SceneGraph(form_class, base_class):
         self.fonts["status"] = QtGui.QFont('Monospace')
         self.fonts["status"].setPointSize(size-1)
 
-    def setupConnections(self):
-        """
-        Set up widget signals/slots
-        """
-        self.timer.timeout.connect(self.resetStatus)
-        self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
+        self.fonts["output"] = QtGui.QFont('Monospace')
+        self.fonts["output"].setPointSize(size+1)
 
     def _setupGraphicsView(self, filter=False):
         """
         Initialize the graphics view and graph object.
         """
         # scene view
-        self.scene = ui.GraphicsScene()
+        self.scene = ui.GraphicsScene()      
         self.view.setScene(self.scene)
+        self.scene.nodeAdded.connect(self.nodeAddedAction)
+        self.scene.nodeChanged.connect(self.nodeChangedAction)
 
         # initialize the Graph
         self.graph = core.Graph(self.view, gui=self)
@@ -165,10 +165,13 @@ class SceneGraph(form_class, base_class):
         # TESTING: disable
         #self.scene.selectionChanged.connect(self.nodesSelectedAction)
 
-    def _setupMenuConnectios(self):
+    def connectSignals(self):
         """
-        Build the main menubar
+        Setup signals & slots.
         """
+        self.timer.timeout.connect(self.resetStatus)
+        self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
+
         # FILE MENU
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -177,8 +180,12 @@ class SceneGraph(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
 
         current_pos = QtGui.QCursor().pos()
-        print 'pos: ', current_pos
         self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos=current_pos))
+
+        # output tab buttons
+        self.tabWidget.currentChanged.connect(self.updateOutput)
+        self.button_refresh.clicked.connect(self.updateOutput)
+        self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
 
     def _buildRecentFilesMenu(self):
         """
@@ -220,9 +227,14 @@ class SceneGraph(form_class, base_class):
             self.statusBar().showMessage(self._getWarningStatus(val))
             logger.getLogger().warning(val)
         self.timer.start(4000)
+        self.statusBar().setFont(self.fonts.get('status'))
 
     def resetStatus(self):
+        """
+        Reset the status bar message.
+        """
         self.statusBar().showMessage('[SceneGraph]: Ready')
+        self.statusBar().setFont(self.fonts.get('status'))
 
     def _getInfoStatus(self, val):
         return '[SceneGraph]: Info: %s' % val
@@ -335,6 +347,20 @@ class SceneGraph(form_class, base_class):
                 nodeAttrWidget.setNode(node)
                 self.detailGroupLayout.addWidget(nodeAttrWidget)
 
+    def nodeAddedAction(self, node):
+        """
+        Action whenever a node is added to the graph.
+        """
+        node.updateDagNode()
+        self.updateOutput()
+
+    def nodeChangedAction(self, node):
+        """
+        node = NodeWidget
+        """
+        #node.updateDagNode()
+        self.updateOutput()
+
     #- Events ----
     def closeEvent(self, event):
         """
@@ -383,6 +409,26 @@ class SceneGraph(form_class, base_class):
         self.qtsettings.setValue("size", QtCore.QSize(width, height))
         self.qtsettings.setValue("pos", self.pos())
         self.qtsettings.endGroup()
+
+    def updateOutput(self):
+        """
+        Update the output text edit.
+        """
+        import networkx.readwrite.json_graph as nxj
+        import simplejson as json
+        self.updateNodes()
+        self.outputPlainTextEdit.clear()
+        graph_data = nxj.node_link_data(self.graph.network)
+        self.outputPlainTextEdit.setPlainText(json.dumps(graph_data, indent=5))
+        self.outputPlainTextEdit.setFont(self.fonts.get('output'))
+
+    def updateNodes(self):
+        for node in self.scene.sceneNodes.values():
+            self.graph.network.node[node.uuid]['name']=node.dagnode.name
+            self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
+            self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
+            self.graph.network.node[node.uuid]['width']=node.width
+            self.graph.network.node[node.uuid]['height']=node.height
 
 
 class MouseEventFilter(QtCore.QObject):
