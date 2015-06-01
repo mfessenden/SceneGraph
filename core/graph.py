@@ -9,7 +9,7 @@ from .. import logger
 
 class Graph(object):
     """
-    Wrapper for Netowrkx graph
+    Wrapper for NetowrkX graph
     """
     def __init__(self, parent, gui):
 
