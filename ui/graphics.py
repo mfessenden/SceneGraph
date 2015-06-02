@@ -14,16 +14,41 @@ class GraphicsView(QtGui.QGraphicsView):
     def __init__(self, parent = None, **kwargs):
         super(GraphicsView, self).__init__(parent)
 
-        self.gui                 = kwargs.get('gui')
         self.parent              = parent
+        scene                    = GraphicsScene(self)
+        self.setScene(scene)
+        scene.setSceneRect(-5000, -5000, 10000, 10000)
+        
         self._scale              = 1
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
 
+        # Mouse Interaction
+        self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
+        self.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
+
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
-        self.renderer = QtSvg.QSvgRenderer()
         self.setRenderHint(QtGui.QPainter.Antialiasing)
+
         self.setMouseTracking(True)
+        self.boxing = False
+        self.modifierBoxOrigin = None
+        self.modifierBox = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)
+        self.scale(1.0, 1.0)
+
+    def updateNetwork(self):
+        self.scene().network.graph['scale']=self.getScaleFactor()
+        self.scene().network.graph['xform']=self.getTranslation()
+        self.scene().network.graph['gview_rect']=self.sceneRect().getCoords()
+        self.scene().network.graph['gscene_rect']=self.scene().sceneRect().getCoords()
+
+    def getTranslation(self):
+        return [self.transform().m31(), self.transform().m32()]
+
+    def getScaleFactor(self):
+        return [self.transform().m11(), self.transform().m22()]
 
     def wheelEvent(self, event):
         """
@@ -35,6 +60,7 @@ class GraphicsView(QtGui.QGraphicsView):
             factor = 1.0 / factor
         self.scale(factor, factor)
         self._scale = factor
+        self.updateNetwork()
 
     def mouseMoveEvent(self, event):
         """
@@ -43,7 +69,7 @@ class GraphicsView(QtGui.QGraphicsView):
         # Panning
         self.current_cursor_pos = event.pos()
         if event.buttons() & QtCore.Qt.MiddleButton:
-            delta = event.pos() - self.lastMousePos
+            delta = event.pos() - self.current_cursor_pos
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
             self.current_cursor_pos = event.pos()
@@ -58,6 +84,7 @@ class GraphicsView(QtGui.QGraphicsView):
                 event.accept()
                 return
 
+        self.updateNetwork()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event):
@@ -107,6 +134,7 @@ class GraphicsView(QtGui.QGraphicsView):
                 if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
                     item.deleteNode()
 
+        self.updateNetwork()
         return super(GraphicsView, self).keyPressEvent(event)
 
     def get_scroll_state(self):
@@ -142,9 +170,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.line        = None
         self.sceneNodes  = weakref.WeakValueDictionary()
         self.graph       = None
+        self.network     = None
 
     def setNodeManager(self, val):
         self.graph = val
+        self.network = val.network
 
     def addItem(self, item):
         """

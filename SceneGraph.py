@@ -59,6 +59,7 @@ class SceneGraph(form_class, base_class):
         
         # add our custom GraphicsView object
         self.view = ui.GraphicsView(self.gview)
+        self.scene = self.view.scene()
         self.gviewLayout.addWidget(self.view)
 
         # allow docks to be nested
@@ -113,7 +114,7 @@ class SceneGraph(form_class, base_class):
 
         self.statusBar().setFont(self.fonts.get('status'))
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
-
+        self._buildRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
 
@@ -135,9 +136,7 @@ class SceneGraph(form_class, base_class):
         """
         Initialize the graphics view and graph object.
         """
-        # scene view
-        self.scene = ui.GraphicsScene()      
-        self.view.setScene(self.scene)
+        # scene view signals
         self.scene.nodeAdded.connect(self.nodeAddedAction)
         self.scene.nodeChanged.connect(self.nodeChangedAction)
 
@@ -146,8 +145,8 @@ class SceneGraph(form_class, base_class):
         self.network = self.graph.network.graph
 
         self.scene.setNodeManager(self.graph)
-        self.view.setSceneRect(0, 0, 1000, 1000)
-        #self.view.setSceneRect(-10000, -10000, 20000, 20000)
+        #self.view.setSceneRect(0, 0, 1000, 1000)
+        self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
         # graphics View
         self.view.wheelEvent = self.graphicsView_wheelEvent
@@ -180,7 +179,7 @@ class SceneGraph(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
 
         current_pos = QtGui.QCursor().pos()
-        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos=current_pos))
+        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos=[current_pos.x(), current_pos.y()]))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -193,11 +192,11 @@ class SceneGraph(form_class, base_class):
         """
         recent_files = dict()
         recent_files = self.prefs.getRecentFiles()
-
+        self.menu_recent_files.setEnabled(False)
         if recent_files:
             # Recent files menu
             for filename in recent_files:
-                file_action = QtGui.QAction(filename, self.recent_menu)
+                file_action = QtGui.QAction(filename, self.menu_recent_files)
                 file_action.triggered.connect(partial(self.readRecentGraph, filename))
                 self.menu_recent_files.addAction(file_action)
             self.menu_recent_files.setEnabled(True)
@@ -217,6 +216,7 @@ class SceneGraph(form_class, base_class):
         """
         Send output to logger/statusbar
         """
+        self.statusBar().setFont(self.fonts.get('status'))
         if level == 'info':
             self.statusBar().showMessage(self._getInfoStatus(val))
             logger.getLogger().info(val)
@@ -226,14 +226,13 @@ class SceneGraph(form_class, base_class):
         if level == 'warning':
             self.statusBar().showMessage(self._getWarningStatus(val))
             logger.getLogger().warning(val)
-        self.timer.start(4000)
-        self.statusBar().setFont(self.fonts.get('status'))
+        self.timer.start(4000)        
 
     def resetStatus(self):
         """
         Reset the status bar message.
         """
-        self.statusBar().showMessage('[SceneGraph]: Ready')
+        self.statusBar().showMessage('[SceneGraph]: ready')
         self.statusBar().setFont(self.fonts.get('status'))
 
     def _getInfoStatus(self, val):
@@ -272,8 +271,10 @@ class SceneGraph(form_class, base_class):
         self.action_save_graph.setEnabled(True)
         self.buildWindowTitle()
 
+        self.graph.setScene(filename)
         self.prefs.addFile(filename)
         self._buildRecentFilesMenu()
+        self.buildWindowTitle()
 
     # TODO: figure out why this has to be a separate method from saveGraphAs
     def saveCurrentGraph(self):
@@ -299,6 +300,7 @@ class SceneGraph(form_class, base_class):
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
+        self.graph.setScene(filename)
         self.buildWindowTitle()
 
     # TODO: combine this with readGraph
@@ -374,7 +376,8 @@ class SceneGraph(form_class, base_class):
         self.view.scale(factor, factor)
 
     def graphicsView_resizeEvent(self, event):
-        self.scene.setSceneRect(0, 0, self.view.width(), self.view.height())
+        #self.scene.setSceneRect(0, 0, self.view.width(), self.view.height())
+        pass
 
     #- Menus -----
     def createTabMenu(self, parent):
@@ -418,6 +421,7 @@ class SceneGraph(form_class, base_class):
         import simplejson as json
         self.updateNodes()
         self.outputPlainTextEdit.clear()
+        #graph_data = nxj.adjacency_data(self.graph.network)
         graph_data = nxj.node_link_data(self.graph.network)
         self.outputPlainTextEdit.setPlainText(json.dumps(graph_data, indent=5))
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))

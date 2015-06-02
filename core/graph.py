@@ -18,7 +18,7 @@ class Graph(object):
         self.viewport       = parent
         self.scene          = self.viewport.scene()
         
-        self.network        = nx.Graph()
+        self.network        = nx.DiGraph()
 
         self._copied_nodes  = []
         self._startdir      = gui._startdir
@@ -315,6 +315,7 @@ class Graph(object):
         """
         import networkx.readwrite.json_graph as nxj
         graph_data = nxj.node_link_data(self.network)
+        #graph_data = nxj.adjacency_data(self.network)
         fn = open(filename, 'w')
         json.dump(graph_data, fn, indent=4)
         fn.close()
@@ -327,7 +328,7 @@ class Graph(object):
         if os.path.exists(filename):
             raw_data = open(filename).read()
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
-
+            self.network.clear()
             graph_data = tmp_data.get('graph', [])
             nodes = tmp_data.get('nodes', [])
 

@@ -28,7 +28,7 @@
        <attribute name="title">
         <string>Scene View</string>
        </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout">
+       <layout class="QVBoxLayout" name="sceneTabLayout">
         <item>
          <widget class="QSplitter" name="main_splitter">
           <property name="orientation">
@@ -75,23 +75,47 @@
              </property>
             </widget>
            </widget>
-           <widget class="QDockWidget" name="sceneWidget">
-            <property name="floating">
-             <bool>false</bool>
+           <widget class="QSplitter" name="btm_splitter">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
             </property>
-            <property name="allowedAreas">
-             <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
-            </property>
-            <property name="windowTitle">
-             <string>Scene</string>
-            </property>
-            <widget class="QWidget" name="sceneWidgetContents">
-             <property name="baseSize">
-              <size>
-               <width>175</width>
-               <height>0</height>
-              </size>
+            <widget class="QDockWidget" name="sceneWidget">
+             <property name="floating">
+              <bool>false</bool>
              </property>
+             <property name="allowedAreas">
+              <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+             </property>
+             <property name="windowTitle">
+              <string>Scene</string>
+             </property>
+             <widget class="QWidget" name="sceneWidgetContents">
+              <property name="baseSize">
+               <size>
+                <width>175</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </widget>
+            <widget class="QDockWidget" name="consoleWidget">
+             <property name="floating">
+              <bool>false</bool>
+             </property>
+             <property name="allowedAreas">
+              <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+             </property>
+             <property name="windowTitle">
+              <string>Console</string>
+             </property>
+             <widget class="QWidget" name="consoleWidgetContents">
+              <property name="baseSize">
+               <size>
+                <width>175</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
             </widget>
            </widget>
           </widget>
@@ -157,7 +181,6 @@
      <property name="title">
       <string>Recent files...</string>
      </property>
-     <addaction name="action_recent1"/>
     </widget>
     <addaction name="action_save_graph"/>
     <addaction name="action_save_graph_as"/>
@@ -305,6 +328,22 @@
     <hint type="destinationlabel">
      <x>581</x>
      <y>662</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>action_reset_ui</sender>
+   <signal>triggered()</signal>
+   <receiver>consoleWidget</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>885</x>
+     <y>751</y>
     </hint>
    </hints>
   </connection>
