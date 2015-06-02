@@ -4,7 +4,9 @@ from functools import partial
 import weakref
 
 from SceneGraph import core
+from . import node_widgets
 reload(core)
+reload(node_widgets)
 
 
 class GraphicsView(QtGui.QGraphicsView):
@@ -39,6 +41,9 @@ class GraphicsView(QtGui.QGraphicsView):
         self.scale(1.0, 1.0)
 
     def updateNetwork(self):
+        """
+        Update networkx graph attributes.
+        """
         self.scene().network.graph['scale']=self.getScaleFactor()
         self.scene().network.graph['xform']=self.getTranslation()
         self.scene().network.graph['gview_rect']=self.sceneRect().getCoords()
@@ -134,8 +139,9 @@ class GraphicsView(QtGui.QGraphicsView):
 
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
-                if isinstance(item, core.LineClass) or isinstance(item, core.NodeBase):
-                    item.deleteNode()
+                if isinstance(item, node_widgets.NodeWidget):                    
+                    graphicsScene.network.remove_node(item.uuid)
+                    graphicsScene.removeItem(item)
 
         self.updateNetwork()
         return super(GraphicsView, self).keyPressEvent(event)

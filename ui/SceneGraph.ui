@@ -35,6 +35,11 @@
            <enum>Qt::Horizontal</enum>
           </property>
           <widget class="QWidget" name="gview" native="true">
+           <property name="font">
+            <font>
+             <family>DejaVu Sans</family>
+            </font>
+           </property>
            <layout class="QVBoxLayout" name="gviewLayout"/>
           </widget>
           <widget class="QSplitter" name="right_splitter">
@@ -73,6 +78,7 @@
                <height>0</height>
               </size>
              </property>
+             <layout class="QVBoxLayout" name="attrEditorLayout"/>
             </widget>
            </widget>
            <widget class="QSplitter" name="btm_splitter">

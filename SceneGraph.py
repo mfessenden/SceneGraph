@@ -145,7 +145,6 @@ class SceneGraph(form_class, base_class):
         self.network = self.graph.network.graph
 
         self.scene.setNodeManager(self.graph)
-        #self.view.setSceneRect(0, 0, 1000, 1000)
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
         # graphics View
@@ -162,7 +161,7 @@ class SceneGraph(form_class, base_class):
             self.view.viewport().installEventFilter(self.viewEventFilter)
 
         # TESTING: disable
-        #self.scene.selectionChanged.connect(self.nodesSelectedAction)
+        self.scene.selectionChanged.connect(self.nodesSelectedAction)
 
     def connectSignals(self):
         """
@@ -192,6 +191,7 @@ class SceneGraph(form_class, base_class):
         """
         recent_files = dict()
         recent_files = self.prefs.getRecentFiles()
+        self.menu_recent_files.clear()
         self.menu_recent_files.setEnabled(False)
         if recent_files:
             # Recent files menu
@@ -330,8 +330,8 @@ class SceneGraph(form_class, base_class):
         """
         Remove a widget from the detailGroup box.
         """
-        for i in reversed(range(self.detailGroupLayout.count())):
-            widget = self.detailGroupLayout.takeAt(i).widget()
+        for i in reversed(range(self.attrEditorLayout.count())):
+            widget = self.attrEditorLayout.takeAt(i).widget()
             if widget is not None:
                 widget.deleteLater()
 
@@ -345,9 +345,9 @@ class SceneGraph(form_class, base_class):
         if len(nodes) == 1:
             node = nodes[0]
             if node._is_node:
-                nodeAttrWidget = ui.AttributeEditor(self.detailGroup, manager=self.scene.graph, gui=self)
+                nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
                 nodeAttrWidget.setNode(node)
-                self.detailGroupLayout.addWidget(nodeAttrWidget)
+                self.attrEditorLayout.addWidget(nodeAttrWidget)
 
     def nodeAddedAction(self, node):
         """
@@ -427,12 +427,17 @@ class SceneGraph(form_class, base_class):
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
 
     def updateNodes(self):
-        for node in self.scene.sceneNodes.values():
-            self.graph.network.node[node.uuid]['name']=node.dagnode.name
-            self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
-            self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
-            self.graph.network.node[node.uuid]['width']=node.width
-            self.graph.network.node[node.uuid]['height']=node.height
+        """
+        Update the networkx graph with current node values.
+        """
+        if self.scene.sceneNodes:
+            for node in self.scene.sceneNodes.values():
+                self.graph.network.node[node.uuid]['name']=node.dagnode.name
+                self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
+                self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
+                self.graph.network.node[node.uuid]['width']=node.width
+                self.graph.network.node[node.uuid]['height']=node.height
+                self.graph.network.node[node.uuid]['expanded']=node.expanded
 
 
 class MouseEventFilter(QtCore.QObject):

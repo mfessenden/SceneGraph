@@ -44,15 +44,15 @@ class AttributeEditor(QtGui.QWidget):
             self.pathLabel.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
             
             self._current_node = node_item
-            self.nameEdit.setText(node_item.name)
+            self.nameEdit.setText(node_item.dagnode.name)
             self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
             self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
 
-            self.pathEdit.setText(node_item.path())
+            #self.pathEdit.setText(node_item.path())
             self.pathEdit.setEnabled(False)
                         
-            for attr, val in node_item.getNodeAttributes().iteritems():
-                if attr not in node_item._private:
+            for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
+                if attr not in node_item.dagnode._private:
                     attr_label = QtGui.QLabel(self)
                     self.gridLayout.addWidget(attr_label, self.__current_row, 0, 1, 1)
                     val_edit = QtGui.QLineEdit(self)
@@ -79,7 +79,7 @@ class AttributeEditor(QtGui.QWidget):
         Update the current node
         """
         new_name = str(self.nameEdit.text())
-        if self._current_node:
+        if self._current_node.dagnode:
             newNode = self.manager.renameNode(self._current_node.name, new_name)
             self.setNode(newNode)
     
@@ -87,7 +87,7 @@ class AttributeEditor(QtGui.QWidget):
         """
         Update the node from an attribute
         """
-        self._current_node.addNodeAttributes(**{attribute:str(lineEdit.text())})
+        self._current_node.dagnode.addNodeAttributes(**{attribute:str(lineEdit.text())})
         self.setNode(self._current_node)
     
     def nodeUpdatedFilter(self):

@@ -26,7 +26,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         # flag for an expanded node
         self.expanded        = expanded
         self.expand_widget   = None   
-        self.hidden_widget   = None    
 
         self.height          = height if expanded else 15
         
@@ -36,7 +35,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.color           = [180, 180, 180]
         
         # label
-        #self.label           = QtGui.QGraphicsSimpleTextItem(parent=self)
         self.label           = QtGui.QGraphicsTextItem(parent=self)
         self._font_family    = font
         self._font_size      = 10
@@ -107,7 +105,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         Build the node's label attribute.
         """
         self.label.setX(-(self.width/2 - self.bufferX))
-        self.label.setY(-(self.height/2 + self.bufferY))  # minus bufferY if plaintext
+        if not self.expanded:
+            self.label.setY(-(self.height/2 + self.bufferY))
+        else:
+            self.label.setY(-(self.height/2 + self.bufferY - 2))
 
         self.font = QtGui.QFont(self._font_family)
         self.font.setPointSize(self._font_size)
@@ -115,9 +116,14 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.font.setItalic(self._font_italic)
 
         self.label.setFont(self.font)
-        #self.label.setText(self.dagnode.name)
         self.label.setPlainText(self.dagnode.name)
         self.label.setDefaultTextColor(QtGui.QColor(0, 0, 0))
+
+        # make the label editable
+        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        label_doc = self.label.document()
+        label_doc.setMaximumBlockCount(1)
+        label_doc.contentsChanged.connect(self.nodeNameChanged)
 
         # drop shadow
         if shadow:
@@ -127,10 +133,7 @@ class NodeWidget(QtGui.QGraphicsObject):
             dropshd.setOffset(2,3)
             self.label.setGraphicsEffect(dropshd)
 
-        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-        label_doc = self.label.document()
-        label_doc.setMaximumBlockCount(1)
-        label_doc.contentsChanged.connect(self.nodeNameChanged)
+
     
     @QtCore.Slot()
     def nodeNameChanged(self):
@@ -201,13 +204,23 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         return QtCore.QRectF()
 
+    def setExpanded(self, val=True):
+        self.expanded = val
+        if val:
+            self.height = 175
+        else:
+            self.height = 15
+        self.update()
+
     def paint(self, painter, option, widget):
         """
         Draw the node.
         """
         # label & line
-        self.buildNodeLabel()        
-        label_line = self.getLabelLine()
+        self.buildNodeLabel()
+
+        if self.expanded:    
+            label_line = self.getLabelLine()
         
         # background
         gradient = QtGui.QLinearGradient(0, -self.height/2, 0, self.height/2)
@@ -234,30 +247,13 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         fullRect = self.boundingRect()
         painter.drawRoundedRect(fullRect, 3, 3)
-        painter.drawLine(label_line)
+        if self.expanded:
+            painter.drawLine(label_line)
 
-        # widgets to expand/hide node attributes
-        painter.setPen(QtGui.QPen(QtGui.QColor(0,0,0,0)))
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(71,71,71)))
-
-        # expanded icon
-        tr = self.boundingRect().topRight()
-        top_rx = tr.x()
-        top_ry = tr.y()
-
-        buf = 2
-        triw = 8
+        if self.expand_widget:
+            self.expand_widget.scene().removeItem(self.expand_widget)
 
         if self.expanded:
-            p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf))
-            p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf))
-            p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf + (triw / 2)))
+            self.expand_widget = self.getExpandedIcon()
         else:
-            p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf) + (triw / 2))
-            p2 = QtCore.QPointF(top_rx - (buf + triw), (top_ry + buf) + (triw / 2))
-            p3 = QtCore.QPointF((p1.x() + p2.x()) / 2, (top_ry + buf - (triw / 2)) + (triw / 2))
-
-
-        poly = QtGui.QPolygonF([p1, p2, p3])
-        painter.drawPolygon(poly)
-
+            self.expand_widget = self.getHiddenIcon()

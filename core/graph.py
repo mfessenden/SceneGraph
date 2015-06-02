@@ -100,9 +100,8 @@ class Graph(object):
         """
         selected_nodes = []
         for nn in self.getNodes():
-            node = self.getNode(nn)
-            if node.isSelected():
-                selected_nodes.append(node)
+            if nn.isSelected():
+                selected_nodes.append(nn)
         return selected_nodes
 
     def addNode(self, node_type, **kwargs):
@@ -122,12 +121,13 @@ class Graph(object):
         pos    = kwargs.get('pos', [0,0])
         width = kwargs.get('width', 100)
         height = kwargs.get('height', 175)
+        expanded = kwargs.get('expanded', False)
 
         if not self.validNodeName(name):
             name = self._nodeNamer(name)
 
         dag = core.NodeBase(name=name, node_type=node_type, UUID=uuid, width=width, height=height)
-        node = ui.NodeWidget(dag, UUID=str(dag.uuid), pos_x=pos[0], pos_y=pos[1], width=width, height=height)
+        node = ui.NodeWidget(dag, UUID=str(dag.uuid), pos_x=pos[0], pos_y=pos[1], width=width, height=height, expanded=expanded)
 
         self.network.add_node(str(dag.uuid))
         nn = self.network.node[str(dag.uuid)]
@@ -201,7 +201,7 @@ class Graph(object):
         returns:
             (object)  - renamed node
         """
-        if new_name in self._getNames():
+        if not self.validNodeName(new_name):
             logger.getLogger().error('"%s" is not unique' % new_name)
             return
 
@@ -348,8 +348,8 @@ class Graph(object):
 
                 width = node.get('width')
                 height = node.get('height')
-
-                myNode = self.addNode(node_type, name=name, pos=[posx, posy], width=width, height=height)
+                expanded = node.get('expanded')
+                myNode = self.addNode(node_type, name=name, pos=[posx, posy], width=width, height=height, expanded=expanded)
 
         else:
             logger.getLogger().error('filename "%s" does not exist' % filename)

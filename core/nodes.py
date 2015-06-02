@@ -12,14 +12,16 @@ reload(options)
 
 class NodeBase(object):
     
-    Type                = QtGui.QGraphicsItem.UserType + 3
+    Type  = QtGui.QGraphicsItem.UserType + 3
 
-    def __init__(self, name='node1', node_type=None, width=100, height=175, font='Consolas', UUID=None):
+    def __init__(self, name='node1', node_type=None, width=100, height=175, font='Consolas', UUID=None,):
         
         self.name            = name
         self.node_type       = node_type
         self.uuid            = UUID if UUID else uuid.uuid4()
         
+        self._private        = []
+
         self.width           = width
         self.height          = height
         self.data            = dict()
@@ -51,6 +53,12 @@ class NodeBase(object):
 
     def path(self):
         return '/%s' % self.name
+
+    def getNodeAttributes(self, **kwargs):
+        """
+        Add arbitrary attributes to the node.
+        """
+        return self.data
 
     def addNodeAttributes(self, **kwargs):
         """
