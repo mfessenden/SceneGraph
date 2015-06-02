@@ -126,7 +126,7 @@ class Graph(object):
         if not self.validNodeName(name):
             name = self._nodeNamer(name)
 
-        dag = core.NodeBase(name=name, node_type=node_type, UUID=uuid, width=width, height=height)
+        dag = core.NodeBase(name=name, node_type=node_type, UUID=uuid)
         node = ui.NodeWidget(dag, UUID=str(dag.uuid), pos_x=pos[0], pos_y=pos[1], width=width, height=height, expanded=expanded)
 
         self.network.add_node(str(dag.uuid))

@@ -20,6 +20,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         QtGui.QGraphicsObject.__init__(self)
         
         self.dagnode         = node
+        self.dagnode._widget = self
         self.uuid            = UUID
         self.width           = width
 
@@ -37,7 +38,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         # label
         self.label           = QtGui.QGraphicsTextItem(parent=self)
         self._font_family    = font
-        self._font_size      = 10
+        self._font_size      = 9
         self._font_bold      = False
         self._font_italic    = False
         self.font            = QtGui.QFont(self._font_family)
@@ -105,10 +106,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         Build the node's label attribute.
         """
         self.label.setX(-(self.width/2 - self.bufferX))
-        if not self.expanded:
-            self.label.setY(-(self.height/2 + self.bufferY))
-        else:
-            self.label.setY(-(self.height/2 + self.bufferY - 2))
+        self.label.setY(-(self.height/2 + self.bufferY))
 
         self.font = QtGui.QFont(self._font_family)
         self.font.setPointSize(self._font_size)
@@ -127,13 +125,11 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # drop shadow
         if shadow:
-            dropshd = QtGui.QGraphicsDropShadowEffect()
-            dropshd.setBlurRadius(6)
-            dropshd.setColor(QtGui.QColor(0,0,0,90))
-            dropshd.setOffset(2,3)
-            self.label.setGraphicsEffect(dropshd)
-
-
+            self.tdropshd = QtGui.QGraphicsDropShadowEffect()
+            self.tdropshd.setBlurRadius(6)
+            self.tdropshd.setColor(QtGui.QColor(0,0,0,120))
+            self.tdropshd.setOffset(1,2)
+            self.label.setGraphicsEffect(self.tdropshd)
     
     @QtCore.Slot()
     def nodeNameChanged(self):
@@ -153,9 +149,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         Draw a line for the node label area
         """
         p1 = self.boundingRect().topLeft()
-        p1.setY(p1.y() + self.bufferY*8)
+        p1.setY(p1.y() + self.bufferY*7)
         p2 = self.boundingRect().topRight()
-        p2.setY(p2.y() + self.bufferY*8)
+        p2.setY(p2.y() + self.bufferY*7)
         return QtCore.QLineF(p1, p2)
     
     def getHiddenIcon(self):
@@ -217,7 +213,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         Draw the node.
         """
         # label & line
-        self.buildNodeLabel()
+        self.buildNodeLabel(True)
 
         if self.expanded:    
             label_line = self.getLabelLine()
@@ -234,20 +230,15 @@ class NodeWidget(QtGui.QGraphicsObject):
             gradient.setColorAt(0, QtGui.QColor(topGrey, topGrey, topGrey))
             gradient.setColorAt(1, QtGui.QColor(bottomGrey, bottomGrey, bottomGrey))
 
-        # drop shadow
-        dropshd = QtGui.QGraphicsDropShadowEffect()
-        dropshd.setBlurRadius(12)
-        dropshd.setColor(QtGui.QColor(0,0,0, 90))
-        dropshd.setOffset(8,8)
-        self.setGraphicsEffect(dropshd)
-
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
 
         fullRect = self.boundingRect()
         painter.drawRoundedRect(fullRect, 3, 3)
+
         if self.expanded:
+            painter.setPen(QtGui.QPen(QtGui.QColor(0,0,0, 90)))
             painter.drawLine(label_line)
 
         if self.expand_widget:
@@ -257,3 +248,10 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.expand_widget = self.getExpandedIcon()
         else:
             self.expand_widget = self.getHiddenIcon()
+
+        # drop shadow
+        dropshd = QtGui.QGraphicsDropShadowEffect()
+        dropshd.setBlurRadius(12)
+        dropshd.setColor(QtGui.QColor(0,0,0, 90))
+        dropshd.setOffset(8,8)
+        self.setGraphicsEffect(dropshd)

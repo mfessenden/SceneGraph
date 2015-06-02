@@ -14,17 +14,16 @@ class NodeBase(object):
     
     Type  = QtGui.QGraphicsItem.UserType + 3
 
-    def __init__(self, name='node1', node_type=None, width=100, height=175, font='Consolas', UUID=None,):
+    def __init__(self, name='node1', node_type='default', font='Consolas', UUID=None,):
         
         self.name            = name
         self.node_type       = node_type
         self.uuid            = UUID if UUID else uuid.uuid4()
         
-        self._private        = []
+        self._private        = ['pos_x', 'pos_y']
+        self._widget         = None   
 
-        self.width           = width
-        self.height          = height
-        self.data            = dict()
+        self._data           = dict()
         
         # buffers
         self.bufferX         = 3
@@ -51,6 +50,62 @@ class NodeBase(object):
         """
         return NodeBase.Type
 
+    @property
+    def data(self):
+        data = dict()
+        data['pos_x'] = self.pos_x
+        data['pos_y'] = self.pos_y
+        data['width'] = self.width
+        data['height'] = self.height
+        for k, v in self._data.iteritems():
+            if k not in self._private:
+                data[k] = v
+        return data
+    
+    @property
+    def pos_x(self):
+        if self._widget:
+            return self._widget.pos().x()
+        return 0
+
+    @property
+    def pos_y(self):
+        if self._widget:
+            return self._widget.pos().y()
+        return 0
+
+    @property
+    def width(self):
+        if self._widget:
+            return self._widget.width
+        return 0
+
+    @property
+    def height(self):
+        if self._widget:
+            return self._widget.height
+        return 0
+
+    @width.setter
+    def width(self, val):
+        if self._widget:
+            self._widget.width = val
+            return True
+        return False
+
+    @property
+    def height(self):
+        if self._widget:
+            return self._widget.height
+        return 0
+
+    @height.setter
+    def height(self, val):
+        if self._widget:
+            self._widget.height = val
+            return True
+        return False
+
     def path(self):
         return '/%s' % self.name
 
@@ -65,15 +120,19 @@ class NodeBase(object):
         Add arbitrary attributes to the node.
         """
         for attr, val in kwargs.iteritems():
-            self.data[attr] = val
+            if attr in ['width', 'height']:
+                #if self._widget:
+                setattr(self, attr, float(val))
+                continue
+            self._data[attr] = val
 
     def removeNodeAttributes(self, *args):
         """
         Remove arbitrary attributes to the node.
         """
         for arg in args:
-            if arg in self.data:
-                self.data.pop(arg)
+            if arg in self._data:
+                self._data.pop(arg)
 
 
 #- CONNECTIONS -----

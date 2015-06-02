@@ -139,6 +139,7 @@ class SceneGraph(form_class, base_class):
         # scene view signals
         self.scene.nodeAdded.connect(self.nodeAddedAction)
         self.scene.nodeChanged.connect(self.nodeChangedAction)
+        self.scene.changed.connect(self.sceneChangedAction)
 
         # initialize the Graph
         self.graph = core.Graph(self.view, gui=self)
@@ -286,7 +287,7 @@ class SceneGraph(form_class, base_class):
         self.buildWindowTitle()
 
         self.prefs.addFile(self.graph.getScene())
-        self._buildRecentFilesMenu()
+        self._buildRecentFilesMenu()        
 
     def readGraph(self):
         """
@@ -296,6 +297,7 @@ class SceneGraph(form_class, base_class):
         if filename == "":
             return
 
+        self.graph.reset()
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
@@ -306,9 +308,11 @@ class SceneGraph(form_class, base_class):
     # TODO: combine this with readGraph
     def readRecentGraph(self, filename):
         self.resetGraph()
+        self.graph.reset()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
+        self.graph.setScene(filename)
         self.buildWindowTitle()
 
     def resetGraph(self):
@@ -318,7 +322,9 @@ class SceneGraph(form_class, base_class):
         self.graph.reset()
         self.view.scene().clear()
         self.action_save_graph.setEnabled(False)
+        self.network.clear()
         self.buildWindowTitle()
+        self.updateOutput()
 
     def resetScale(self):
         self.view.resetMatrix()
@@ -362,6 +368,10 @@ class SceneGraph(form_class, base_class):
         """
         #node.updateDagNode()
         self.updateOutput()
+
+    def sceneChangedAction(self, event):
+        self.nodesSelectedAction()
+        self.updateNodes()
 
     #- Events ----
     def closeEvent(self, event):
@@ -432,13 +442,15 @@ class SceneGraph(form_class, base_class):
         """
         if self.scene.sceneNodes:
             for node in self.scene.sceneNodes.values():
-                self.graph.network.node[node.uuid]['name']=node.dagnode.name
-                self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
-                self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
-                self.graph.network.node[node.uuid]['width']=node.width
-                self.graph.network.node[node.uuid]['height']=node.height
-                self.graph.network.node[node.uuid]['expanded']=node.expanded
-
+                try:
+                    self.graph.network.node[node.uuid]['name']=node.dagnode.name
+                    self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
+                    self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
+                    self.graph.network.node[node.uuid]['width']=node.width
+                    self.graph.network.node[node.uuid]['height']=node.height
+                    self.graph.network.node[node.uuid]['expanded']=node.expanded
+                except:
+                    pass
 
 class MouseEventFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
