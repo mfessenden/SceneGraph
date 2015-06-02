@@ -3,7 +3,7 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 VERSION                     = 0.50
-REVISION                    = 7
+REVISION                    = 8
 VERSION_AS_STRING           = '%.02f.%d' % (VERSION, REVISION)
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)

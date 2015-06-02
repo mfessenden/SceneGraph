@@ -81,7 +81,7 @@ class Graph(object):
         returns:
             (weakref)
         """
-        return self.scene.sceneNodes
+        return self.scene.sceneNodes.values()
 
     def getNode(self, name):
         """
@@ -265,7 +265,7 @@ class Graph(object):
         Remove all node & connection data
         """
         # clear the Graph
-        self.network.graph.clear()
+        self.network.clear()
         from SceneGraph import core
         for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):

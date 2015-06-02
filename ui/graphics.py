@@ -45,7 +45,8 @@ class GraphicsView(QtGui.QGraphicsView):
         self.scene().network.graph['gscene_rect']=self.scene().sceneRect().getCoords()
 
     def getTranslation(self):
-        return [self.transform().m31(), self.transform().m32()]
+        #return [self.transform().m31(), self.transform().m32()]
+        return [self.horizontalScrollBar().value(), self.verticalScrollBar().value()]
 
     def getScaleFactor(self):
         return [self.transform().m11(), self.transform().m22()]
@@ -115,8 +116,10 @@ class GraphicsView(QtGui.QGraphicsView):
         if event.key() == QtCore.Qt.Key_A:
             # get the bounding rect of the graphics scene
             boundsRect = graphicsScene.itemsBoundingRect()
-            # set it to the GraphicsView scene rect...
-            self.setSceneRect(boundsRect)
+            
+            # set it to the GraphicsScene item selection bounds...
+            #self.setSceneRect(boundsRect)
+
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
 
