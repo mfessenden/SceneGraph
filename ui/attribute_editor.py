@@ -52,7 +52,7 @@ class AttributeEditor(QtGui.QWidget):
             self.pathEdit.setEnabled(False)
                         
             for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
-                if attr not in node_item.dagnode._private or force:
+                if attr not in node_item.dagnode.PRIVATE or force:
                     attr_label = QtGui.QLabel(self)
                     self.gridLayout.addWidget(attr_label, self.__current_row, 0, 1, 1)
                     val_edit = QtGui.QLineEdit(self)
@@ -64,7 +64,7 @@ class AttributeEditor(QtGui.QWidget):
                     self.__current_row+=1
                     val_edit.editingFinished.connect(partial(self.updateNodeAttribute, val_edit, attr))
 
-                    val_edit.setEnabled(attr not in node_item.dagnode._private)
+                    val_edit.setEnabled(attr not in node_item.dagnode.PRIVATE)
                 
             spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
             self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)

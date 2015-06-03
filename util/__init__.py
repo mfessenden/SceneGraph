@@ -50,3 +50,21 @@ def lower_case_underscore_to_camel_case(string):
     # use string's class to work on the string to keep its type
     class_ = string.__class__
     return splitted_string[0] + class_.join('', map(class_.capitalize, splitted_string[1:]))
+
+
+# attribute conversions
+def is_number(s):
+    """
+    Check if a string is a int/float 
+    """
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+def is_bool(s):
+    if str(s).lower() in ['true', 'false', '1', '0']:
+        return True
+    return False

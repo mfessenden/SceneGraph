@@ -142,7 +142,7 @@ class SceneGraph(form_class, base_class):
         self.scene.changed.connect(self.sceneChangedAction)
 
         # initialize the Graph
-        self.graph = core.Graph(self.view, gui=self)
+        self.graph = core.Graph(viewport=self.view)
         self.network = self.graph.network.graph
 
         self.scene.setNodeManager(self.graph)
@@ -175,7 +175,7 @@ class SceneGraph(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
 
         current_pos = QtGui.QCursor().pos()
-        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos=[current_pos.x(), current_pos.y()]))
+        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos_x=current_pos.x(), pos_y=current_pos.y()))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -355,14 +355,12 @@ class SceneGraph(form_class, base_class):
         """
         Action whenever a node is added to the graph.
         """
-        node.updateDagNode()
         self.updateOutput()
 
     def nodeChangedAction(self, node):
         """
         node = NodeWidget
         """
-        #node.updateDagNode()
         self.updateOutput()
 
     def sceneChangedAction(self, event):
@@ -395,7 +393,7 @@ class SceneGraph(form_class, base_class):
         add_action = menu.addAction('Add default node')        
         qcurs=QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
-        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos=[view_pos.x(), view_pos.y()]))
+        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos_x=view_pos.x(), pos_y=view_pos.y()))
         menu.exec_(qcurs.pos())
 
     #- Settings -----
@@ -426,12 +424,20 @@ class SceneGraph(form_class, base_class):
         import networkx.readwrite.json_graph as nxj
         import simplejson as json
         self.updateNodes()
+
+        # store the current position in the text box
+        bar = self.outputPlainTextEdit.verticalScrollBar()
+        posy = bar.value()
+
         self.outputPlainTextEdit.clear()
         #graph_data = nxj.adjacency_data(self.graph.network)
         graph_data = nxj.node_link_data(self.graph.network)
         self.outputPlainTextEdit.setPlainText(json.dumps(graph_data, indent=5))
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
 
+        self.outputPlainTextEdit.scrollContentsBy(0, posy)
+
+    # TODO: this is in Graph.updateGraph
     def updateNodes(self):
         """
         Update the networkx graph with current node values.
@@ -439,12 +445,17 @@ class SceneGraph(form_class, base_class):
         if self.scene.sceneNodes:
             for node in self.scene.sceneNodes.values():
                 try:
-                    self.graph.network.node[node.uuid]['name']=node.dagnode.name
-                    self.graph.network.node[node.uuid]['pos_x']=node.pos().x()
-                    self.graph.network.node[node.uuid]['pos_y']=node.pos().y()
-                    self.graph.network.node[node.uuid]['width']=node.width
-                    self.graph.network.node[node.uuid]['height']=node.height
-                    self.graph.network.node[node.uuid]['expanded']=node.expanded
+                    self.graph.network.node[str(node.UUID)]['name']=node.dagnode.name
+
+                    # update widget attributes
+                    self.graph.network.node[str(node.UUID)]['pos_x']=node.pos().x()
+                    self.graph.network.node[str(node.UUID)]['pos_y']=node.pos().y()
+                    self.graph.network.node[str(node.UUID)]['width']=node.width
+                    self.graph.network.node[str(node.UUID)]['height']=node.height
+                    self.graph.network.node[str(node.UUID)]['expanded']=node.expanded
+
+                    # update arbitrary attributes
+                    self.graph.network.node[str(node.UUID)].update(**node.dagnode.getNodeAttributes())
                 except:
                     pass
 

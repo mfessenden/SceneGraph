@@ -15,19 +15,19 @@
 	node_names = graph.listNodeNames()
 
 	# get all of the nodes (widgets)
-	nodes = graph.getNodes()
+	nodes = graph.getSceneNodes()
 
 	# get all of the nodes (dag nodes)
 	dags = graph.getDagNodes()
 
 	# return a named dag node
-	node = graph.getDagNode('node1')
+	dagnode = graph.getDagNode('node1')
 
 	# get node attributes
-	node.getNodeAttributes()
+	dagnode.getNodeAttributes()
 		
 	# set arbitrary attributes
-	node.setNodeAttributes(env='maya', version='2014')
+	dagnode.setNodeAttributes(env='maya', version='2014')
 
 
 ##### Dependencies:

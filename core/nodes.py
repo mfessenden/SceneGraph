@@ -12,26 +12,27 @@ reload(options)
 
 class NodeBase(object):
     
-    Type  = QtGui.QGraphicsItem.UserType + 3
+    Type    = QtGui.QGraphicsItem.UserType + 3
+    PRIVATE = ['name', 'node_type', 'UUID']
 
-    def __init__(self, name='node1', node_type='default', font='Consolas', UUID=None,):
+    def __init__(self, node_type='default', **kwargs):
         
-        self.name            = name
-        self.node_type       = node_type
-        self.uuid            = UUID if UUID else uuid.uuid4()
+        self.name            = kwargs.pop('name', 'node1')
+        self.node_type       = kwargs.pop('node_type', 'default')
+        UUID                 = kwargs.pop('id', None)
+        self.UUID            = UUID if UUID else uuid.uuid4()
         
-        self._private        = ['pos_x', 'pos_y']
+        # node widget
         self._widget         = None   
 
-        self._data           = dict()
-        
-        # buffers
-        self.bufferX         = 3
-        self.bufferY         = 3
-        self.color           = [180, 180, 180]     
+        # data attribute for arbitrary attributes
+        self._data           = dict()        
+        self.color           = [180, 180, 180]
+
+        # add any arbitrary attributes
+        self.addNodeAttributes(**kwargs)
 
     def __str__(self):
-        #return "name:%s  type:%s  uuid:%s" % (self.name, type(self).__name__, str(self.uuid))
         data = """%s %s {""" % (type(self).__name__, self.name)
         for k, v in self.data.iteritems():
             data += "\n   %s: %s," % (k, str(v))
@@ -42,7 +43,7 @@ class NodeBase(object):
         return self.name < other.name
 
     def __hash__(self):
-        return hash(self.uuid)
+        return hash(self.UUID)
 
     def type(self):
         """
@@ -58,7 +59,7 @@ class NodeBase(object):
         data['width'] = self.width
         data['height'] = self.height
         for k, v in self._data.iteritems():
-            if k not in self._private:
+            if k not in self.PRIVATE:
                 data[k] = v
         return data
     
@@ -78,13 +79,13 @@ class NodeBase(object):
     def width(self):
         if self._widget:
             return self._widget.width
-        return 0
+        return 125
 
     @property
     def height(self):
         if self._widget:
             return self._widget.height
-        return 0
+        return 15
 
     @width.setter
     def width(self, val):
@@ -119,12 +120,21 @@ class NodeBase(object):
         """
         Add arbitrary attributes to the node.
         """
+        from SceneGraph import util
+        reload(util)
         for attr, val in kwargs.iteritems():
-            if attr in ['width', 'height']:
-                #if self._widget:
-                setattr(self, attr, float(val))
-                continue
-            self._data[attr] = val
+            # haxx here
+            if attr not in self.PRIVATE:
+                if not self._widget or attr not in self._widget.PRIVATE:
+                    print '# DEBUG: adding node attribute: "%s"' % attr
+                    self._data[attr] = val
+                    continue
+                else:
+                    if self._widget:
+                        if attr in self._widget.PRIVATE:
+                            if util.is_number(val):
+                                val = float(val)
+                            setattr(self._widget, attr, val)
 
     def removeNodeAttributes(self, *args):
         """

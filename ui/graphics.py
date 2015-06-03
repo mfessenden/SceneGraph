@@ -40,9 +40,9 @@ class GraphicsView(QtGui.QGraphicsView):
         self.modifierBox = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)
         self.scale(1.0, 1.0)
 
-    def updateNetwork(self):
+    def updateNetworkGraphAttributes(self):
         """
-        Update networkx graph attributes.
+        Update networkx graph attributes from the current UI.
         """
         self.scene().network.graph['scale']=self.getScaleFactor()
         self.scene().network.graph['xform']=self.getTranslation()
@@ -66,7 +66,7 @@ class GraphicsView(QtGui.QGraphicsView):
             factor = 1.0 / factor
         self.scale(factor, factor)
         self._scale = factor
-        self.updateNetwork()
+        self.updateNetworkGraphAttributes()
 
     def mouseMoveEvent(self, event):
         """
@@ -90,7 +90,7 @@ class GraphicsView(QtGui.QGraphicsView):
                 event.accept()
                 return
 
-        self.updateNetwork()
+        self.updateNetworkGraphAttributes()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event):
@@ -140,10 +140,10 @@ class GraphicsView(QtGui.QGraphicsView):
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
                 if isinstance(item, node_widgets.NodeWidget):                    
-                    graphicsScene.network.remove_node(item.uuid)
+                    graphicsScene.network.remove_node(item.UUID)
                     graphicsScene.removeItem(item)
 
-        self.updateNetwork()
+        self.updateNetworkGraphAttributes()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def get_scroll_state(self):
@@ -191,7 +191,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = NodeWidget
         """
         self.nodeAdded.emit(item)
-        self.sceneNodes[item.uuid] = item
+        self.sceneNodes[item.UUID] = item
         item.nodeChanged.connect(self.nodeChangedAction)
 
         dropshd = QtGui.QGraphicsDropShadowEffect()
@@ -203,8 +203,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         QtGui.QGraphicsScene.addItem(self, item)
 
-    def nodeChangedAction(self, uuid, **kwargs):
-        node = self.sceneNodes.get(uuid, None)
+    def nodeChangedAction(self, UUID, **kwargs):
+        node = self.sceneNodes.get(UUID, None)
         if node:
             self.nodeChanged.emit(node)
 

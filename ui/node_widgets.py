@@ -15,35 +15,39 @@ class NodeWidget(QtGui.QGraphicsObject):
     clickedSignal       = QtCore.Signal(QtCore.QObject)
     nodeCreatedInScene  = QtCore.Signal()
     nodeChanged         = QtCore.Signal(str, dict)
+    PRIVATE             = ['width', 'height', 'expanded', 'pos_x', 'pos_y']
 
-    def __init__(self, node, width=100, height=175, expanded=False, font='Monospace', UUID=None, pos_x=0, pos_y=0):
-        QtGui.QGraphicsObject.__init__(self)
-        
+    def __init__(self, node, **kwargs):
+        QtGui.QGraphicsObject.__init__(self)        
+
+        self._is_node        = True
+
+        # set the dag node widget attribute
         self.dagnode         = node
-        self.dagnode._widget = self
-        self.uuid            = UUID
-        self.width           = width
+        self.dagnode._widget = self       
 
         # flag for an expanded node
-        self.expanded        = expanded
+        self.expanded        = kwargs.get('expanded', False)
         self.expand_widget   = None   
 
-        self.height          = height if expanded else 15
+        # width/height attributes
+        self.width           = kwargs.get('width', 120)
+        self.height          = kwargs.get('height', 175) if self.expanded else 15
         
         # buffers
         self.bufferX         = 3
         self.bufferY         = 3
         self.color           = [180, 180, 180]
         
-        # label
+        # font/label attributes
         self.label           = QtGui.QGraphicsTextItem(parent=self)
-        self._font_family    = font
+        self.font            = kwargs.get('font', 'Monospace')
         self._font_size      = 8
         self._font_bold      = False
         self._font_italic    = False
-        self.font            = QtGui.QFont(self._font_family)
-        self._is_node        = True
+        self.qfont           = QtGui.QFont(self.font)
         
+        # widget flags
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsObject.ItemIsMovable | QtGui.QGraphicsObject.ItemIsFocusable)
         self.setAcceptHoverEvents(True)
 
@@ -51,7 +55,16 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.setCacheMode(self.DeviceCoordinateCache)
         self.setZValue(-1)
 
+        # set the postition
+        pos_x = kwargs.get('pos_x', 0)
+        pos_y = kwargs.get('pos_y', 0)
         self.setPos(pos_x, pos_y)  
+
+    @property
+    def UUID(self):
+        if self.dagnode:
+            return self.dagnode.UUID
+        return None
 
     def type(self):
         """
@@ -59,20 +72,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         return NodeWidget.Type
     
-    @QtCore.Slot()
-    def updateDagNode(self):
-        """
-        Update dag node attributes
-        """
-        attrs = dict()
-        attrs.update(pos_x=self.pos().x())
-        attrs.update(pos_y=self.pos().y())
-        attrs.update(width=self.width)
-        attrs.update(height=self.height)
-        attrs.update(expanded=self.expanded)
-        self.dagnode.addNodeAttributes(**attrs)
-        self.nodeChanged.emit(self.uuid, attrs)
-
     def shape(self):
         path = QtGui.QPainterPath()
         path.addRoundedRect(QtCore.QRectF(-self.width/2, -self.height/2, self.width, self.height), 5, 5)
@@ -108,12 +107,12 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.label.setX(-(self.width/2 - self.bufferX + 3))
         self.label.setY(-(self.height/2 + self.bufferY))
 
-        self.font = QtGui.QFont(self._font_family)
-        self.font.setPointSize(self._font_size)
-        self.font.setBold(self._font_bold)
-        self.font.setItalic(self._font_italic)
+        self.qfont = QtGui.QFont(self.font)
+        self.qfont.setPointSize(self._font_size)
+        self.qfont.setBold(self._font_bold)
+        self.qfont.setItalic(self._font_italic)
 
-        self.label.setFont(self.font)
+        self.label.setFont(self.qfont)
         self.label.setPlainText(self.dagnode.name)
         self.label.setDefaultTextColor(QtGui.QColor(0, 0, 0))
 
@@ -138,11 +137,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         node_name = self.label.document().toPlainText()
         cur_name = self.dagnode.name
-        uuid = self.dagnode.uuid
+        UUID = self.dagnode.UUID
         if node_name != cur_name:
             self.dagnode.name = node_name
-            self.nodeChanged.emit(uuid, {'name':node_name})
-            self.updateDagNode()
+            self.nodeChanged.emit(UUID, {'name':node_name})
 
     def getLabelLine(self):
         """
