@@ -4,7 +4,7 @@ from . import node_widgets
 
 
 reload(attribute_editor)
-#reload(graphics)
+reload(graphics)
 reload(node_widgets)
 
 

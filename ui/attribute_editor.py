@@ -82,8 +82,10 @@ class AttributeEditor(QtGui.QWidget):
         """
         new_name = str(self.nameEdit.text())
         if self._current_node.dagnode:
-            newNode = self.manager.renameNode(self._current_node.name, new_name)
-            self.setNode(newNode)
+            node = self.manager.renameNode(self._current_node.dagnode.name, new_name)
+            if node:
+                self.setNode(node)
+                node.update()
     
     def updateNodeAttribute(self, lineEdit, attribute):
         """

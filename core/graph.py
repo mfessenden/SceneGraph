@@ -4,7 +4,7 @@ import re
 import simplejson as json
 import networkx as nx
 from functools import partial
-from PySide import QtCore
+from PySide import QtCore, QtGui
 
 from .. import logger
 
@@ -76,10 +76,10 @@ class Graph(object):
     
     def getNodes(self):
         """
-        Returns a weakref to all of the scene nodes
+        Returns a list of all scene node widgets.
 
         returns:
-            (weakref)
+            (list)
         """
         return self.scene.sceneNodes.values()
 
@@ -89,6 +89,29 @@ class Graph(object):
         """
         if name in self.getNodes():
             return self.getNodes().get(name)
+        return
+
+    def getDagNodes(self):
+        """
+        Returns a list of all dag node.
+
+        returns:
+            (list)
+        """
+        nodes = self.getNodes()
+        if nodes:
+            return [node.dagnode for node in self.getNodes()]
+        return []
+
+    def getDagNode(self, name):
+        """
+        Return a dag node by name.
+        """
+        dagNodes = self.getDagNodes()
+        if dagNodes:
+            for dag in dagNodes:
+                if dag.name == name:
+                    return dag
         return
 
     def selectedNodes(self):
@@ -205,11 +228,13 @@ class Graph(object):
             logger.getLogger().error('"%s" is not unique' % new_name)
             return
 
-        node=self.scene.sceneNodes.pop(old_name)
-        node.name = new_name
-        self.scene.sceneNodes[node.name]=node
-        node.update()
-        return node
+        uuid = self.getNodeID(old_name)
+        self.network.node[uuid]['name'] = new_name
+        for node in self.scene.sceneNodes.values():
+            if node.dagnode.name == old_name:
+                node.dagnode.name = new_name
+                return node
+        return
 
     def copyNodes(self, nodes):
         """

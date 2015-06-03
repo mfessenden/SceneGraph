@@ -18,8 +18,8 @@
     <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
        <number>0</number>
@@ -78,7 +78,32 @@
                <height>0</height>
               </size>
              </property>
-             <layout class="QVBoxLayout" name="attrEditorLayout"/>
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <item>
+               <widget class="QScrollArea" name="attributeScrollArea">
+                <property name="frameShape">
+                 <enum>QFrame::NoFrame</enum>
+                </property>
+                <property name="frameShadow">
+                 <enum>QFrame::Sunken</enum>
+                </property>
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="attributeSrollAreaContents">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>745</width>
+                   <height>216</height>
+                  </rect>
+                 </property>
+                 <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
+                </widget>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </widget>
            <widget class="QSplitter" name="btm_splitter">
@@ -102,6 +127,29 @@
                 <height>0</height>
                </size>
               </property>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <item>
+                <widget class="QScrollArea" name="sceneScrollArea">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="sceneScrollAreaContents">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>745</width>
+                    <height>213</height>
+                   </rect>
+                  </property>
+                  <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </widget>
             <widget class="QDockWidget" name="consoleWidget">
@@ -121,6 +169,29 @@
                 <height>0</height>
                </size>
               </property>
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <item>
+                <widget class="QScrollArea" name="consoleScrollArea">
+                 <property name="frameShape">
+                  <enum>QFrame::NoFrame</enum>
+                 </property>
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="consoleScrollAreaContents">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>745</width>
+                    <height>212</height>
+                   </rect>
+                  </property>
+                  <layout class="QVBoxLayout" name="consoleScrollAreaLayout"/>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
              </widget>
             </widget>
            </widget>

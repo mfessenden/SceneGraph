@@ -101,8 +101,8 @@ class SceneGraph(form_class, base_class):
         self.setupFonts()
         
         # event filter
-        self.eventFilter = MouseEventFilter(self)
-        self.installEventFilter(self.eventFilter)
+        #self.eventFilter = MouseEventFilter(self)
+        #self.installEventFilter(self.eventFilter)
         
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
@@ -130,7 +130,7 @@ class SceneGraph(form_class, base_class):
         self.fonts["status"].setPointSize(size-1)
 
         self.fonts["output"] = QtGui.QFont('Monospace')
-        self.fonts["output"].setPointSize(size+1)
+        self.fonts["output"].setPointSize(size)
 
     def _setupGraphicsView(self, filter=False):
         """
@@ -156,10 +156,6 @@ class SceneGraph(form_class, base_class):
         self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
 
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        # event filter
-        if filter:
-            self.viewEventFilter = MouseEventFilter(self.view)
-            self.view.viewport().installEventFilter(self.viewEventFilter)
 
         # TESTING: disable
         self.scene.selectionChanged.connect(self.nodesSelectedAction)
@@ -336,8 +332,8 @@ class SceneGraph(form_class, base_class):
         """
         Remove a widget from the detailGroup box.
         """
-        for i in reversed(range(self.attrEditorLayout.count())):
-            widget = self.attrEditorLayout.takeAt(i).widget()
+        for i in reversed(range(self.attributeScrollAreaLayout.count())):
+            widget = self.attributeScrollAreaLayout.takeAt(i).widget()
             if widget is not None:
                 widget.deleteLater()
 
@@ -353,7 +349,7 @@ class SceneGraph(form_class, base_class):
             if node._is_node:
                 nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
                 nodeAttrWidget.setNode(node)
-                self.attrEditorLayout.addWidget(nodeAttrWidget)
+                self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
 
     def nodeAddedAction(self, node):
         """
@@ -452,11 +448,12 @@ class SceneGraph(form_class, base_class):
                 except:
                     pass
 
+
 class MouseEventFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.MouseButtonPress:
             # call a function here..
             # obj.doSomething()
             return True
-        return False
+        return QtGui.QMainWindow.eventFilter(self, obj, event)
 

@@ -8,14 +8,20 @@
 	sgui=SceneGraph.SceneGraph()
 	sgui.show()
 	
-	# work with the graph
-	from SceneGraph.core import nodes
-	
 	# access the node graph
 	graph = sgui.graph
 
-	# return a named node
-	node = graph.getNode('node1')
+	# list all node names
+	node_names = graph.listNodeNames()
+
+	# get all of the nodes (widgets)
+	nodes = graph.getNodes()
+
+	# get all of the nodes (dag nodes)
+	dags = graph.getDagNodes()
+
+	# return a named dag node
+	node = graph.getDagNode('node1')
 
 	# get node attributes
 	node.getNodeAttributes()

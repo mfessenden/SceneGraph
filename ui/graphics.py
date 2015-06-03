@@ -14,7 +14,7 @@ class GraphicsView(QtGui.QGraphicsView):
     tabPressed          = QtCore.Signal()
 
     def __init__(self, parent = None, **kwargs):
-        super(GraphicsView, self).__init__(parent)
+        QtGui.QGraphicsView.__init__(self, parent)
 
         self.parent              = parent
         scene                    = GraphicsScene(self)
@@ -60,7 +60,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Scale the viewport with the middle-mouse wheel
         """
-        super(GraphicsView, self).wheelEvent(event)
+        QtGui.QGraphicsView.wheelEvent(self, event)
         factor = 1.2
         if event.delta() < 0:
             factor = 1.0 / factor
@@ -101,7 +101,7 @@ class GraphicsView(QtGui.QGraphicsView):
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
         else:
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
-        super(GraphicsView, self).mousePressEvent(event)
+        QtGui.QGraphicsView.mousePressEvent(self, event)
 
     def event(self, event):
         """
@@ -109,7 +109,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         if (event.type()==QtCore.QEvent.KeyPress) and (event.key()==QtCore.Qt.Key_Tab):
             self.tabPressed.emit()
-        return super(GraphicsView, self).event(event)
+        return QtGui.QGraphicsView.event(self, event)
 
     def keyPressEvent(self, event):
         """
@@ -144,7 +144,7 @@ class GraphicsView(QtGui.QGraphicsView):
                     graphicsScene.removeItem(item)
 
         self.updateNetwork()
-        return super(GraphicsView, self).keyPressEvent(event)
+        return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def get_scroll_state(self):
         """
@@ -174,13 +174,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
     nodeChanged        = QtCore.Signal(object)
 
     def __init__(self, parent=None):
-        super(GraphicsScene, self).__init__(parent)
+        QtGui.QGraphicsScene.__init__(self, parent)
 
         self.line        = None
         self.sceneNodes  = weakref.WeakValueDictionary()
         self.graph       = None
         self.network     = None
 
+    # TODO: do we need this anymore?
     def setNodeManager(self, val):
         self.graph = val
         self.network = val.network
@@ -192,7 +193,15 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.nodeAdded.emit(item)
         self.sceneNodes[item.uuid] = item
         item.nodeChanged.connect(self.nodeChangedAction)
-        super(GraphicsScene, self).addItem(item)
+
+        dropshd = QtGui.QGraphicsDropShadowEffect()
+        dropshd.setBlurRadius(12)
+        dropshd.setColor(QtGui.QColor(0,0,0, 120))
+        dropshd.setOffset(4,4)
+        item.setGraphicsEffect(dropshd)
+        item.setZValue(1)
+
+        QtGui.QGraphicsScene.addItem(self, item)
 
     def nodeChangedAction(self, uuid, **kwargs):
         node = self.sceneNodes.get(uuid, None)
@@ -202,14 +211,17 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def dropEvent(self, event):
         newPos = event.scenePos()
 
-    def mouseDoubleClickEvent(self, event):
-        super(GraphicsScene, self).mouseDoubleClickEvent(event)
-
     """
     # CONNECTING NODES:
 
          - we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent methods
     """
+    def getNodes(self):
+        """
+        Returns a list of node widgets.
+        """
+        return self.sceneNodes.values()
+
     def mousePressEvent(self, event):
         """
         If an input/output connector is selected, draw a line
@@ -218,13 +230,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if event.button() == QtCore.Qt.LeftButton and (isinstance(item, core.nodes.NodeInput) or isinstance(item, core.nodes.NodeOutput)):
             self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
             self.addItem(self.line)
-        super(GraphicsScene, self).mousePressEvent(event)
+        QtGui.QGraphicsScene.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
         if self.line:
             newLine = QtCore.QLineF(self.line.line().p1(), event.scenePos())
             self.line.setLine(newLine)
-        super(GraphicsScene, self).mouseMoveEvent(event)
+        QtGui.QGraphicsScene.mouseMoveEvent(self, event)
         self.update()
 
     def mouseReleaseEvent(self, event):
@@ -245,23 +257,22 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 self.addItem(connectionLine)
                 # Now use that previous line created and update its position, giving it the proper length and etc...
                 connectionLine.updatePosition()
-
-                ###  NEED TO IMPLEMENT THIS< OR DELETE ###
-                # Sending the data downstream. The start item is the upstream node ALWAYS. The end item is the downstream node ALWAYS.
-                #connectionLine.getEndItem().getWidgetMenu().receiveFrom(connectionLine.getStartItem(), delete=False)
-                #connectionLine.getStartItem().getWidgetMenu().sendData(connectionLine.getStartItem().getWidgetMenu().packageData())
-                # Emitting the "justConnected" signal (That is on all connection points)
-                #connectionLine.myEndItem.lineConnected.emit()
-                #connectionLine.myStartItem.lineConnected.emit()
-                ### ###
         self.line = None
-        super(GraphicsScene, self).mouseReleaseEvent(event)
+        QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
+
+    def mouseDoubleClickEvent(self, event):
+        items = self.selectedItems()
+        if items:
+            for item in items:
+                posy = item.boundingRect().topRight().y()
+                item.setExpanded(not item.expanded)
+                item.setY(item.pos().y() - posy)
+                item.update()
+        QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
 
     def connectionTest(self, startItems, endItems):
         """
-        This is the big if statement that is checking
-        to make sure that whatever nodes the user is trying to
-        make a connection between is allowable.
+        Check that the two nodes that the user is connecting can be connected
         """
         if startItems[0]:
             if startItems[0].isInputConnection:

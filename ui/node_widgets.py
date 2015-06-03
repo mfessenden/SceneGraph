@@ -38,7 +38,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         # label
         self.label           = QtGui.QGraphicsTextItem(parent=self)
         self._font_family    = font
-        self._font_size      = 9
+        self._font_size      = 8
         self._font_bold      = False
         self._font_italic    = False
         self.font            = QtGui.QFont(self._font_family)
@@ -105,7 +105,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Build the node's label attribute.
         """
-        self.label.setX(-(self.width/2 - self.bufferX))
+        self.label.setX(-(self.width/2 - self.bufferX + 3))
         self.label.setY(-(self.height/2 + self.bufferY))
 
         self.font = QtGui.QFont(self._font_family)
@@ -163,7 +163,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         top_rx = tr.x()
         top_ry = tr.y()
 
-        buf = 2
+        buf = 8
         triw = 8
 
         p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf) + (triw / 2))
@@ -172,6 +172,8 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         tripoly = QtGui.QPolygonF([p1, p2, p3])
         triangle = QtGui.QGraphicsPolygonItem(tripoly, self, None)
+        triangle.setPen(QtGui.QPen(QtGui.QColor(0,0,0, 50)))
+        triangle.setBrush(QtGui.QBrush(QtGui.QColor(125,125,125)))
         return triangle
 
     def getExpandedIcon(self):
@@ -183,7 +185,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         top_rx = tr.x()
         top_ry = tr.y()
 
-        buf = 2
+        buf = 8
         triw = 8
 
         p1 = QtCore.QPointF(top_rx - buf, (top_ry + buf))
@@ -192,6 +194,8 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         tripoly = QtGui.QPolygonF([p1, p2, p3])
         triangle = QtGui.QGraphicsPolygonItem(tripoly, self, None)
+        triangle.setPen(QtGui.QPen(QtGui.QColor(0,0,0, 50)))
+        triangle.setBrush(QtGui.QBrush(QtGui.QColor(125,125,125)))
         return triangle
 
     def labelRect(self):
@@ -230,12 +234,12 @@ class NodeWidget(QtGui.QGraphicsObject):
             gradient.setColorAt(0, QtGui.QColor(topGrey, topGrey, topGrey))
             gradient.setColorAt(1, QtGui.QColor(bottomGrey, bottomGrey, bottomGrey))
 
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
 
         fullRect = self.boundingRect()
-        painter.drawRoundedRect(fullRect, 3, 3)
+        painter.drawRoundedRect(fullRect, 7, 7)
 
         if self.expanded:
             painter.setPen(QtGui.QPen(QtGui.QColor(0,0,0, 90)))
@@ -248,10 +252,3 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.expand_widget = self.getExpandedIcon()
         else:
             self.expand_widget = self.getHiddenIcon()
-
-        # drop shadow
-        dropshd = QtGui.QGraphicsDropShadowEffect()
-        dropshd.setBlurRadius(12)
-        dropshd.setColor(QtGui.QColor(0,0,0, 90))
-        dropshd.setOffset(8,8)
-        self.setGraphicsEffect(dropshd)
