@@ -33,4 +33,4 @@
 ##### Dependencies:
 
 - simplejson
-- NetoworkX 1.9.1
+- NetworkX 1.9.1

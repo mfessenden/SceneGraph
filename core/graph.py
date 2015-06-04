@@ -217,7 +217,7 @@ class Graph(object):
 
         if self.mode == 'ui':
             node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
-            logger.getLogger().info('adding scene graph node "%s"' % name)
+            logger.getLogger().info('adding scene graph node "%s" at ( %f, %f )' % (name, pos_x, pos_y))
         else:
             logger.getLogger().info('adding node "%s"' % name)
         
@@ -321,14 +321,15 @@ class Graph(object):
         """
         Paste saved nodes
         """
+        offset = 25
         pasted_nodes = []
         for node in self._copied_nodes:
             node.setSelected(False)
-            new_name = self._nodeNamer(node.name)
+            new_name = self._nodeNamer(node.dagnode.name)
             posx = node.pos().x() + node.width
             posy = node.pos().y() + node.height
-            new_node = self.addNode('generic', name=new_name, pos=[posx, posy])
-            new_node.addNodeAttributes(**node.getNodeAttributes())
+            new_node = self.addNode(node.dagnode.node_type, name=new_name, pos_x=node.pos().x() + offset, pos_y=node.pos().y() + offset)
+            new_node.dagnode.addNodeAttributes(**node.dagnode.getNodeAttributes())
             new_node.setSelected(True)
             pasted_nodes.append(new_node)
         return pasted_nodes

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>983</width>
-    <height>900</height>
+    <width>883</width>
+    <height>756</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,8 +17,11 @@
    <iconset>
     <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
   </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="mainLayout">
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
@@ -78,7 +81,7 @@
                <height>0</height>
               </size>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout">
+             <layout class="QVBoxLayout" name="attrEditorContentsLayout">
               <item>
                <widget class="QScrollArea" name="attributeScrollArea">
                 <property name="frameShape">
@@ -95,8 +98,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>745</width>
-                   <height>216</height>
+                   <width>761</width>
+                   <height>112</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
@@ -127,7 +130,7 @@
                 <height>0</height>
                </size>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_3">
+              <layout class="QVBoxLayout" name="sceneWidgetContentsLayout">
                <item>
                 <widget class="QScrollArea" name="sceneScrollArea">
                  <property name="frameShape">
@@ -141,8 +144,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>745</width>
-                    <height>213</height>
+                    <width>761</width>
+                    <height>110</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
@@ -169,7 +172,7 @@
                 <height>0</height>
                </size>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_4">
+              <layout class="QVBoxLayout" name="consoleWidgetContentsLayout">
                <item>
                 <widget class="QScrollArea" name="consoleScrollArea">
                  <property name="frameShape">
@@ -183,11 +186,85 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>745</width>
-                    <height>212</height>
+                    <width>761</width>
+                    <height>275</height>
                    </rect>
                   </property>
-                  <layout class="QVBoxLayout" name="consoleScrollAreaLayout"/>
+                  <layout class="QFormLayout" name="formLayout">
+                   <property name="fieldGrowthPolicy">
+                    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+                   </property>
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="viewRectLabel">
+                     <property name="text">
+                      <string>View Size:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QLineEdit" name="viewRectLineEdit"/>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QLabel" name="sceneRectLabel">
+                     <property name="text">
+                      <string>Scene Rect:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QLineEdit" name="sceneRectLineEdit"/>
+                   </item>
+                   <item row="2" column="0">
+                    <widget class="QLabel" name="zoomLevelLabel">
+                     <property name="text">
+                      <string>Zoom Level:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QLineEdit" name="zoomLevelLineEdit"/>
+                   </item>
+                   <item row="3" column="0">
+                    <widget class="QLabel" name="cursorXLabel">
+                     <property name="text">
+                      <string>Cursor X:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="3" column="1">
+                    <widget class="QLineEdit" name="cursorXLineEdit"/>
+                   </item>
+                   <item row="4" column="0">
+                    <widget class="QLabel" name="cursorYLabel">
+                     <property name="text">
+                      <string>Cursor Y:</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="4" column="1">
+                    <widget class="QLineEdit" name="cursorYLineEdit"/>
+                   </item>
+                   <item row="5" column="0">
+                    <widget class="QLabel" name="sceneCursorXLabel">
+                     <property name="text">
+                      <string>Cursor X (scene):</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="5" column="1">
+                    <widget class="QLineEdit" name="sceneCursorXLineEdit"/>
+                   </item>
+                   <item row="6" column="0">
+                    <widget class="QLabel" name="sceneCursorYLabel">
+                     <property name="text">
+                      <string>Cursor Y (scene):</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="6" column="1">
+                    <widget class="QLineEdit" name="sceneCursorYLineEdit"/>
+                   </item>
+                  </layout>
                  </widget>
                 </widget>
                </item>
@@ -224,12 +301,18 @@
             <property name="text">
              <string>Clear</string>
             </property>
+            <property name="class" stdset="0">
+             <string>Console</string>
+            </property>
            </widget>
           </item>
           <item>
            <widget class="QPushButton" name="button_refresh">
             <property name="text">
              <string>Refresh</string>
+            </property>
+            <property name="class" stdset="0">
+             <string>Console</string>
             </property>
            </widget>
           </item>
@@ -246,7 +329,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>983</width>
+     <width>883</width>
      <height>25</height>
     </rect>
    </property>
@@ -273,7 +356,6 @@
      <string>Graph</string>
     </property>
     <addaction name="action_clear_graph"/>
-    <addaction name="action_reset_scale"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
     <property name="title">
@@ -291,6 +373,14 @@
     <property name="title">
      <string>UI</string>
     </property>
+    <widget class="QMenu" name="menu_view">
+     <property name="title">
+      <string>View...</string>
+     </property>
+     <addaction name="action_reset_scale"/>
+    </widget>
+    <addaction name="menu_view"/>
+    <addaction name="separator"/>
     <addaction name="action_reset_ui"/>
    </widget>
    <addaction name="menuFile"/>
@@ -363,14 +453,14 @@
     <string>Clear graph</string>
    </property>
   </action>
-  <action name="action_reset_scale">
-   <property name="text">
-    <string>Reset scale...</string>
-   </property>
-  </action>
   <action name="action_reset_ui">
    <property name="text">
     <string>Reset UI</string>
+   </property>
+  </action>
+  <action name="action_reset_scale">
+   <property name="text">
+    <string>100%</string>
    </property>
   </action>
  </widget>

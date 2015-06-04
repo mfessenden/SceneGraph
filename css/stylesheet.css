@@ -23,6 +23,47 @@ QTabBar{
     font-size: 12;
 }
 
-QPushButton{
+QPushButton.Console{
     font-weight: bold;
+    background-color: #383838;
+}
+
+QLineEdit{
+    background-color:  #3a3a3a;
+}
+
+QMenuBar.AttributeMenu::item{
+    border-width: 1px;
+    border-bottom-color: #939393;
+    font-weight: bold;
+}
+
+QMenuBar{
+    background: #363636;
+}
+
+QMenuBar::item {
+    spacing: 3px; /* spacing between menu bar items */
+    padding: 1px 4px;
+    background: transparent;
+    border-radius: 4px;
+}
+
+QMenuBar::item:selected { /* when selected using mouse or keyboard */
+    background: #707070;
+}
+
+
+QMenu {
+    background-color: #323232;
+    margin: 2px; /* some spacing around the menu */
+}
+
+QMenu::item {
+    padding: 2px 25px 2px 20px;
+    border: 1px solid transparent; /* reserve space for selection border */
+}
+
+QMenu::item:selected {
+    background: rgba(100, 100, 100, 150);
 }

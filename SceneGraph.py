@@ -99,7 +99,8 @@ class SceneGraph(form_class, base_class):
         Set up the main UI
         """
         self.setupFonts()
-        
+        #self.setupStylesheetFlags()
+
         # event filter
         #self.eventFilter = MouseEventFilter(self)
         #self.installEventFilter(self.eventFilter)
@@ -107,10 +108,15 @@ class SceneGraph(form_class, base_class):
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
         self.main_splitter.setSizes([770, 300])
+
+        self.right_splitter.setStretchFactor(0, 1)
+        self.right_splitter.setStretchFactor(1, 0)
+
+        
         self.setStyleSheet("QTabWidget {background-color:rgb(68, 68, 68)}")
 
         # build the graph
-        self._setupGraphicsView()
+        self.initializeGraphicsView()
 
         self.statusBar().setFont(self.fonts.get('status'))
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
@@ -132,7 +138,10 @@ class SceneGraph(form_class, base_class):
         self.fonts["output"] = QtGui.QFont('Monospace')
         self.fonts["output"].setPointSize(size)
 
-    def _setupGraphicsView(self, filter=False):
+    def setupStylesheetFlags(self):
+        self.button_refresh.setProperty('class','Console')
+
+    def initializeGraphicsView(self, filter=False):
         """
         Initialize the graphics view and graph object.
         """
@@ -166,8 +175,9 @@ class SceneGraph(form_class, base_class):
         """
         self.timer.timeout.connect(self.resetStatus)
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
+        self.view.statusEvent.connect(self.updateConsole)
 
-        # FILE MENU
+        # file menu
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
@@ -175,7 +185,9 @@ class SceneGraph(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
 
         current_pos = QtGui.QCursor().pos()
-        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos_x=current_pos.x(), pos_y=current_pos.y()))
+        pos_x = current_pos.x()
+        pos_y = current_pos.y()
+        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos_x=QtGui.QCursor().pos().x(), pos_y=QtGui.QCursor().pos().y()))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -388,13 +400,25 @@ class SceneGraph(form_class, base_class):
         """
         Build a context menu at the current pointer pos.
         """
-        menu=QtGui.QMenu(parent)
-        menu.clear()
-        add_action = menu.addAction('Add default node')        
-        qcurs=QtGui.QCursor()
+        tab_menu = QtGui.QMenu(parent)
+        tab_menu.clear()
+        add_action = tab_menu.addAction('Add default node')        
+        qcurs = QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
-        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos_x=view_pos.x(), pos_y=view_pos.y()))
-        menu.exec_(qcurs.pos())
+        scene_pos = self.view.mapToScene(view_pos)
+        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos_x=scene_pos.x(), pos_y=scene_pos.y()))
+        tab_menu.exec_(qcurs.pos())
+
+    def initializeViewContextMenu(self):
+        """
+        Initialize the GraphicsView context menu.
+        """
+        menu_actions = list()
+        for node_type in ['default']:
+            action = QtGui.QAction(node_type, self, triggered=self.createNodeFromMenuStub)
+            action.setData((node_type, None))
+            actionList.append(action)
+        return menu_actions
 
     #- Settings -----
     def readSettings(self):
@@ -436,6 +460,43 @@ class SceneGraph(form_class, base_class):
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
 
         self.outputPlainTextEdit.scrollContentsBy(0, posy)
+
+    def updateConsole(self, status):
+        """
+        Update the console data.
+
+        params:
+            data - (dict) data from GraphicsView mouseMoveEvent
+        """
+        
+        self.sceneRectLineEdit.clear()
+        self.viewRectLineEdit.clear()
+        self.zoomLevelLineEdit.clear()
+
+        if status.get('cursor_x'):
+            self.cursorXLineEdit.clear()
+            self.cursorXLineEdit.setText(str(status.get('cursor_x')))
+
+        if status.get('cursor_y'):
+            self.cursorYLineEdit.clear()
+            self.cursorYLineEdit.setText(str(status.get('cursor_y')))
+
+        if status.get('cursor_sx'):
+            self.sceneCursorXLineEdit.clear()
+            self.sceneCursorXLineEdit.setText(str(status.get('cursor_sx')))
+
+        if status.get('cursor_sy'):
+            self.sceneCursorYLineEdit.clear()
+            self.sceneCursorYLineEdit.setText(str(status.get('cursor_sy')))
+
+        scene_str = '%s, %s' % (status.get('scene_rect')[0], status.get('scene_rect')[1])
+        self.sceneRectLineEdit.setText(scene_str)
+
+        view_str = '%s, %s' % (status.get('view_size')[0], status.get('view_size')[1])
+        self.viewRectLineEdit.setText(view_str)
+
+        zoom_str = '%s' % status.get('zoom_level')[0]
+        self.zoomLevelLineEdit.setText(zoom_str)
 
     # TODO: this is in Graph.updateGraph
     def updateNodes(self):

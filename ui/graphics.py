@@ -12,6 +12,7 @@ reload(node_widgets)
 class GraphicsView(QtGui.QGraphicsView):
 
     tabPressed          = QtCore.Signal()
+    statusEvent          = QtCore.Signal(dict)
 
     def __init__(self, parent = None, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
@@ -40,6 +41,10 @@ class GraphicsView(QtGui.QGraphicsView):
         self.modifierBox = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)
         self.scale(1.0, 1.0)
 
+        # context menu
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.showContextMenu)
+
     def updateNetworkGraphAttributes(self):
         """
         Update networkx graph attributes from the current UI.
@@ -49,12 +54,45 @@ class GraphicsView(QtGui.QGraphicsView):
         self.scene().network.graph['gview_rect']=self.sceneRect().getCoords()
         self.scene().network.graph['gscene_rect']=self.scene().sceneRect().getCoords()
 
+    # debug
+    def getContentsSize(self):
+        """
+        Returns the contents size (physical size)
+        """
+        crect = self.contentsRect()
+        return [crect.width(), crect.height()]
+
+    def getSceneSize(self):
+        """
+        Returns the scene size.
+        """
+        srect = self.scene().sceneRect()
+        return [srect.width(), srect.height()]
+
     def getTranslation(self):
         #return [self.transform().m31(), self.transform().m32()]
         return [self.horizontalScrollBar().value(), self.verticalScrollBar().value()]
 
     def getScaleFactor(self):
-        return [self.transform().m11(), self.transform().m22()]
+        scale_x = '%.3f' % self.transform().m11()
+        scale_y = '%.3f' % self.transform().m22()
+        return [scale_x, scale_y]
+
+    def resizeEvent(self, event):
+        #self.sendConsoleStatus(event)
+        QtGui.QGraphicsView.resizeEvent(self, event)
+
+    def viewportEvent(self, event):
+        #self.sendConsoleStatus(event)
+        return QtGui.QGraphicsView.viewportEvent(self, event)
+
+    def enterEvent(self, event):
+        #self.sendConsoleStatus(event)
+        QtGui.QGraphicsView.enterEvent(self, event)
+
+    def actionEvent(self, event):
+        #self.sendConsoleStatus(event)
+        QtGui.QGraphicsView.actionEvent(self, event)
 
     def wheelEvent(self, event):
         """
@@ -68,12 +106,45 @@ class GraphicsView(QtGui.QGraphicsView):
         self._scale = factor
         self.updateNetworkGraphAttributes()
 
+    def sendConsoleStatus(self, event):
+        """
+        Update the parent UI with the view status.
+
+        params:
+            event - (QEvent) event object
+        """
+        #action.setData((action.data()[0], self.mapToScene(menuLocation)))
+        # provide debug feedback
+        status = dict(
+            view_size = self.getContentsSize(),
+            scene_rect = self.getSceneSize(),
+            zoom_level = self.getScaleFactor(),
+            )
+
+        if hasattr(event, 'pos'):
+            status['cursor_x'] = event.pos().x()
+            status['cursor_y'] = event.pos().y()
+
+            #status['cursor_sx'] = self.mapFromScene(event.pos()).x()
+            #status['cursor_sy'] = self.mapFromScene(event.pos()).y()
+
+            status['cursor_sx'] = self.mapToScene(event.pos()).x()
+            status['cursor_sy'] = self.mapToScene(event.pos()).y()
+
+        self.statusEvent.emit(status)
+
+    def actionEvent(self, event):
+        #self.sendConsoleStatus(event)
+        QtGui.QGraphicsView.actionEvent(self, event)
+
     def mouseMoveEvent(self, event):
         """
         Panning the viewport around and CTRL+mouse drag behavior.
-        """
-        # Panning
+        """        
         self.current_cursor_pos = event.pos()
+        self.sendConsoleStatus(event)
+
+        # Panning
         if event.buttons() & QtCore.Qt.MiddleButton:
             delta = event.pos() - self.current_cursor_pos
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
@@ -97,6 +168,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Pan the viewport if the control key is pressed
         """
+        #self.sendConsoleStatus(event)
         if event.modifiers() == QtCore.Qt.ControlModifier:
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
         else:
@@ -139,9 +211,20 @@ class GraphicsView(QtGui.QGraphicsView):
 
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
-                if isinstance(item, node_widgets.NodeWidget):                    
-                    graphicsScene.network.remove_node(item.UUID)
+                
+                if isinstance(item, node_widgets.NodeWidget):
+                    print '# GraphicsView: deleting node "%s"' % item.dagnode.name
+                    graphicsScene.network.remove_node(str(item.dagnode.UUID))
                     graphicsScene.removeItem(item)
+                    continue
+                else:
+                    if hasattr(item, '_is_node'):
+                        if item._is_node:
+                            print '# GraphicsView: deleting node "%s"' % item.dagnode.name
+                            graphicsScene.network.remove_node(str(item.dagnode.UUID))
+                            graphicsScene.removeItem(item)
+                            continue
+                print '# Error: GraphicsView: "%s" has an invalid type: "%s"' % (item.dagnode.name, str(item.__class__.__name__))
 
         self.updateNetworkGraphAttributes()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
@@ -161,6 +244,17 @@ class GraphicsView(QtGui.QGraphicsView):
         sceneWidthPercent = centerWidth / sceneWidth if sceneWidth != 0 else 0
         sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
         return sceneWidthPercent, sceneHeightPercent
+
+    def showContextMenu(self, pos):
+        """
+        Pop up a node creation context menu at a given location.
+        """
+        menu = QtGui.QMenu()
+        menuActions = self.parent().createCreateMenuActions()
+        for action in menuActions:
+            action.setData((action.data()[0], self.mapToScene(pos)))
+            menu.addAction(action)
+        menu.exec_(self.mapToGlobal(pos))
 
 
 class GraphicsScene(QtGui.QGraphicsScene):
@@ -265,9 +359,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if items:
             for item in items:
                 posy = item.boundingRect().topRight().y()
-                item.setExpanded(not item.expanded)
-                item.setY(item.pos().y() - posy)
-                item.update()
+
+
+                #item.setExpanded(not item.expanded)
+                #item.setY(item.pos().y() - posy)
+                #item.update()
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
 
     def connectionTest(self, startItems, endItems):

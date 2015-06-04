@@ -27,8 +27,14 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.dagnode._widget = self       
 
         # flag for an expanded node
+        self.is_expandable   = True
         self.expanded        = kwargs.get('expanded', False)
-        self.expand_widget   = None   
+        self.expand_widget   = None
+
+        # input/output terminals
+        self.output_widget   = ConnectionWidget(self)
+        self.output_widget.setParentItem(self)
+
 
         # width/height attributes
         self.width           = kwargs.get('width', 120)
@@ -53,12 +59,12 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
         self.setCacheMode(self.DeviceCoordinateCache)
-        self.setZValue(-1)
+        self.setZValue(1)
 
         # set the postition
         pos_x = kwargs.get('pos_x', 0)
         pos_y = kwargs.get('pos_y', 0)
-        self.setPos(pos_x, pos_y)  
+        self.setPos(pos_x, pos_y)
 
     @property
     def UUID(self):
@@ -129,7 +135,7 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.tdropshd.setColor(QtGui.QColor(0,0,0,120))
             self.tdropshd.setOffset(1,2)
             self.label.setGraphicsEffect(self.tdropshd)
-    
+
     @QtCore.Slot()
     def nodeNameChanged(self):
         """
@@ -250,3 +256,70 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.expand_widget = self.getExpandedIcon()
         else:
             self.expand_widget = self.getHiddenIcon()
+
+
+class ConnectionWidget(QtGui.QGraphicsObject):
+    
+    Type                = QtGui.QGraphicsObject.UserType + 4
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeChanged         = QtCore.Signal(str, dict)
+    PRIVATE             = []
+
+    def __init__(self, node, **kwargs):
+        QtGui.QGraphicsObject.__init__(self)
+
+        self._is_node   = False
+        self.node       = node
+
+        self.color      = [255, 255, 0]
+        self.dagnode    = node.dagnode
+        self.radius     = 8
+
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
+        self.setZValue(- 1)
+
+    @property
+    def UUID(self):
+        if self.dagnode:
+            return self.dagnode.UUID
+        return None
+
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return NodeWidget.Type
+
+    def boundingRect(self):
+        """
+        Defines the clickable hit box.
+
+        top left, width, height
+        """
+        return QtCore.QRectF(self.parentItem().boundingRect().right() - self.radius/2, 
+                            self.parentItem().label.pos().y()/2, 
+                            self.radius, 
+                            self.radius)
+
+    def paint(self, painter, option, widget):
+        """
+        Draw the connection widget.
+        """
+        # background
+        gradient = QtGui.QLinearGradient(0, -self.radius/2, 0, self.radius/2)
+        grad = .5
+        color = self.color
+        if option.state & QtGui.QStyle.State_Selected:
+            color = [255, 0, 0]
+        
+        gradient.setColorAt(0, QtGui.QColor(*color))
+        gradient.setColorAt(1, QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad))
+        
+        painter.setRenderHints(QtGui.QPainter.Antialiasing)
+        #painter.setPen(QtGui.QColor(*color))
+
+        painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad)), 0.5, QtCore.Qt.SolidLine))
+
+        painter.setBrush(QtGui.QBrush(gradient))
+        painter.drawEllipse(self.boundingRect())
+        

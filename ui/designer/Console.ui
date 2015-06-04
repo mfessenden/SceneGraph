@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>270</width>
-    <height>236</height>
+    <width>321</width>
+    <height>280</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,33 +18,54 @@
     <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
    </property>
    <item row="0" column="0">
-    <widget class="QLabel" name="zoomLabel">
+    <widget class="QLabel" name="viewRectLabel">
      <property name="text">
-      <string>Zoom:</string>
+      <string>View Rect:</string>
      </property>
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QDoubleSpinBox" name="zoomDoubleSpinBox"/>
+    <widget class="QLineEdit" name="viewRectLineEdit"/>
    </item>
    <item row="1" column="0">
-    <widget class="QLabel" name="positionLabel">
+    <widget class="QLabel" name="sceneRectLabel">
      <property name="text">
-      <string>Position:</string>
+      <string>Scene Rect:</string>
      </property>
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QWidget" name="positionWidget" native="true">
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <widget class="QLineEdit" name="pos_x_line"/>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="pos_y_line"/>
-      </item>
-     </layout>
+    <widget class="QLineEdit" name="sceneRectLineEdit"/>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="zoomLevelLabel">
+     <property name="text">
+      <string>Zoom Level:</string>
+     </property>
     </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLineEdit" name="zoomLevelLineEdit"/>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="cursorXLabel">
+     <property name="text">
+      <string>Cursor X:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="cursorXLineEdit"/>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="cursorYLabel">
+     <property name="text">
+      <string>Cursor Y:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLineEdit" name="cursorYLineEdit"/>
    </item>
   </layout>
  </widget>

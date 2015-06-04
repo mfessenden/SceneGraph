@@ -1,6 +1,46 @@
 from PySide import QtCore, QtGui
 
 
+class SimpleItem(QtGui.QGraphicsObject):
+    
+    Type                = QtGui.QGraphicsObject.UserType + 4
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeChanged         = QtCore.Signal(str, dict)
+    PRIVATE             = []
+    def __init__(self, node, **kwargs):
+        QtGui.QGraphicsObject.__init__(self)
+        self.node       = node
+        self.color      = [255, 255, 0]
+        self.dagnode    = None
+        self.width = 100
+        self.height = 100
+
+    @property
+    def UUID(self):
+        if self.dagnode:
+            return self.dagnode.UUID
+        return None
+
+    def boundingRect(self):
+        """
+        Defines the clickable hit-box.  Simply returns a rectangle instead of
+        a rounded rectangle for speed purposes.
+        """
+        adjust = 2.0
+        return QtCore.QRectF(-self.width/2  - adjust, 
+                             -self.height/2 - adjust,
+                              self.width  + 3 + adjust, 
+                              self.height + 3 + adjust)
+
+    def paint(self, painter, option, widget):
+        """
+        Draw the widget.
+        """
+        painter.setRenderHints(QtGui.QPainter.Antialiasing)
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(*self.color)))
+        painter.drawRect(self.boundingRect())
+
+
 class DagNode(QtGui.QGraphicsItem):
     """
     A QGraphicsItem representing a node in a dependency graph.  These can be
