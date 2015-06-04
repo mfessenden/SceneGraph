@@ -58,7 +58,7 @@ class SceneGraph(form_class, base_class):
         self.setupUi(self)
         
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview)
+        self.view = ui.GraphicsView(self.gview, ui=self)
         self.scene = self.view.scene()
         self.gviewLayout.addWidget(self.view)
 
@@ -93,6 +93,8 @@ class SceneGraph(form_class, base_class):
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
+
+        self.resetStatus()
 
     def initializeUI(self):
         """
@@ -178,6 +180,7 @@ class SceneGraph(form_class, base_class):
         self.view.statusEvent.connect(self.updateConsole)
 
         # file menu
+        self.menu_file.aboutToShow.connect(self.initializeFileMenu)
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
@@ -193,6 +196,11 @@ class SceneGraph(form_class, base_class):
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
+
+    def initializeFileMenu(self):
+        current_scene = self.graph.getScene()
+        if not current_scene:
+            self.action_save_graph.setEnabled(False)
 
     def _buildRecentFilesMenu(self):
         """
@@ -265,10 +273,13 @@ class SceneGraph(form_class, base_class):
         """
         import os
         if not filename:
-            if self.graph.getScene():
-                filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", self.graph.getScene(), "JSON files (*.json)")
-                if filename == "":
-                    return
+            filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", 
+                                                                os.path.join(os.getenv('HOME'), 'my_graph.json'), 
+                                                                "JSON files (*.json)")
+            basename, fext = os.path.splitext(filename)
+            if not fext:
+                filename = '%s.json' % basename
+
 
         filename = str(os.path.normpath(filename))
         self.updateStatus('saving current graph "%s"' % filename)
@@ -290,12 +301,16 @@ class SceneGraph(form_class, base_class):
         """
         Save the current graph file
         """
+        if not self.graph.getScene():
+            return
+
         self.updateStatus('saving current graph "%s"' % self.graph.getScene())
         self.graph.write(self.graph.getScene())
         self.buildWindowTitle()
 
         self.prefs.addFile(self.graph.getScene())
-        self._buildRecentFilesMenu()        
+        self._buildRecentFilesMenu()
+        return self.graph.getScene()      
 
     def readGraph(self):
         """
@@ -357,8 +372,9 @@ class SceneGraph(form_class, base_class):
         self.removeDetailWidgets()
         nodes = self.scene.selectedItems()
         if len(nodes) == 1:
+
             node = nodes[0]
-            if node._is_node:
+            if node._is_node:                
                 nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
                 nodeAttrWidget.setNode(node)
                 self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
@@ -373,12 +389,16 @@ class SceneGraph(form_class, base_class):
         """
         node = NodeWidget
         """
+        print '# SceneGraph: Node changed...'
         self.updateOutput()
 
     def sceneChangedAction(self, event):
         self.nodesSelectedAction()
         self.updateNodes()
-
+    
+    def createCreateMenuActions(self):
+        pass
+    
     #- Events ----
     def closeEvent(self, event):
         """
@@ -413,13 +433,14 @@ class SceneGraph(form_class, base_class):
         """
         Initialize the GraphicsView context menu.
         """
-        menu_actions = list()
-        for node_type in ['default']:
-            action = QtGui.QAction(node_type, self, triggered=self.createNodeFromMenuStub)
-            action.setData((node_type, None))
-            actionList.append(action)
+        menu_actions = []
+        menu_actions.append(QtGui.QAction('Rename node', self, triggered=self.renameNodeAction))
         return menu_actions
 
+    def renameNodeAction(self, node):
+        print 'renaming node...'
+
+        
     #- Settings -----
     def readSettings(self):
         """

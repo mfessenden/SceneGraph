@@ -91,6 +91,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         return QtCore.QRectF(-self.width/2  - self.bufferX,  -self.height/2 - self.bufferY,
                               self.width  + 3 + self.bufferX, self.height + 3 + self.bufferY)
     
+    #- Events -----
+    def hoverEnterEvent(self, event):
+        QtGui.QGraphicsObject.hoverEnterEvent(self, event)
+
     # Label formatting -----
     def setLabelItalic(self, val=False):
         """
@@ -143,8 +147,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         node_name = self.label.document().toPlainText()
         cur_name = self.dagnode.name
-        UUID = self.dagnode.UUID
+        UUID = str(self.dagnode.UUID)
         if node_name != cur_name:
+            print '# NodeWidget: Node name updated: ', node_name
             self.dagnode.name = node_name
             self.nodeChanged.emit(UUID, {'name':node_name})
 
@@ -232,6 +237,11 @@ class NodeWidget(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_Selected:
             gradient.setColorAt(0, QtGui.QColor(255, 172, 0))
             gradient.setColorAt(1, QtGui.QColor(200, 128, 0))
+
+        elif option.state & QtGui.QStyle.State_MouseOver:
+            gradient.setColorAt(0, QtGui.QColor(200, 200, 200))
+            gradient.setColorAt(1, QtGui.QColor(150, 150, 150))
+
         else:
             topGrey = self.color[0]
             bottomGrey = self.color[0] / 1.5
@@ -276,6 +286,8 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.radius     = 8
 
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
+
+        self.setAcceptHoverEvents(True)
         self.setZValue(- 1)
 
     @property
@@ -309,9 +321,13 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         gradient = QtGui.QLinearGradient(0, -self.radius/2, 0, self.radius/2)
         grad = .5
         color = self.color
+
         if option.state & QtGui.QStyle.State_Selected:
             color = [255, 0, 0]
         
+        if option.state & QtGui.QStyle.State_MouseOver:
+            color = [255, 157, 0]
+
         gradient.setColorAt(0, QtGui.QColor(*color))
         gradient.setColorAt(1, QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad))
         

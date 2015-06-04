@@ -333,7 +333,7 @@
      <height>25</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="menu_file">
     <property name="title">
      <string>File</string>
     </property>
@@ -383,7 +383,7 @@
     <addaction name="separator"/>
     <addaction name="action_reset_ui"/>
    </widget>
-   <addaction name="menuFile"/>
+   <addaction name="menu_file"/>
    <addaction name="menuGraph"/>
    <addaction name="menu_nodes"/>
    <addaction name="menu_ui"/>
@@ -397,6 +397,9 @@
    </property>
   </widget>
   <action name="action_save_graph">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save graph...</string>
    </property>

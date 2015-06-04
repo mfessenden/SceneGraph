@@ -34,7 +34,7 @@ class AttributeEditor(QtGui.QWidget):
         """
         Set the currently focused node
         """
-        if node_item:
+        if node_item and node_item != self._current_node:
             # removed for testing
             #node_item.nodeChanged.connect(partial(self.setNode, node_item))
             

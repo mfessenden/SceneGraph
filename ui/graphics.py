@@ -11,13 +11,13 @@ reload(node_widgets)
 
 class GraphicsView(QtGui.QGraphicsView):
 
-    tabPressed          = QtCore.Signal()
-    statusEvent          = QtCore.Signal(dict)
+    tabPressed    = QtCore.Signal()
+    statusEvent   = QtCore.Signal(dict)
 
-    def __init__(self, parent = None, **kwargs):
+    def __init__(self, parent=None, ui=None, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
 
-        self.parent              = parent
+        self.parent              = ui
         scene                    = GraphicsScene(self)
         self.setScene(scene)
         scene.setSceneRect(-5000, -5000, 10000, 10000)
@@ -250,9 +250,9 @@ class GraphicsView(QtGui.QGraphicsView):
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        menuActions = self.parent().createCreateMenuActions()
+        menuActions = self.parent.initializeViewContextMenu()
         for action in menuActions:
-            action.setData((action.data()[0], self.mapToScene(pos)))
+            #action.setData((action.data()[0], self.mapToScene(pos)))
             menu.addAction(action)
         menu.exec_(self.mapToGlobal(pos))
 
@@ -285,7 +285,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = NodeWidget
         """
         self.nodeAdded.emit(item)
-        self.sceneNodes[item.UUID] = item
+        self.sceneNodes[str(item.UUID)] = item
         item.nodeChanged.connect(self.nodeChangedAction)
 
         dropshd = QtGui.QGraphicsDropShadowEffect()
@@ -297,9 +297,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         QtGui.QGraphicsScene.addItem(self, item)
 
-    def nodeChangedAction(self, UUID, **kwargs):
+    def nodeChangedAction(self, UUID, attrs):
+        # find the node widget
         node = self.sceneNodes.get(UUID, None)
         if node:
+            print '# GraphicsScene: node changed: ', UUID
             self.nodeChanged.emit(node)
 
     def dropEvent(self, event):
@@ -315,6 +317,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         QtGui.QGraphicsScene.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
+
         QtGui.QGraphicsScene.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):

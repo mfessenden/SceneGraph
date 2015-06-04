@@ -22,7 +22,6 @@ class Graph(object):
         self.mode           = 'standalone'
 
         self._copied_nodes  = []
-        self._default_name  = 'scene_graph_v001'            # default scene name
 
         # if we're in graphics mode
         self.initializeUI(viewport)
@@ -35,12 +34,12 @@ class Graph(object):
         graph_data = nxj.node_link_data(self.network)
         return json.dumps(graph_data, indent=5)
 
-    def initializeGraph(self):
+    def initializeGraph(self, scene=None):
         """
         Add default attributes to the networkx graph.
         """
         # add the current scene attribute
-        self.network.graph['scene'] = os.path.join(os.getenv('HOME'), 'graphs', '%s.json' % self._default_name)
+        self.network.graph['scene'] = scene
 
     def initializeUI(self, view):
         """
@@ -63,9 +62,9 @@ class Graph(object):
         returns:
             (str)
         """
-        return self.network.graph.get('scene', os.path.join(os.getenv('HOME'), 'graphs', '%s.json' % self._default_name))
+        return self.network.graph.get('scene', None)
 
-    def setScene(self, scene):
+    def setScene(self, scene=None):
         """
         Set the current scene value.
 
@@ -217,7 +216,7 @@ class Graph(object):
 
         if self.mode == 'ui':
             node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
-            logger.getLogger().info('adding scene graph node "%s" at ( %f, %f )' % (name, pos_x, pos_y))
+            logger.getLogger().info('adding scene graph node "%s"' % name)
         else:
             logger.getLogger().info('adding node "%s"' % name)
         
