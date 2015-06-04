@@ -273,7 +273,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.color      = [255, 255, 0]
         self.dagnode    = node.dagnode
-        self.radius     = 8
+        self.radius     = 6
 
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
         self.setZValue(- 1)
@@ -297,7 +297,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         top left, width, height
         """
         return QtCore.QRectF(self.parentItem().boundingRect().right() - self.radius/2, 
-                            self.parentItem().label.pos().y()/2, 
+                            self.parentItem().boundingRect().center().y() - self.radius/2, 
                             self.radius, 
                             self.radius)
 
