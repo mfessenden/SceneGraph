@@ -273,7 +273,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.color      = [255, 255, 0]
         self.dagnode    = node.dagnode
-        self.radius     = 6
+        self.radius     = 8
 
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
         self.setZValue(- 1)
@@ -319,7 +319,6 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         #painter.setPen(QtGui.QColor(*color))
 
         painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad)), 0.5, QtCore.Qt.SolidLine))
-
         painter.setBrush(QtGui.QBrush(gradient))
         painter.drawEllipse(self.boundingRect())
         

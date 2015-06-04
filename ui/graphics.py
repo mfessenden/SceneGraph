@@ -305,11 +305,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def dropEvent(self, event):
         newPos = event.scenePos()
 
-    """
-    # CONNECTING NODES:
-
-         - we need to implement mousePressEvent, mouseMoveEvent & mouseReleaseEvent methods
-    """
     def getNodes(self):
         """
         Returns a list of node widgets.
@@ -317,41 +312,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         return self.sceneNodes.values()
 
     def mousePressEvent(self, event):
-        """
-        If an input/output connector is selected, draw a line
-        """
-        item = self.itemAt(event.scenePos())
-        if event.button() == QtCore.Qt.LeftButton and (isinstance(item, core.nodes.NodeInput) or isinstance(item, core.nodes.NodeOutput)):
-            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
-            self.addItem(self.line)
         QtGui.QGraphicsScene.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
-        if self.line:
-            newLine = QtCore.QLineF(self.line.line().p1(), event.scenePos())
-            self.line.setLine(newLine)
         QtGui.QGraphicsScene.mouseMoveEvent(self, event)
-        self.update()
 
     def mouseReleaseEvent(self, event):
-        if self.line:
-            startItems = self.items(self.line.line().p1())
-            if len(startItems) and startItems[0] == self.line:
-                startItems.pop(0)
-            endItems = self.items(self.line.line().p2())
-            if len(endItems) and endItems[0] == self.line:
-                endItems.pop(0)
-
-            self.removeItem(self.line)
-
-            # If this is true a successful line was created
-            if self.connectionTest(startItems, endItems):
-                # Creates a line that is basically of 0 length, just to put a line into the scene
-                connectionLine = core.nodes.LineClass(startItems[0], endItems[0], QtCore.QLineF(startItems[0].scenePos(), endItems[0].scenePos()))
-                self.addItem(connectionLine)
-                # Now use that previous line created and update its position, giving it the proper length and etc...
-                connectionLine.updatePosition()
-        self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
@@ -360,29 +326,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
             for item in items:
                 posy = item.boundingRect().topRight().y()
 
-
                 #item.setExpanded(not item.expanded)
                 #item.setY(item.pos().y() - posy)
                 #item.update()
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
 
-    def connectionTest(self, startItems, endItems):
-        """
-        Check that the two nodes that the user is connecting can be connected
-        """
-        if startItems[0]:
-            if startItems[0].isInputConnection:
-                temp = startItems[0]
-                if endItems[0]:
-                    startItems[0] = endItems[0]
-                    endItems[0] = temp
-
-        try:
-            if len(startItems) is not 0 and len(endItems) is not 0:
-                if startItems[0] is not endItems[0]:
-                    if isinstance(startItems[0], core.nodes.NodeOutput) and isinstance(endItems[0], core.nodes.NodeInput):
-                        if (startItems[0].isOutputConnection and endItems[0].isInputConnection):
-                            return True
-        except AttributeError:
-            pass
-        return False
