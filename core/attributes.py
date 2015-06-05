@@ -166,5 +166,9 @@ class FloatAttribute(Attribute):
 
     @value.setter
     def value(self, value=None):
-        if value: value = float(value)
-        self.value = value
+        if value:
+            if util.is_number(value):
+                value = float(value)
+                self.value = value
+                return self.value 
+        return

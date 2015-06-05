@@ -152,7 +152,7 @@ class ConnectionBase(object):
     def __init__(self, *args, **kwargs):
 
         self.name               = kwargs.pop('name', None)
-        self._is_node           = False                         # this is a connection, not a scene graph node
+        self.node_type          = 'connection'
         
         self._parent            = None
         self.nodeimage          = None

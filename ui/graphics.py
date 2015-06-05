@@ -8,6 +8,9 @@ from . import node_widgets
 reload(core)
 reload(node_widgets)
 
+# logger
+log = core.log
+
 
 class GraphicsView(QtGui.QGraphicsView):
 
@@ -203,28 +206,20 @@ class GraphicsView(QtGui.QGraphicsView):
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = graph.selectedNodes()
             graph.copyNodes(nodes)
-            print '# copying nodes: ', nodes
+            log.debug('copying nodes: %s' % ', '.join(nodes))
 
         elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = graph.pasteNodes()
-            print '# pasting nodes: ', nodes
+            log.debug('pasting nodes: %s' % ', '.join(nodes))
 
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
-                
-                if isinstance(item, node_widgets.NodeWidget):
-                    print '# GraphicsView: deleting node "%s"' % item.dagnode.name
-                    graphicsScene.network.remove_node(str(item.dagnode.UUID))
-                    graphicsScene.removeItem(item)
-                    continue
-                else:
-                    if hasattr(item, '_is_node'):
-                        if item._is_node:
-                            print '# GraphicsView: deleting node "%s"' % item.dagnode.name
-                            graphicsScene.network.remove_node(str(item.dagnode.UUID))
-                            graphicsScene.removeItem(item)
-                            continue
-                print '# Error: GraphicsView: "%s" has an invalid type: "%s"' % (item.dagnode.name, str(item.__class__.__name__))
+                if hasattr(item, 'node_class'):
+                    if item.node_class:
+                        log.info('deleting node "%s"' % item.dagnode.name)
+                        graphicsScene.network.remove_node(str(item.dagnode.UUID))
+                        graphicsScene.removeItem(item)
+                        continue
 
         self.updateNetworkGraphAttributes()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
@@ -288,16 +283,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if hasattr(item, 'UUID'):
             self.sceneNodes[str(item.UUID)] = item
             item.nodeChanged.connect(self.nodeChangedAction)
-
-        '''
-        dropshd = QtGui.QGraphicsDropShadowEffect()
-        dropshd.setBlurRadius(12)
-        dropshd.setColor(QtGui.QColor(0,0,0, 120))
-        dropshd.setOffset(4,4)
-        item.setGraphicsEffect(dropshd)
-        item.setZValue(1)
-        '''
-
         QtGui.QGraphicsScene.addItem(self, item)
 
     def nodeChangedAction(self, UUID, attrs):

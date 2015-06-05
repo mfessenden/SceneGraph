@@ -20,8 +20,6 @@ class NodeWidget(QtGui.QGraphicsObject):
     def __init__(self, node, **kwargs):
         QtGui.QGraphicsObject.__init__(self)        
 
-        self._is_node           = True
-
         # set the dag node widget attribute
         self.dagnode            = node
         self.dagnode._widget    = self       
@@ -65,6 +63,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         pos_x = kwargs.get('pos_x', 0)
         pos_y = kwargs.get('pos_y', 0)
         self.setPos(pos_x, pos_y)
+
+    @property
+    def node_class(self):
+        return 'dagnode'    
 
     @property
     def UUID(self):
@@ -272,98 +274,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.label.setPlainText(self.dagnode.name)
 
 
-class NodeLabel(QtGui.QGraphicsTextItem):
-    def __init__(self, text, parent=None, **kwargs):
-        QtGui.QGraphicsTextItem.__init__(self, text, parent)
-
-        self._is_node        = False
-        self.node            = parent
-
-        self._font_size      = 8
-        self._font_bold      = False
-        self._font_italic    = False
-        self._font           = parent.font if parent else 'Monospace'
-        self.qfont           = QtGui.QFont(self._font)
-
-        # make the label editable
-        self.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable)
-
-        label_doc = self.document()
-        label_doc.setMaximumBlockCount(1)
-
-        if self.node:
-            label_doc.contentsChanged.connect(self.node.nodeNameChanged)
-        self.setZValue(10)
-
-    def setText(self, label):
-        self.node.dagnode.name = label
-
-    def getText(self):
-        return str(self.node.dagnode.name)
-
-    # Label formatting -----
-    def setLabelItalic(self, val=False):
-        """
-        Set the label font italic
-        """
-        self._font_italic = val
-        self.update()
-
-    def setLabelBold(self, val=False):
-        """
-        Set the label font bold
-        """
-        self._font_bold = val
-        self.update()
-
-    def shape(self):
-        path = QtGui.QPainterPath()
-        path.addRect(self.boundingRect())
-        return path
-
-    def boundingRect(self):
-        """
-        Defines the clickable hit-box.  Simply returns a rectangle instead of
-        a rounded rectangle for speed purposes.
-        """
-        return QtCore.QRectF(-self.node.width/2,  
-                             -self.node.height_collapsed/2, 
-                             self.node.width - 20, 
-                             self.node.height_collapsed)
-
-    def paint(self, painter, option, widget):
-        """
-        Build the node's label attribute.
-        """
-        # transform the label to the node top
-        painter.setBrush(QtGui.QBrush(QtCore.Qt.black))
-        painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
-        # 
-        self.qfont.setPointSize(self._font_size)
-        self.qfont.setBold(self._font_bold)
-        self.qfont.setItalic(self._font_italic)
-
-        self.setFont(self.qfont)
-        self.setDefaultTextColor(QtGui.QColor(0, 0, 0))
-        self.setPlainText(self.node.dagnode.name)
-
-        self.setY(self.node.boundingRect().top() + (self.node.height_collapsed - self.node.bufferY*1.5))
-
-        # debug rect
-        #painter.drawRect(self.boundingRect())
-
-        # drop shadow
-        """
-        self.tdropshd = QtGui.QGraphicsDropShadowEffect()
-        self.tdropshd.setBlurRadius(6)
-        self.tdropshd.setColor(QtGui.QColor(0,0,0,120))
-        self.tdropshd.setOffset(1,2)
-        self.setGraphicsEffect(self.tdropshd)
-        """
-        QtGui.QGraphicsTextItem.paint(self, painter, option, widget)
-
-
 class ConnectionWidget(QtGui.QGraphicsObject):
     
     Type                = QtGui.QGraphicsObject.UserType + 4
@@ -374,7 +284,6 @@ class ConnectionWidget(QtGui.QGraphicsObject):
     def __init__(self, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
-        self._is_node   = False
         self.node       = parent
 
         self.color      = [255, 255, 0]
@@ -385,6 +294,10 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.setAcceptHoverEvents(True)
         self.setZValue(- 1)
+
+    @property
+    def node_class(self):
+        return 'connection'    
 
     @property
     def UUID(self):

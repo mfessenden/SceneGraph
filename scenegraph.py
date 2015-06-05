@@ -9,12 +9,10 @@ from cStringIO import StringIO
 from SceneGraph import options
 from SceneGraph import core
 from SceneGraph import ui
-from SceneGraph import prefs
 
 reload(options)
 reload(core)
 reload(ui)
-reload(prefs)
 
 
 log = core.log
@@ -65,12 +63,8 @@ class SceneGraphUI(form_class, base_class):
         self.timer            = QtCore.QTimer()
 
         # preferences
-        self.prefs_key        = 'SceneGraph'
-        self.prefs            = prefs.RecentFiles(self, ui=self.prefs_key)
-        self.recent_menu      = None
-
-        self.settings_file    = self.prefs.qtsettings
-        self.qtsettings       = QtCore.QSettings(self.settings_file, QtCore.QSettings.IniFormat)
+        self.settings_file    = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
+        self.qtsettings       = Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
         self.qtsettings.setFallbacksEnabled(False)
 
         # icon
@@ -103,7 +97,7 @@ class SceneGraphUI(form_class, base_class):
         self.initializeGraphicsView()
 
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
-        self._buildRecentFilesMenu()
+        self.initializeRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
 
@@ -162,6 +156,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.resetUI)
+        self.action_exit.triggered.connect(self.close)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -174,21 +169,25 @@ class SceneGraphUI(form_class, base_class):
         self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
 
     def initializeFileMenu(self):
+        """
+        Setup the file menu before it is drawn.
+        """
         current_scene = self.graph.getScene()
         if not current_scene:
             self.action_save_graph.setEnabled(False)
+        self.initializeRecentFilesMenu()
 
-    def _buildRecentFilesMenu(self):
+    def initializeRecentFilesMenu(self):
         """
-        Build a menu of recently opened scenes
+        Build a menu of recently opened scenes.
         """
         recent_files = dict()
-        recent_files = self.prefs.getRecentFiles()
+        recent_files = self.qtsettings.getRecentFiles()
         self.menu_recent_files.clear()
         self.menu_recent_files.setEnabled(False)
         if recent_files:
             # Recent files menu
-            for filename in recent_files:
+            for filename in reversed(recent_files):
                 file_action = QtGui.QAction(filename, self.menu_recent_files)
                 file_action.triggered.connect(partial(self.readRecentGraph, filename))
                 self.menu_recent_files.addAction(file_action)
@@ -266,8 +265,8 @@ class SceneGraphUI(form_class, base_class):
         self.buildWindowTitle()
 
         self.graph.setScene(filename)
-        self.prefs.addFile(filename)
-        self._buildRecentFilesMenu()
+        self.qtsettings.addRecentFile(filename)
+        self.initializeRecentFilesMenu()
         self.buildWindowTitle()
 
     # TODO: figure out why this has to be a separate method from saveGraphAs
@@ -282,8 +281,8 @@ class SceneGraphUI(form_class, base_class):
         self.graph.write(self.graph.getScene())
         self.buildWindowTitle()
 
-        self.prefs.addFile(self.graph.getScene())
-        self._buildRecentFilesMenu()
+        self.qtsettings.addRecentFile(self.graph.getScene())
+        self.initializeRecentFilesMenu()
         return self.graph.getScene()      
 
     def readGraph(self):
@@ -300,6 +299,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
         self.graph.setScene(filename)
+        self.qtsettings.addRecentFile(filename)
         self.buildWindowTitle()
 
     # TODO: combine this with readGraph
@@ -310,6 +310,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
         self.graph.setScene(filename)
+        self.qtsettings.addRecentFile(filename)
         self.buildWindowTitle()
 
     def resetGraph(self):
@@ -330,10 +331,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Attempts to restore docks and window to factory fresh state.
         """
-        self.qtsettings.beginGroup(self.prefs_key)
-        self.qtsettings.remove('windowState')
-        self.qtsettings.endGroup()
-
+        self.qtsettings.clear()
         self.setupUi(self)
         self.initializeUI()
 
@@ -359,8 +357,8 @@ class SceneGraphUI(form_class, base_class):
         if len(nodes) == 1:
 
             node = nodes[0]
-            if hasattr(node, '_is_node'):
-                if node._is_node:                
+            if hasattr(node, 'node_class'):
+                if node.node_class in ['dagnode']:                
                     nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
                     nodeAttrWidget.setNode(node)
                     self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
@@ -433,7 +431,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Read Qt settings from file
         """
-        self.qtsettings.beginGroup(self.prefs_key)
+        self.qtsettings.beginGroup('MainWindow')
         self.resize(self.qtsettings.value("size", QtCore.QSize(400, 256)))
         self.move(self.qtsettings.value("pos", QtCore.QPoint(200, 200)))
 
@@ -446,7 +444,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Write Qt settings to file
         """
-        self.qtsettings.beginGroup(self.prefs_key)
+        self.qtsettings.beginGroup('MainWindow')
         width = self.width()
         height = self.height()
         self.qtsettings.setValue("size", QtCore.QSize(width, height))
@@ -532,6 +530,58 @@ class SceneGraphUI(form_class, base_class):
                     self.graph.network.node[str(node.UUID)].update(**node.dagnode.getNodeAttributes())
                 except:
                     pass
+
+
+class Settings(QtCore.QSettings):
+    def __init__(self, filename, frmt, parent=None, max_files=10):
+        QtCore.QSettings.__init__(self, filename, frmt, parent)
+
+        self._max_files     = max_files
+        self._parent        = parent
+        self._initialize()
+
+    def _initialize(self):
+        if 'RecentFiles' not in self.childGroups():
+            self.beginWriteArray('RecentFiles', 0)
+            self.endArray()
+
+    def save(self, state='default'):
+        self.beginGroup("Mainwindow/%s" % state)
+        self.setValue("size", QtCore.QSize(self._parent.width(), self._parent.height()))
+        self.setValue("pos", self._parent.pos())
+        self.setValue("windowState", self._parent.saveState())
+        self.endGroup()
+
+    def load(self, state='default'):
+        pass
+
+    def getRecentFiles(self):
+        """
+        Get a tuple of the most recent files.
+        """
+        recent_files = []
+        cnt = self.beginReadArray('RecentFiles')
+        for i in range(cnt):
+            self.setArrayIndex(i)
+            fn = self.value('file')
+            recent_files.append(fn)
+        self.endArray()
+        return tuple(recent_files)
+
+    def addRecentFile(self, filename):
+        """
+        Adds a recent file to the stack.
+        """
+        recent_files = self.getRecentFiles()
+        if filename in recent_files:
+            recent_files = tuple(x for x in recent_files if x != filename)
+
+        recent_files = recent_files + (filename,)
+        self.beginWriteArray('RecentFiles')
+        for i in range(len(recent_files)):
+            self.setArrayIndex(i)
+            self.setValue('file', recent_files[i])
+        self.endArray()
 
 
 class MouseEventFilter(QtCore.QObject):
