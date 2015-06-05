@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>883</width>
-    <height>756</height>
+    <width>887</width>
+    <height>674</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,11 +18,11 @@
     <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
   </property>
   <property name="dockOptions">
-   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::ForceTabbedDocks</set>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="mainLayout">
-    <item>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
        <number>0</number>
@@ -33,246 +33,13 @@
        </attribute>
        <layout class="QVBoxLayout" name="sceneTabLayout">
         <item>
-         <widget class="QSplitter" name="main_splitter">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
+         <widget class="QWidget" name="gview" native="true">
+          <property name="font">
+           <font>
+            <family>DejaVu Sans</family>
+           </font>
           </property>
-          <widget class="QWidget" name="gview" native="true">
-           <property name="font">
-            <font>
-             <family>DejaVu Sans</family>
-            </font>
-           </property>
-           <layout class="QVBoxLayout" name="gviewLayout"/>
-          </widget>
-          <widget class="QSplitter" name="right_splitter">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <widget class="QDockWidget" name="attrEditorWidget">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="baseSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="floating">
-             <bool>false</bool>
-            </property>
-            <property name="features">
-             <set>QDockWidget::AllDockWidgetFeatures</set>
-            </property>
-            <property name="allowedAreas">
-             <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
-            </property>
-            <property name="windowTitle">
-             <string>Attributes</string>
-            </property>
-            <widget class="QWidget" name="attrEditorContents">
-             <property name="baseSize">
-              <size>
-               <width>175</width>
-               <height>0</height>
-              </size>
-             </property>
-             <layout class="QVBoxLayout" name="attrEditorContentsLayout">
-              <item>
-               <widget class="QScrollArea" name="attributeScrollArea">
-                <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Sunken</enum>
-                </property>
-                <property name="widgetResizable">
-                 <bool>true</bool>
-                </property>
-                <widget class="QWidget" name="attributeSrollAreaContents">
-                 <property name="geometry">
-                  <rect>
-                   <x>0</x>
-                   <y>0</y>
-                   <width>761</width>
-                   <height>112</height>
-                  </rect>
-                 </property>
-                 <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
-                </widget>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </widget>
-           <widget class="QSplitter" name="btm_splitter">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <widget class="QDockWidget" name="sceneWidget">
-             <property name="floating">
-              <bool>false</bool>
-             </property>
-             <property name="allowedAreas">
-              <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
-             </property>
-             <property name="windowTitle">
-              <string>Scene</string>
-             </property>
-             <widget class="QWidget" name="sceneWidgetContents">
-              <property name="baseSize">
-               <size>
-                <width>175</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QVBoxLayout" name="sceneWidgetContentsLayout">
-               <item>
-                <widget class="QScrollArea" name="sceneScrollArea">
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
-                 </property>
-                 <property name="widgetResizable">
-                  <bool>true</bool>
-                 </property>
-                 <widget class="QWidget" name="sceneScrollAreaContents">
-                  <property name="geometry">
-                   <rect>
-                    <x>0</x>
-                    <y>0</y>
-                    <width>761</width>
-                    <height>110</height>
-                   </rect>
-                  </property>
-                  <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
-                 </widget>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-            <widget class="QDockWidget" name="consoleWidget">
-             <property name="floating">
-              <bool>false</bool>
-             </property>
-             <property name="allowedAreas">
-              <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
-             </property>
-             <property name="windowTitle">
-              <string>Console</string>
-             </property>
-             <widget class="QWidget" name="consoleWidgetContents">
-              <property name="baseSize">
-               <size>
-                <width>175</width>
-                <height>0</height>
-               </size>
-              </property>
-              <layout class="QVBoxLayout" name="consoleWidgetContentsLayout">
-               <item>
-                <widget class="QScrollArea" name="consoleScrollArea">
-                 <property name="frameShape">
-                  <enum>QFrame::NoFrame</enum>
-                 </property>
-                 <property name="widgetResizable">
-                  <bool>true</bool>
-                 </property>
-                 <widget class="QWidget" name="consoleScrollAreaContents">
-                  <property name="geometry">
-                   <rect>
-                    <x>0</x>
-                    <y>0</y>
-                    <width>761</width>
-                    <height>275</height>
-                   </rect>
-                  </property>
-                  <layout class="QFormLayout" name="formLayout">
-                   <property name="fieldGrowthPolicy">
-                    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-                   </property>
-                   <item row="0" column="0">
-                    <widget class="QLabel" name="viewRectLabel">
-                     <property name="text">
-                      <string>View Size:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="1">
-                    <widget class="QLineEdit" name="viewRectLineEdit"/>
-                   </item>
-                   <item row="1" column="0">
-                    <widget class="QLabel" name="sceneRectLabel">
-                     <property name="text">
-                      <string>Scene Rect:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="1" column="1">
-                    <widget class="QLineEdit" name="sceneRectLineEdit"/>
-                   </item>
-                   <item row="2" column="0">
-                    <widget class="QLabel" name="zoomLevelLabel">
-                     <property name="text">
-                      <string>Zoom Level:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="1">
-                    <widget class="QLineEdit" name="zoomLevelLineEdit"/>
-                   </item>
-                   <item row="3" column="0">
-                    <widget class="QLabel" name="cursorXLabel">
-                     <property name="text">
-                      <string>Cursor X:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="3" column="1">
-                    <widget class="QLineEdit" name="cursorXLineEdit"/>
-                   </item>
-                   <item row="4" column="0">
-                    <widget class="QLabel" name="cursorYLabel">
-                     <property name="text">
-                      <string>Cursor Y:</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="4" column="1">
-                    <widget class="QLineEdit" name="cursorYLineEdit"/>
-                   </item>
-                   <item row="5" column="0">
-                    <widget class="QLabel" name="sceneCursorXLabel">
-                     <property name="text">
-                      <string>Cursor X (scene):</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="5" column="1">
-                    <widget class="QLineEdit" name="sceneCursorXLineEdit"/>
-                   </item>
-                   <item row="6" column="0">
-                    <widget class="QLabel" name="sceneCursorYLabel">
-                     <property name="text">
-                      <string>Cursor Y (scene):</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="6" column="1">
-                    <widget class="QLineEdit" name="sceneCursorYLineEdit"/>
-                   </item>
-                  </layout>
-                 </widget>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </widget>
-          </widget>
+          <layout class="QVBoxLayout" name="gviewLayout"/>
          </widget>
         </item>
        </layout>
@@ -329,7 +96,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>883</width>
+     <width>887</width>
      <height>25</height>
     </rect>
    </property>
@@ -396,6 +163,197 @@
     </font>
    </property>
   </widget>
+  <widget class="QDockWidget" name="attrEditorWidget">
+   <property name="minimumSize">
+    <size>
+     <width>250</width>
+     <height>150</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Attribute Editor</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="attrEditorWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QScrollArea" name="attributeScrollArea">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="attributeScrollAreaContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>232</width>
+          <height>162</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="sceneWidget">
+   <property name="minimumSize">
+    <size>
+     <width>250</width>
+     <height>150</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Scene</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="sceneWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <item>
+      <widget class="QScrollArea" name="sceneScrollArea">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="sceneScrollAreaContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>232</width>
+          <height>162</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="consoleWidget">
+   <property name="minimumSize">
+    <size>
+     <width>250</width>
+     <height>150</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Console</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="consoleWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QScrollArea" name="consoleScrollArea">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="consoleScrollAreaContents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>219</width>
+          <height>271</height>
+         </rect>
+        </property>
+        <layout class="QFormLayout" name="consoleScrollAreaLayout">
+         <property name="fieldGrowthPolicy">
+          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="viewRectLabel">
+           <property name="text">
+            <string>View Size:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="viewRectLineEdit"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="sceneRectLabel">
+           <property name="text">
+            <string>Scene Rect:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="sceneRectLineEdit"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="zoomLevelLabel">
+           <property name="text">
+            <string>Zoom Level:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="zoomLevelLineEdit"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="cursorXLabel">
+           <property name="text">
+            <string>Cursor X:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="cursorXLineEdit"/>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="cursorYLabel">
+           <property name="text">
+            <string>Cursor Y:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="cursorYLineEdit"/>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="sceneCursorXLabel">
+           <property name="text">
+            <string>Cursor X (scene):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="sceneCursorXLineEdit"/>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="sceneCursorYLabel">
+           <property name="text">
+            <string>Cursor Y (scene):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="sceneCursorYLineEdit"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="action_save_graph">
    <property name="enabled">
     <bool>false</bool>
@@ -458,7 +416,7 @@
   </action>
   <action name="action_reset_ui">
    <property name="text">
-    <string>Reset UI</string>
+    <string>Restore UI</string>
    </property>
   </action>
   <action name="action_reset_scale">
@@ -468,54 +426,5 @@
   </action>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>action_reset_ui</sender>
-   <signal>triggered()</signal>
-   <receiver>attrEditorWidget</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>581</x>
-     <y>269</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>action_reset_ui</sender>
-   <signal>triggered()</signal>
-   <receiver>sceneWidget</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>581</x>
-     <y>662</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>action_reset_ui</sender>
-   <signal>triggered()</signal>
-   <receiver>consoleWidget</receiver>
-   <slot>show()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>885</x>
-     <y>751</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

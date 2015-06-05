@@ -55,11 +55,6 @@ class SceneGraphUI(form_class, base_class):
 
         self.setupUi(self)
         
-        # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self)
-        self.scene = self.view.scene()
-        self.gviewLayout.addWidget(self.view)
-
         # allow docks to be nested
         self.setDockNestingEnabled(True)
 
@@ -81,8 +76,8 @@ class SceneGraphUI(form_class, base_class):
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
 
-        self.readSettings()
-        self.initializeUI()        
+        self.initializeUI()
+        self.readSettings()       
         self.connectSignals()
 
         # stylesheet
@@ -98,14 +93,11 @@ class SceneGraphUI(form_class, base_class):
         """
         Set up the main UI
         """
-        self.setupFonts()
-        
-        self.main_splitter.setStretchFactor(0, 1)
-        self.main_splitter.setStretchFactor(1, 0)
-        self.main_splitter.setSizes([770, 300])
-
-        self.right_splitter.setStretchFactor(0, 1)
-        self.right_splitter.setStretchFactor(1, 0)
+        # add our custom GraphicsView object
+        self.view = ui.GraphicsView(self.gview, ui=self)
+        self.scene = self.view.scene()
+        self.gviewLayout.addWidget(self.view)
+        self.setupFonts()        
         
         # build the graph
         self.initializeGraphicsView()
@@ -169,6 +161,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_reset_scale.triggered.connect(self.resetScale)
+        self.action_reset_ui.triggered.connect(self.resetUI)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -333,6 +326,17 @@ class SceneGraphUI(form_class, base_class):
     def resetScale(self):
         self.view.resetMatrix()
 
+    def resetUI(self):
+        """
+        Attempts to restore docks and window to factory fresh state.
+        """
+        self.qtsettings.beginGroup(self.prefs_key)
+        self.qtsettings.remove('windowState')
+        self.qtsettings.endGroup()
+
+        self.setupUi(self)
+        self.initializeUI()
+
     def sizeHint(self):
         return QtCore.QSize(1070, 800)
 
@@ -432,6 +436,10 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.beginGroup(self.prefs_key)
         self.resize(self.qtsettings.value("size", QtCore.QSize(400, 256)))
         self.move(self.qtsettings.value("pos", QtCore.QPoint(200, 200)))
+
+        if 'windowState' in self.qtsettings.childKeys():
+            self.restoreState(self.qtsettings.value("windowState"))
+
         self.qtsettings.endGroup()
 
     def writeSettings(self):
@@ -443,6 +451,7 @@ class SceneGraphUI(form_class, base_class):
         height = self.height()
         self.qtsettings.setValue("size", QtCore.QSize(width, height))
         self.qtsettings.setValue("pos", self.pos())
+        self.qtsettings.setValue("windowState", self.saveState())
         self.qtsettings.endGroup()
 
     def updateOutput(self):
