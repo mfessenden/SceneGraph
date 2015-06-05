@@ -5,6 +5,7 @@ QMainWindow{
 QWidget{
     color: #b1b1b1;
     background-color: #323232;
+    font-size: 9pt;
 }
 
 QDockWidget{
@@ -20,7 +21,7 @@ QDockWidget::title{
 
 QTabBar{
     font-weight: bold;
-    font-size: 12;
+    font-size: 11;
 }
 
 QPushButton.Console{
@@ -29,7 +30,7 @@ QPushButton.Console{
 }
 
 QLineEdit{
-    background-color:  #3a3a3a;
+    background-color: #3a3a3a;
 }
 
 QMenuBar.AttributeMenu::item{
@@ -40,10 +41,11 @@ QMenuBar.AttributeMenu::item{
 
 QMenuBar{
     background: #363636;
+    padding: 1px 1px;
+    spacing: 5px; /* spacing between menu bar items */
 }
 
-QMenuBar::item {
-    spacing: 3px; /* spacing between menu bar items */
+QMenuBar::item{
     padding: 1px 4px;
     background: transparent;
     border-radius: 4px;
@@ -54,9 +56,19 @@ QMenuBar::item:selected { /* when selected using mouse or keyboard */
 }
 
 
-QMenu {
-    background-color: #323232;
-    margin: 2px; /* some spacing around the menu */
+QMenu{
+    border: 1px solid;
+    border-bottom-color: #1f1f1f;
+    border-top-color: #333333;
+    border-left-color: #585858;
+    border-right-color: #1f1f1f;
+    background-color: #333333;
+    /*box-shadow: 0px 1px 0px 0px #191919;*/
+}
+
+QMenu::indicator {
+    width: 13px;
+    height: 13px;
 }
 
 QMenu::item {
@@ -69,5 +81,44 @@ QMenu::item:selected {
 }
 
 QMenu::item:disabled {
-    color: rgba(100, 100, 100);
+    color: #646464;
+    background: none; /* remove menu highlighting on disabled items */
+}
+
+QStatusBar {
+    font-family: Monospace;
+    font-size: 9pt;
+}
+
+QScrollBar:horizontal {
+  border-color: #646464;
+  background-color: #404040;
+  height: 15px;  
+}
+
+QScrollBar:vertical {
+  border-color: #646464;
+  background-color: #404040;
+  width: 15px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #646464;
+    min-height: 20px;
+    border-radius: 2px;
+}
+QScrollBar::handle:vertical {
+    background: #646464;
+    min-height: 20px;
+    border-radius: 2px;
+}
+
+/* background of the scrollbar */
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background-color: none;
+}
+
+/* background of the scrollbar */
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
 }

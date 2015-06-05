@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import os
 import simplejson as json
-from . import logger
-from . import options
+from SceneGraph import options
+from SceneGraph.core import log
 
 
 class RecentFiles(object):
@@ -34,7 +34,7 @@ class RecentFiles(object):
         """ 
         initialize the data structure 
         """
-        logger.getLogger().debug('initializing %s prefs data' % self.__package)
+        log.debug('initializing %s prefs data' % self.__package)
         self.__data = dict()
         recent_files = dict()
         self.__data.update(recent_files=recent_files)
@@ -100,7 +100,7 @@ class RecentFiles(object):
         
         
         if len(self.getRecentFiles()) > self.max_items:
-            logger.getLogger().info('removing oldest index')  # DEBUG
+            log.info('removing oldest index')  # DEBUG
             self.removeOldestIndex()
         
         # BACKUP
@@ -109,7 +109,7 @@ class RecentFiles(object):
         fn = open(filename, 'w')
         try:
             if not quiet:
-                logger.getLogger().info(msg)
+                log.info(msg)
             json.dump(self.data, fn, indent=4, sort_keys=True)
             fn.close()
             return True
@@ -134,7 +134,7 @@ class RecentFiles(object):
 
         if os.path.exists(src_file):
             shutil.copy(src_file, dest_file)
-            logger.getLogger().debug('%s preferences: "%s"' % (msg, dest_file))  # DEBUG
+            log.debug('%s preferences: "%s"' % (msg, dest_file))  # DEBUG
         return self.backupprefs
 
     @property

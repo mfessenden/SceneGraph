@@ -6,8 +6,6 @@ import networkx as nx
 from functools import partial
 from PySide import QtCore, QtGui
 
-from .. import logger
-
 
 class Graph(object):
     """
@@ -48,8 +46,9 @@ class Graph(object):
         params:
             view - (object) QtGui.QGraphicsView
         """
+        from SceneGraph.core import log
         if view is not None:
-            logger.getLogger().info('setting up GraphicsView...')
+            log.info('setting up GraphicsView...')
             self.view = view
             self.scene = view.scene()
             self.mode = 'ui'        
@@ -200,6 +199,8 @@ class Graph(object):
         reload(core)
         reload(ui)
 
+        log = core.log
+
         UUID = kwargs.pop('id', None)
         name   = kwargs.pop('name', 'node1')
         
@@ -216,9 +217,9 @@ class Graph(object):
 
         if self.mode == 'ui':
             node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
-            logger.getLogger().info('adding scene graph node "%s"' % name)
+            log.info('adding scene graph node "%s"' % name)
         else:
-            logger.getLogger().info('adding node "%s"' % name)
+            log.info('adding node "%s"' % name)
         
         # add the node to the networkx graph
         self.network.add_node(str(dag.UUID))
@@ -278,7 +279,8 @@ class Graph(object):
         returns:
             (object)  - removed node
         """
-        logger.getLogger().info('Removing node: "%s"' % name)
+        from SceneGraph.core import log
+        log.info('Removing node: "%s"' % name)
 
         self.scene.removeItem(node)
         if name in self.scene.sceneNodes.keys():
@@ -296,8 +298,9 @@ class Graph(object):
         returns:
             (object)  - renamed node
         """
+        from SceneGraph.core import log
         if not self.validNodeName(new_name):
-            logger.getLogger().error('"%s" is not unique' % new_name)
+            log.error('"%s" is not unique' % new_name)
             return
 
         UUID = self.getNodeID(old_name)
@@ -339,6 +342,7 @@ class Graph(object):
         """
         from PySide import QtCore
         from SceneGraph import core
+
         input_name, input_conn = input.split('.')
         output_name, output_conn = output.split('.')
         input_node = self.getNode(input_name)
@@ -353,10 +357,10 @@ class Graph(object):
             connectionLine.updatePosition()
         else:
             if not input_conn_node:
-                logger.getLogger().error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))
+                core.log.error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))
 
             if not output_conn_node:
-                logger.getLogger().error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
+                core.log.error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
 
 
     # TODO: we need to store a weakref dict of dag nodes in the graph
@@ -440,6 +444,7 @@ class Graph(object):
             filename - (str) file to read
         """
         import os
+        from SceneGraph.core import log
         if os.path.exists(filename):
             raw_data = open(filename).read()
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
@@ -464,7 +469,7 @@ class Graph(object):
             return self.setScene(filename)
 
         else:
-            logger.getLogger().error('filename "%s" does not exist' % filename)
+            log.error('filename "%s" does not exist' % filename)
         return 
 
     #- CONNECTIONS ----

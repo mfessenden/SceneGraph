@@ -2,12 +2,14 @@
 from PySide import QtCore, QtGui
 from functools import partial
 import os
+import pysideuic
+import xml.etree.ElementTree as xml
+from cStringIO import StringIO
 
-from . import logger
-from . import options
-from . import core
-from . import ui
-from . import prefs
+from SceneGraph import options
+from SceneGraph import core
+from SceneGraph import ui
+from SceneGraph import prefs
 
 reload(options)
 reload(core)
@@ -15,11 +17,7 @@ reload(ui)
 reload(prefs)
 
 
-import os
-import pysideuic
-import xml.etree.ElementTree as xml
-from cStringIO import StringIO
-
+log = core.log
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
 
 
@@ -51,9 +49,9 @@ form_class, base_class = loadUiType(SCENEGRAPH_UI)
 
 
 
-class SceneGraph(form_class, base_class):
+class SceneGraphUI(form_class, base_class):
     def __init__(self, parent=None, **kwargs):
-        super(SceneGraph, self).__init__(parent)
+        super(SceneGraphUI, self).__init__(parent)
 
         self.setupUi(self)
         
@@ -101,11 +99,6 @@ class SceneGraph(form_class, base_class):
         Set up the main UI
         """
         self.setupFonts()
-        #self.setupStylesheetFlags()
-
-        # event filter
-        #self.eventFilter = MouseEventFilter(self)
-        #self.installEventFilter(self.eventFilter)
         
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 0)
@@ -113,14 +106,10 @@ class SceneGraph(form_class, base_class):
 
         self.right_splitter.setStretchFactor(0, 1)
         self.right_splitter.setStretchFactor(1, 0)
-
         
-        self.setStyleSheet("QTabWidget {background-color:rgb(68, 68, 68)}")
-
         # build the graph
         self.initializeGraphicsView()
 
-        self.statusBar().setFont(self.fonts.get('status'))
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
         self._buildRecentFilesMenu()
         self.buildWindowTitle()
@@ -134,14 +123,8 @@ class SceneGraph(form_class, base_class):
         self.fonts["ui"] = QtGui.QFont(font)
         self.fonts["ui"].setPointSize(size)
 
-        self.fonts["status"] = QtGui.QFont('Monospace')
-        self.fonts["status"].setPointSize(size-1)
-
         self.fonts["output"] = QtGui.QFont('Monospace')
         self.fonts["output"].setPointSize(size)
-
-    def setupStylesheetFlags(self):
-        self.button_refresh.setProperty('class','Console')
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -233,16 +216,15 @@ class SceneGraph(form_class, base_class):
         """
         Send output to logger/statusbar
         """
-        self.statusBar().setFont(self.fonts.get('status'))
         if level == 'info':
             self.statusBar().showMessage(self._getInfoStatus(val))
-            logger.getLogger().info(val)
+            log.info(val)
         if level == 'error':
             self.statusBar().showMessage(self._getErrorStatus(val))
-            logger.getLogger().error(val)
+            log.error(val)
         if level == 'warning':
             self.statusBar().showMessage(self._getWarningStatus(val))
-            logger.getLogger().warning(val)
+            log.warning(val)
         self.timer.start(4000)        
 
     def resetStatus(self):
@@ -250,7 +232,6 @@ class SceneGraph(form_class, base_class):
         Reset the status bar message.
         """
         self.statusBar().showMessage('[SceneGraph]: ready')
-        self.statusBar().setFont(self.fonts.get('status'))
 
     def _getInfoStatus(self, val):
         return '[SceneGraph]: Info: %s' % val
@@ -374,10 +355,11 @@ class SceneGraph(form_class, base_class):
         if len(nodes) == 1:
 
             node = nodes[0]
-            if node._is_node:                
-                nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
-                nodeAttrWidget.setNode(node)
-                self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
+            if hasattr(node, '_is_node'):
+                if node._is_node:                
+                    nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
+                    nodeAttrWidget.setNode(node)
+                    self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
 
     def nodeAddedAction(self, node):
         """
@@ -392,8 +374,9 @@ class SceneGraph(form_class, base_class):
         print '# SceneGraph: Node changed...'
         self.updateOutput()
 
+    # TODO: disabling this, causing lag
     def sceneChangedAction(self, event):
-        self.nodesSelectedAction()
+        #self.nodesSelectedAction()
         self.updateNodes()
     
     def createCreateMenuActions(self):
@@ -440,7 +423,7 @@ class SceneGraph(form_class, base_class):
     def renameNodeAction(self, node):
         print 'renaming node...'
 
-        
+
     #- Settings -----
     def readSettings(self):
         """
@@ -488,8 +471,8 @@ class SceneGraph(form_class, base_class):
 
         params:
             data - (dict) data from GraphicsView mouseMoveEvent
-        """
-        
+
+        """        
         self.sceneRectLineEdit.clear()
         self.viewRectLineEdit.clear()
         self.zoomLevelLineEdit.clear()

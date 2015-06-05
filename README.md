@@ -4,8 +4,8 @@
 
 ###### Maya:
 
-	from SceneGraph import SceneGraph
-	sgui=SceneGraph.SceneGraph()
+	from SceneGraph import scenegraph
+	sgui = scenegraph.SceneGraphUI()
 	sgui.show()
 	
 	# access the node graph

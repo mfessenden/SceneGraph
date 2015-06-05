@@ -13,6 +13,7 @@ class AttributeEditor(QtGui.QWidget):
         self.manager        = kwargs.get('manager')
         self._current_node  = None                              # the currently selected node
         
+        '''
         # menubar
         self.menubar = QtGui.QMenuBar(self)
         self.menubar.setProperty('class', 'AttributeMenu')
@@ -25,9 +26,10 @@ class AttributeEditor(QtGui.QWidget):
         # actions
         deleteAttrAction = QtGui.QAction('Delete attributes...', self)        
         attrMenu.addAction(deleteAttrAction)
+        '''
 
         self.gridLayout     = QtGui.QGridLayout(self)
-        self.gridLayout.setContentsMargins(9, 30, 9, 9)
+        self.gridLayout.setContentsMargins(9, 2, 9, 9)
 
     
     def setNode(self, node_item, force=True):

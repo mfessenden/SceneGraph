@@ -29,7 +29,7 @@ class GraphicsView(QtGui.QGraphicsView):
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
@@ -285,15 +285,18 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = NodeWidget
         """
         self.nodeAdded.emit(item)
-        self.sceneNodes[str(item.UUID)] = item
-        item.nodeChanged.connect(self.nodeChangedAction)
+        if hasattr(item, 'UUID'):
+            self.sceneNodes[str(item.UUID)] = item
+            item.nodeChanged.connect(self.nodeChangedAction)
 
+        '''
         dropshd = QtGui.QGraphicsDropShadowEffect()
         dropshd.setBlurRadius(12)
         dropshd.setColor(QtGui.QColor(0,0,0, 120))
         dropshd.setOffset(4,4)
         item.setGraphicsEffect(dropshd)
         item.setZValue(1)
+        '''
 
         QtGui.QGraphicsScene.addItem(self, item)
 
@@ -327,10 +330,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         items = self.selectedItems()
         if items:
             for item in items:
-                posy = item.boundingRect().topRight().y()
+                if hasattr(item, 'setExpanded'):
+                    posy = item.boundingRect().topRight().y()
 
-                #item.setExpanded(not item.expanded)
-                #item.setY(item.pos().y() - posy)
-                #item.update()
+                    # expand/collapse the node
+                    item.setExpanded(not item.expanded)
+                    item.setY(item.pos().y() - posy)
+                    item.update()
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
 
