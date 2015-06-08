@@ -215,11 +215,18 @@ class GraphicsView(QtGui.QGraphicsView):
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
                 if hasattr(item, 'node_class'):
-                    if item.node_class:
+                    if item.node_class in ['dagnode']:
                         log.info('deleting node "%s"' % item.dagnode.name)
                         graphicsScene.network.remove_node(str(item.dagnode.UUID))
                         graphicsScene.removeItem(item)
                         continue
+
+                    if item.node_class in ['edge']:
+                        log.info('deleting connection "%s"' % item)
+                        #graphicsScene.network.remove_node(str(item.dagnode.UUID))
+                        graphicsScene.removeItem(item)
+                        continue
+
 
         self.updateNetworkGraphAttributes()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
@@ -265,7 +272,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def __init__(self, parent=None):
         QtGui.QGraphicsScene.__init__(self, parent)
 
-        self.line        = None
+        self.line        = None    # temp line
         self.sceneNodes  = weakref.WeakValueDictionary()
         self.graph       = None
         self.network     = None
@@ -291,6 +298,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if node:
             print '# GraphicsScene: node changed: ', UUID
             self.nodeChanged.emit(node)
+            self.update()
 
     def dropEvent(self, event):
         newPos = event.scenePos()
@@ -302,14 +310,34 @@ class GraphicsScene(QtGui.QGraphicsScene):
         return self.sceneNodes.values()
 
     def mousePressEvent(self, event):
+        item = self.itemAt(event.scenePos())
+        if event.button() == QtCore.Qt.LeftButton:
+            if hasattr(item, 'node_class'):
+                if item.node_class in ['connection']:
+                    print 'drawing line'
+                    self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
+                    self.addItem(self.line)
+                    self.update(self.itemsBoundingRect())
         QtGui.QGraphicsScene.mousePressEvent(self, event)
+        self.update()
 
     def mouseMoveEvent(self, event):
-
         QtGui.QGraphicsScene.mouseMoveEvent(self, event)
+        self.update()
 
     def mouseReleaseEvent(self, event):
+        if self.line:
+            startItems = self.items(self.line.line().p1())
+            if len(startItems) and startItems[0] == self.line:
+                startItems.pop(0)
+            endItems = self.items(self.line.line().p2())
+            if len(endItems) and endItems[0] == self.line:
+                endItems.pop(0)
+
+            #self.removeItem(self.line)
+
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
+        self.update()
 
     def mouseDoubleClickEvent(self, event):
         items = self.selectedItems()
@@ -323,4 +351,5 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     item.setY(item.pos().y() - posy)
                     item.update()
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
+        self.update()
 

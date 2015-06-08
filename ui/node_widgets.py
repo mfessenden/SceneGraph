@@ -16,7 +16,12 @@ class NodeWidget(QtGui.QGraphicsObject):
     nodeCreatedInScene  = QtCore.Signal()
     nodeChanged         = QtCore.Signal(str, dict)
     PRIVATE             = ['width', 'height', 'expanded', 'pos_x', 'pos_y']
-
+    
+    """
+    Simple node type widget.
+    
+    Represents a node without any connectable attributes.
+    """
     def __init__(self, node, **kwargs):
         QtGui.QGraphicsObject.__init__(self)        
 
@@ -30,7 +35,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.expand_widget      = None
 
         # input/output terminals
-        self.output_widget      = ConnectionWidget(self)
+        self.input_widget      = ConnectionWidget(self)
+        self.input_widget.setParentItem(self)
+
+        self.output_widget      = ConnectionWidget(self, is_input=False)
         self.output_widget.setParentItem(self)
 
         # width/height attributes
@@ -44,12 +52,12 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.color              = [180, 180, 180]
         
         # font/label attributes
-        self.label           = QtGui.QGraphicsTextItem(parent=self)
-        self.font            = kwargs.get('font', 'Monospace')
-        self._font_size      = 8
-        self._font_bold      = False
-        self._font_italic    = False
-        self.qfont           = QtGui.QFont(self.font)
+        self.label              = QtGui.QGraphicsTextItem(parent=self)
+        self.font               = kwargs.get('font', 'Monospace')
+        self._font_size         = 8
+        self._font_bold         = False
+        self._font_italic       = False
+        self.qfont              = QtGui.QFont(self.font)
 
 
         # widget flags
@@ -273,6 +281,9 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.expand_widget = self.getHiddenIcon()
         self.label.setPlainText(self.dagnode.name)
 
+        self.output_widget.update()
+        self.input_widget.update()
+
 
 class ConnectionWidget(QtGui.QGraphicsObject):
     
@@ -281,7 +292,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
     nodeChanged         = QtCore.Signal(str, dict)
     PRIVATE             = []
 
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, is_input=True, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
         self.node       = parent
@@ -290,14 +301,35 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.dagnode    = parent.dagnode
         self.radius     = 8
 
+        self.is_input   = is_input
+        self.attribute  = kwargs.get('attribute', None)
+
+        if self.attribute is None:
+            if self.is_input:
+                self.attribute ='input'
+            else:
+                self.attribute = 'output'
+
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
 
         self.setAcceptHoverEvents(True)
         self.setZValue(- 1)
 
+
+
+    def __str__(self):
+        return '%s.%s' % (self.dagnode.name, self.attribute)
+
+    def __repr__(self):
+        return str(self)
+
     @property
     def node_class(self):
         return 'connection'    
+
+    @property
+    def node_class(self):
+        return 'connection'  
 
     @property
     def UUID(self):
@@ -325,10 +357,16 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         top left, width, height
         """
-        return QtCore.QRectF(self.parentItem().boundingRect().right() - self.radius/2, 
-                            self.parentItem().boundingRect().center().y() - self.radius/2, 
-                            self.radius, 
-                            self.radius)
+        if self.is_input:
+            return QtCore.QRectF(self.parentItem().boundingRect().left() - self.radius/2, 
+                                            self.parentItem().boundingRect().center().y() - self.radius/2, 
+                                            self.radius, 
+                                            self.radius)
+        else:
+            return QtCore.QRectF(self.parentItem().boundingRect().right() - self.radius/2, 
+                                self.parentItem().boundingRect().center().y() - self.radius/2, 
+                                self.radius, 
+                                self.radius)
 
     def paint(self, painter, option, widget):
         """
@@ -356,3 +394,136 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         painter.setBrush(QtGui.QBrush(gradient))
         painter.drawEllipse(self.boundingRect())
         
+
+# Line class for connecting the nodes together
+class EdgeWidget(QtGui.QGraphicsLineItem):
+
+    def __init__(self, source_item, dest_item, *args, **kwargs):
+        super(EdgeWidget, self).__init__(*args, **kwargs)
+
+        # The arrow that's drawn in the center of the line
+        self.arrowhead      = QtGui.QPolygonF()
+        self.color          = QtCore.Qt.white
+
+        self.source_item    = source_item
+        self.dest_item      = dest_item
+               
+        self.source_point   = QtCore.QPointF(self.source_item.boundingRect().center())
+        self.dest_pint      = QtCore.QPointF(self.dest_item.boundingRect().center())
+        self.centerpoint    = QtCore.QPointF()  # for bezier lines
+        
+        self.setZValue(-1.0)
+        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setPen(QtGui.QPen(self.color, 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
+        
+        self.name = "%s.%s" % (self.source_item, self.dest_item)
+
+
+    @property
+    def node_class(self):
+        return 'edge' 
+
+    def __repr__(self):
+        return '%s >> %s' % (self.source_item, self.dest_item)
+    
+    def deleteNode(self):
+        # For whatever the shit reason, I have to have this check. If I don't, I get an error in rare cases.
+        if self:
+            #self.getEndItem().getWidgetMenu().receiveFrom(self.getStartItem(), delete=True)
+            #self.getStartItem().getWidgetMenu().sendData(self.getStartItem().getWidgetMenu().packageData())
+            #self.getStartItem().removeReferences()
+            self.scene().removeItem(self)
+            self.source_item.connectedLine.remove(self)
+            self.dest_item.connectedLine.remove(self)
+
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Delete:
+            self.deleteNode()
+            self.update()
+        else:
+            super(EdgeWidget, self).keyPressEvent(event)
+
+    def getCenterPoint(self):
+        line = self.getLine()
+        centerX = (line.p1().x() + line.p2().x())/2
+        centerY = (line.p1().y() + line.p2().y())/2
+        return QtCore.QPointF(centerX, centerY)
+
+    def getLine(self):
+        p1 = self.source_item.sceneBoundingRect().center()
+        p2 = self.dest_item.sceneBoundingRect().center()
+        return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
+
+    def getEndItem(self):
+        return self.dest_item.parentItem()
+
+    def getStartItem(self):
+        return self.source_item.parentItem()
+
+    def updatePosition(self):
+        self.setLine(self.getLine())
+        self.source_item.connectedLine.append(self)
+        self.dest_item.connectedLine.append(self)
+
+    def boundingRect(self):
+        extra = (self.pen().width() + 100)  / 2.0
+        line = self.getLine()
+        p1 = line.p1()
+        p2 = line.p2()
+        return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
+
+    def shape(self):
+        path = super(EdgeWidget, self).shape()
+        path.addPolygon(self.arrowhead)
+        return path
+
+    def paint(self, painter, option, widget=None):
+        arrowSize = 10.0
+        line = self.getLine()
+        painter.setBrush(self.color)
+        myPen = self.pen()
+        myPen.setColor(self.color)
+        painter.setPen(myPen)
+
+        if self.isSelected():
+            painter.setBrush(QtCore.Qt.yellow)
+            myPen.setColor(QtCore.Qt.yellow)
+            myPen.setStyle(QtCore.Qt.DashLine)
+            painter.setPen(myPen)
+
+        if line.length() > 0.0:
+
+            try:
+                angle = math.acos(line.dx() / line.length())
+            except ZeroDivisionError:
+                angle = 0
+
+            if line.dy() >= 0:
+                angle = (math.pi * 2.0) - angle
+
+            if self.source_item.is_input:
+                revArrow = 1
+            else:
+                revArrow = -1
+
+            # Get the center point of the line
+            centerPoint = self.getCenterPoint()
+
+            # The head of the arrows tip is the centerPoint, so now calculate the other 2 arrow points
+            arrowP1 = centerPoint + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * arrowSize * revArrow,
+                                        math.cos(angle + math.pi / 3) * arrowSize * revArrow)
+            arrowP2 = centerPoint + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * arrowSize * revArrow,
+                                        math.cos(angle + math.pi - math.pi / 3.0) * arrowSize * revArrow)
+
+            # Clear anything in the arrowHead polygon
+            self.arrowhead.clear()
+
+            # Set the points of the arrowHead polygon
+            for point in [centerPoint, arrowP1, arrowP2]:
+                self.arrowhead.append(point)
+
+            if line:
+                painter.drawPolygon(self.arrowhead)
+                painter.drawLine(line)
+                #painter.drawCubicBezier(line)
+

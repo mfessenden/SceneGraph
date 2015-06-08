@@ -8,10 +8,9 @@ reload(graphics)
 reload(node_widgets)
 
 
-AttributeEditor 	= attribute_editor.AttributeEditor
-GraphicsView		= graphics.GraphicsView
-GraphicsScene   	= graphics.GraphicsScene
-NodeWidget 			= node_widgets.NodeWidget
-NodeWidget 			= node_widgets.NodeWidget
-NodeLabel			= node_widgets.NodeLabel
-ConnectionWidget 	= node_widgets.ConnectionWidget
+AttributeEditor     = attribute_editor.AttributeEditor
+GraphicsView        = graphics.GraphicsView
+GraphicsScene       = graphics.GraphicsScene
+NodeWidget          = node_widgets.NodeWidget
+NodeWidget          = node_widgets.NodeWidget
+ConnectionWidget    = node_widgets.ConnectionWidget

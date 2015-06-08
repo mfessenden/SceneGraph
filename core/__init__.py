@@ -18,12 +18,10 @@ log = logger.myLogger()
 
 
 # graph class
-Graph 				= graph.Graph
+Graph               = graph.Graph
 
 # nodes
-LineClass   		= nodes.LineClass
-MyLine      		= nodes.MyLine
-NodeBase 			= nodes.NodeBase
+NodeBase            = nodes.NodeBase
 
 # attributes
 StringAttribute     = attributes.StringAttribute
