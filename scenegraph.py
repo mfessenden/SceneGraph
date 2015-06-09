@@ -373,7 +373,6 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
-        print '# SceneGraph: Node changed...'
         self.updateOutput()
 
     # TODO: disabling this, causing lag
@@ -422,9 +421,8 @@ class SceneGraphUI(form_class, base_class):
         menu_actions.append(QtGui.QAction('Rename node', self, triggered=self.renameNodeAction))
         return menu_actions
 
-    def renameNodeAction(self, node):
+    def renameNodeAction(self):
         print 'renaming node...'
-
 
     #- Settings -----
     def readSettings(self):

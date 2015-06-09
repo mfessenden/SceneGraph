@@ -84,6 +84,7 @@ class GraphicsView(QtGui.QGraphicsView):
     def resizeEvent(self, event):
         #self.sendConsoleStatus(event)
         QtGui.QGraphicsView.resizeEvent(self, event)
+        self.scene().update()
 
     def viewportEvent(self, event):
         #self.sendConsoleStatus(event)
@@ -296,7 +297,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         # find the node widget
         node = self.sceneNodes.get(UUID, None)
         if node:
-            print '# GraphicsScene: node changed: ', UUID
             self.nodeChanged.emit(node)
             self.update()
 
@@ -309,33 +309,73 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         return self.sceneNodes.values()
 
+    def validateConnection(self, source_item, dest_item):
+        """
+        When the mouse is released, validate the two connections.
+        """
+        if not hasattr(source_item, 'node_class') or not hasattr(dest_item, 'node_class'):
+            return False
+
+        if source_item.node_class not in ['connection'] or dest_item.node_class not in ['connection']:
+            return False
+
+        if source_item.isInputConnection() or dest_item.isOutputConnection():
+            return False
+
+        return True
+
+    def resizeEvent(self, event):
+        QtGui.QGraphicsScene.resizeEvent(self, event)
+        self.update()
+
     def mousePressEvent(self, event):
         item = self.itemAt(event.scenePos())
         if event.button() == QtCore.Qt.LeftButton:
             if hasattr(item, 'node_class'):
                 if item.node_class in ['connection']:
-                    print 'drawing line'
                     self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
                     self.addItem(self.line)
                     self.update(self.itemsBoundingRect())
+        
+        if event.button() == QtCore.Qt.RightButton:
+            pass
+
         QtGui.QGraphicsScene.mousePressEvent(self, event)
         self.update()
 
     def mouseMoveEvent(self, event):
+        if self.line:
+            newLine = QtCore.QLineF(self.line.line().p1(), event.scenePos())
+            self.line.setLine(newLine)
         QtGui.QGraphicsScene.mouseMoveEvent(self, event)
         self.update()
 
     def mouseReleaseEvent(self, event):
         if self.line:
-            startItems = self.items(self.line.line().p1())
-            if len(startItems) and startItems[0] == self.line:
-                startItems.pop(0)
-            endItems = self.items(self.line.line().p2())
-            if len(endItems) and endItems[0] == self.line:
-                endItems.pop(0)
+            source_items = self.items(self.line.line().p1())
+            if len(source_items) and source_items[0] == self.line:
+                source_items.pop(0)
+            dest_items = self.items(self.line.line().p2())
+            if len(dest_items) and dest_items[0] == self.line:
+                dest_items.pop(0)
 
-            #self.removeItem(self.line)
+            self.removeItem(self.line)
+            if len(source_items) and len(dest_items):
+                source_node = source_items[0]
+                dest_node = dest_items[0]
 
+                if self.validateConnection(source_node, dest_node):
+                    edge = node_widgets.EdgeWidget(source_node, dest_node)
+                    self.addItem(edge)
+                    self.network.add_edge(str(source_node.dagnode.UUID), 
+                        str(dest_node.dagnode.UUID),
+                        src_node=str(source_node.dagnode.UUID),
+                        dest_node=str(dest_node.dagnode.UUID),
+                        src_attr=source_node.attribute, 
+                        dest_attr=dest_node.attribute)
+
+
+        self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
         self.update()
 

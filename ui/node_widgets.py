@@ -128,7 +128,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         cur_name = self.dagnode.name
         UUID = str(self.dagnode.UUID)
         if node_name != cur_name:
-            print '# NodeWidget: Node name updated: ', node_name
             self.dagnode.name = node_name
             self.nodeChanged.emit(UUID, {'name':node_name})
 
@@ -313,9 +312,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
 
         self.setAcceptHoverEvents(True)
-        self.setZValue(- 1)
-
-
+        self.setZValue(- 2)
 
     def __str__(self):
         return '%s.%s' % (self.dagnode.name, self.attribute)
@@ -324,8 +321,8 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         return str(self)
 
     @property
-    def node_class(self):
-        return 'connection'    
+    def name(self):
+        return '%s.%s' % (self.dagnode.name, self.attribute)  
 
     @property
     def node_class(self):
@@ -348,7 +345,8 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         Aids in selection.
         """
         path = QtGui.QPainterPath()
-        path.addRect(self.boundingRect())
+        bounds = self.boundingRect()
+        path.addRect(bounds)
         return path
 
     def boundingRect(self):
@@ -372,10 +370,16 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         """
         Draw the connection widget.
         """
+        self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
         # background
         gradient = QtGui.QLinearGradient(0, -self.radius/2, 0, self.radius/2)
         grad = .5
-        color = self.color
+
+        if self.isInputConnection():
+            color = self.color
+
+        if self.isOutputConnection():
+            color = [0, 255, 0]
 
         if option.state & QtGui.QStyle.State_Selected:
             color = [255, 0, 0]
@@ -393,13 +397,25 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad)), 0.5, QtCore.Qt.SolidLine))
         painter.setBrush(QtGui.QBrush(gradient))
         painter.drawEllipse(self.boundingRect())
-        
 
-# Line class for connecting the nodes together
+    def isInputConnection(self):
+        if self.is_input:
+            return True
+        return False
+
+    def isOutputConnection(self):
+        if self.is_input:
+            return False
+        return True
+
+
+# edge class for connecting nodes
 class EdgeWidget(QtGui.QGraphicsLineItem):
 
+    adjustment = 5
+
     def __init__(self, source_item, dest_item, *args, **kwargs):
-        super(EdgeWidget, self).__init__(*args, **kwargs)
+        QtGui.QGraphicsLineItem.__init__(self, *args, **kwargs)
 
         # The arrow that's drawn in the center of the line
         self.arrowhead      = QtGui.QPolygonF()
@@ -407,17 +423,22 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         self.source_item    = source_item
         self.dest_item      = dest_item
-               
+
+        self.arrow_size     = 12
+        self.show_conn      = False             # show connection string
+        self.multi_conn     = False             # multiple connections (future)
+        self.conn_label     = None
+
         self.source_point   = QtCore.QPointF(self.source_item.boundingRect().center())
-        self.dest_pint      = QtCore.QPointF(self.dest_item.boundingRect().center())
-        self.centerpoint    = QtCore.QPointF()  # for bezier lines
-        
-        self.setZValue(-1.0)
+        self.dest_point     = QtCore.QPointF(self.dest_item.boundingRect().center())
+        self.centerpoint    = QtCore.QPointF()  # for bezier lines       
+
+        self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
         self.setPen(QtGui.QPen(self.color, 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
         
         self.name = "%s.%s" % (self.source_item, self.dest_item)
-
+        self.setZValue(-1.0)
 
     @property
     def node_class(self):
@@ -427,11 +448,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         return '%s >> %s' % (self.source_item, self.dest_item)
     
     def deleteNode(self):
-        # For whatever the shit reason, I have to have this check. If I don't, I get an error in rare cases.
         if self:
-            #self.getEndItem().getWidgetMenu().receiveFrom(self.getStartItem(), delete=True)
-            #self.getStartItem().getWidgetMenu().sendData(self.getStartItem().getWidgetMenu().packageData())
-            #self.getStartItem().removeReferences()
             self.scene().removeItem(self)
             self.source_item.connectedLine.remove(self)
             self.dest_item.connectedLine.remove(self)
@@ -441,7 +458,12 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             self.deleteNode()
             self.update()
         else:
-            super(EdgeWidget, self).keyPressEvent(event)
+            QtGui.QGraphicsLineItem.keyPressEvent(self, event)
+
+    def getLine(self):
+        p1 = self.source_item.sceneBoundingRect().center()
+        p2 = self.dest_item.sceneBoundingRect().center()
+        return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
 
     def getCenterPoint(self):
         line = self.getLine()
@@ -449,10 +471,10 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         centerY = (line.p1().y() + line.p2().y())/2
         return QtCore.QPointF(centerX, centerY)
 
-    def getLine(self):
-        p1 = self.source_item.sceneBoundingRect().center()
-        p2 = self.dest_item.sceneBoundingRect().center()
-        return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
+    def getEndPoint(self):
+        line = self.getLine()
+        ep = line.p2()
+        return QtCore.QPointF(ep.x(), ep.y())
 
     def getEndItem(self):
         return self.dest_item.parentItem()
@@ -473,31 +495,68 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
-        path = super(EdgeWidget, self).shape()
-        path.addPolygon(self.arrowhead)
-        return path
+        """
+        Need to add some adjustments to the line to make is more selectable.
+        """
+        path = QtGui.QPainterPath()
+        stroker = QtGui.QPainterPathStroker()
+        stroker.setWidth(30)
+        line = self.getLine()
+        path.moveTo(line.p1())
+        path.lineTo(line.p2())
+        return stroker.createStroke(path)
+
+    def buildConnectionLabel(self):
+        line = self.getLine()
+        p1 = line.p1()
+        p2 = line.p2()
+
+        # draw a label showing the connection
+        dx = p2.x() - p1.x()
+        dy = p2.y() -  p1.y()
+        rads = math.atan2(-dy,dx)
+        rads %= 2*math.pi
+        degs = math.degrees(rads)
+
+        text = QtGui.QGraphicsSimpleTextItem(str(self))
+
+        text.setParentItem(self)
+        #text.setRenderHints(QtGui.QPainter.TextAntialiasing)
+        text.setBrush(QtGui.QBrush(QtGui.QColor(255,255,255)))
+      
+        tw = text.boundingRect().width()
+        th = text.boundingRect().height()
+        center = self.boundingRect().center()
+        
+        text.rotate(-degs)
+        text.setPos(center.x()-tw/2, center.y()-th/2)
+        return text
 
     def paint(self, painter, option, widget=None):
-        arrowSize = 10.0
+        self.setToolTip(str(self))
+        self.show_conn = False
+        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+
         line = self.getLine()
         painter.setBrush(self.color)
-        myPen = self.pen()
-        myPen.setColor(self.color)
-        painter.setPen(myPen)
+        epen = self.pen()
+        epen.setColor(self.color)
+        painter.setPen(epen)
 
-        if self.isSelected():
+        if option.state & QtGui.QStyle.State_Selected:
             painter.setBrush(QtCore.Qt.yellow)
-            myPen.setColor(QtCore.Qt.yellow)
-            myPen.setStyle(QtCore.Qt.DashLine)
-            painter.setPen(myPen)
+            epen.setColor(QtCore.Qt.yellow)
+            painter.setPen(epen)
+
+        if option.state & QtGui.QStyle.State_MouseOver:
+            painter.setBrush(QtCore.Qt.green)
+            epen.setColor(QtCore.Qt.green)
+            painter.setPen(epen)
+            self.show_conn = True
 
         if line.length() > 0.0:
 
-            try:
-                angle = math.acos(line.dx() / line.length())
-            except ZeroDivisionError:
-                angle = 0
-
+            angle = math.acos(line.dx() / line.length())
             if line.dy() >= 0:
                 angle = (math.pi * 2.0) - angle
 
@@ -506,24 +565,26 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             else:
                 revArrow = -1
 
-            # Get the center point of the line
-            centerPoint = self.getCenterPoint()
-
-            # The head of the arrows tip is the centerPoint, so now calculate the other 2 arrow points
-            arrowP1 = centerPoint + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * arrowSize * revArrow,
-                                        math.cos(angle + math.pi / 3) * arrowSize * revArrow)
-            arrowP2 = centerPoint + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * arrowSize * revArrow,
-                                        math.cos(angle + math.pi - math.pi / 3.0) * arrowSize * revArrow)
-
-            # Clear anything in the arrowHead polygon
+            center_point = self.getCenterPoint()
+            end_point = self.getEndPoint()
+            
+            arrow_p1 = end_point + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * self.arrow_size * revArrow,
+                                        math.cos(angle + math.pi / 3) * self.arrow_size * revArrow)
+            arrow_p2 = end_point + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow,
+                                        math.cos(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow)
+            # clear the arrow
             self.arrowhead.clear()
 
-            # Set the points of the arrowHead polygon
-            for point in [centerPoint, arrowP1, arrowP2]:
+            # set the polygon points
+            for point in [end_point, arrow_p1, arrow_p2]:
                 self.arrowhead.append(point)
 
+            #self.scene().removeItem(self.conn_label)
+            #self.conn_label = self.buildConnectionLabel()
             if line:
                 painter.drawPolygon(self.arrowhead)
                 painter.drawLine(line)
                 #painter.drawCubicBezier(line)
 
+    def hoverEnterEvent(self, event):
+        QtGui.QGraphicsLineItem.hoverEnterEvent(self, event)

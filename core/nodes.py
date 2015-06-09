@@ -129,7 +129,6 @@ class NodeBase(object):
             # haxx here
             if attr not in self.PRIVATE:
                 if not self._widget or attr not in self._widget.PRIVATE:
-                    print '# DEBUG: adding node attribute: "%s"' % attr
                     self._data[attr] = val
                     continue
                 else:
@@ -152,15 +151,32 @@ class NodeBase(object):
 class EdgeBase(object):
     
     Type    = QtGui.QGraphicsItem.UserType + 2
-    PRIVATE = ['UUID', 'source', 'destination']
+    PRIVATE = []
 
     def __init__(self, **kwargs):        
         
-        UUID                 = kwargs.pop('id', None)
-        self.UUID            = UUID if UUID else uuid.uuid4()
-        
-        self.source          = dict()
-        self.destination     = dict()
+        src     = kwargs.get('src', None)
+        dest    = kwargs.get('dest', None)
+
+        if src is not None:
+            self.src_node, self.src_attr = self.getNodeConnection(src)
+
+        if dest is not None:
+            self.dest_node, self.dest_attr = self.getNodeConnection(dest)
+
+    def getNodeConnection(self, node, src=True):
+        """
+        Given a connection string (ie: "MyNode.graph"), 
+        return a tuple of (node name, connection attribute)
+        """
+        attrs = node.partition('.')
+        node_name = attrs[0]
+        node_attr = 'input'
+        if src:
+            node_attr='output'
+        if attrs[-1]:
+            node_attr = attrs[-1]
+        return (node_name, node_attr)
 
 
 #- Connections -----
@@ -181,7 +197,7 @@ class ConnectionBase(object):
     
     def __repr__(self):
         return '%s.%s' % (self._parent.name, self.name)
-        
+
     def path(self):
         return '%s.%s' % (self._parent.path(), self.name)
 

@@ -87,6 +87,16 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="drawTab">
+       <attribute name="title">
+        <string>Draw</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="drawTabLayout">
+        <item>
+         <widget class="QGraphicsView" name="graphicsView"/>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -191,8 +201,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>162</height>
+          <width>256</width>
+          <height>107</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
@@ -230,8 +240,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>232</width>
-          <height>162</height>
+          <width>256</width>
+          <height>108</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
@@ -269,7 +279,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>219</width>
+          <width>256</width>
           <height>271</height>
          </rect>
         </property>

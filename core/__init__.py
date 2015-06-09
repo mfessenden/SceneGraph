@@ -22,6 +22,7 @@ Graph               = graph.Graph
 
 # nodes
 NodeBase            = nodes.NodeBase
+EdgeBase            = nodes.EdgeBase
 
 # attributes
 StringAttribute     = attributes.StringAttribute

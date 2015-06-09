@@ -12,5 +12,5 @@ AttributeEditor     = attribute_editor.AttributeEditor
 GraphicsView        = graphics.GraphicsView
 GraphicsScene       = graphics.GraphicsScene
 NodeWidget          = node_widgets.NodeWidget
-NodeWidget          = node_widgets.NodeWidget
+EdgeWidget          = node_widgets.EdgeWidget
 ConnectionWidget    = node_widgets.ConnectionWidget

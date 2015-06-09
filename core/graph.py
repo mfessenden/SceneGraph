@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import re
+import weakref
 import simplejson as json
 import networkx as nx
 from functools import partial
@@ -18,6 +19,8 @@ class Graph(object):
         self.view           = None
         self.scene          = None      
         self.mode           = 'standalone'
+
+        self.dagnodes       = dict()
 
         self._copied_nodes  = []
 
@@ -51,7 +54,6 @@ class Graph(object):
             log.info('setting up GraphicsView...')
             self.view = view
             self.scene = view.scene()
-            self.mode = 'ui'        
 
     #-- NetworkX Stuff -----
     def getScene(self):
@@ -108,7 +110,7 @@ class Graph(object):
         returns:
             (list)
         """
-        if self.mode != 'ui':
+        if not self.view:
             return []
 
         return self.scene.sceneNodes.values()
@@ -123,7 +125,7 @@ class Graph(object):
         returns:
             (obj)
         """
-        if self.mode != 'ui':
+        if not self.view:
             return
 
         nodes = self.getSceneNodes()
@@ -140,30 +142,26 @@ class Graph(object):
         returns:
             (list)
         """
-        if self.mode != 'ui':
-            return
+        return self.dagnodes.values()
 
-        nodes = self.getSceneNodes()
-        if nodes:
-            return [node.dagnode for node in self.getSceneNodes()]
-        return []
-
-    def getDagNode(self, name):
+    def getDagNode(self, node):
         """
         Return a dag node by name.
 
         params:
-            name - (str) name of node to return
+            node - (str) name of node to return
 
         returns:
             (obj)
         """
-        if self.mode != 'ui':
-            return
-        dagNodes = self.getDagNodes()
-        if dagNodes:
-            for dag in dagNodes:
-                if dag.name == name:
+        if node in self.dagnodes:
+            return self.dagnodes.get(node)
+        
+        if self.dagnodes:
+            for UUID in self.dagnodes:
+                dag = self.dagnodes.get(UUID)
+                print 'dag: ', dag.name
+                if dag and dag.name == node:
                     return dag
         return
 
@@ -174,8 +172,9 @@ class Graph(object):
         returns:
             (list)
         """
-        if self.mode != 'ui':
+        if not self.view:
             return []
+
         selected_nodes = []
         for nn in self.getSceneNodes():
             if nn.isSelected():
@@ -195,9 +194,7 @@ class Graph(object):
                           - node widget in ui mode
         """
         from SceneGraph import core
-        from SceneGraph import ui
         reload(core)
-        reload(ui)
 
         log = core.log
 
@@ -214,8 +211,11 @@ class Graph(object):
             name = self._nodeNamer(name)
 
         dag = core.NodeBase(node_type, name=name, id=UUID, **kwargs)
+        self.dagnodes[str(dag.UUID)] = dag
 
-        if self.mode == 'ui':
+        if self.view:
+            from SceneGraph import ui
+            reload(ui)
             node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
             log.info('adding scene graph node "%s"' % name)
         else:
@@ -228,7 +228,7 @@ class Graph(object):
         nn['name'] = name
         nn['node_type'] = node_type
 
-        if self.mode == 'ui':
+        if self.view:
             nn['pos_x'] = node.pos().x()
             nn['pos_y'] = node.pos().y()
             nn['width'] = node.width
@@ -238,6 +238,49 @@ class Graph(object):
             #node.setPos(pos_x, pos_y)
             return node
         return dag
+
+    # TODO: auto-parse NodeBase objects
+    def addEdge(self, **kwargs):
+        """
+        Add an edge connecting two nodes.
+        """
+        src_node=kwargs.get('src', None)
+        dest_node=kwargs.get('dest', None)
+
+        if src_node is None or dest_node is None:
+            return False
+
+        if src_node and dest_node:
+
+            from SceneGraph import core
+            reload(core)
+
+            edge = core.EdgeBase(src=src_node, dest=dest_node)
+
+            src_name = edge.src_node
+            src_id = self.getNodeID(src_name)
+            dest_name = edge.dest_node
+            dest_id = self.getNodeID(src_name)
+
+            self.network.add_edge(src_id, 
+                dest_id,
+                src_node=src_id,
+                dest_node=dest_id,
+                src_attr=edge.src_attr, 
+                dest_attr=edge.dest_attr)
+
+            if self.view:
+                from SceneGraph import ui
+                reload(ui)
+
+                src_node = self.getSceneNode(src_name)
+                dest_node = self.getSceneNode(dest_name)
+
+                if src_node and dest_node:
+                    # TODO: need a method to return a named input/output widget (for when we have complex nodes)
+                    edge = ui.EdgeWidget(src_node.output_widget, dest_node.input_widget)
+                    self.scene.addItem(node)
+
 
     def getNodeID(self, name):
         """
@@ -254,21 +297,6 @@ class Graph(object):
                     result = UUID
         return result 
 
-    def getNode(self, name):
-        """
-        Return the node given a name.
-
-        params:
-            name - (str) node name
-        """
-        result = None
-        for node in self.network.nodes(data=True):
-            UUID, data = node
-            if 'name' in data:
-                if data['name'] == name:
-                    result = node
-        return result
-
     def removeNode(self, name):
         """
         Removes a node from the graph
@@ -279,13 +307,18 @@ class Graph(object):
         returns:
             (object)  - removed node
         """
-        from SceneGraph.core import log
-        log.info('Removing node: "%s"' % name)
-
-        self.scene.removeItem(node)
-        if name in self.scene.sceneNodes.keys():
-            return self.scene.sceneNodes.pop(name)
-        return
+        UUID = self.getNodeID(name)
+        if UUID and UUID in self.dagnodes:
+            from SceneGraph.core import log
+            log.info('Removing node: "%s"' % name)
+            self.dagnodes.pop(UUID)
+            self.network.remove_node(UUID)
+            if self.view:
+                self.scene.removeItem(node)
+                if name in self.scene.sceneNodes.keys():
+                    self.scene.sceneNodes.pop(name)
+            return True
+        return False
 
     def renameNode(self, old_name, new_name):
         """
@@ -368,7 +401,7 @@ class Graph(object):
         """
         Update the networkx graph from the UI.
         """
-        if self.mode != 'ui':
+        if not self.view:
             return False
 
         for node in self.getDagNodes():
@@ -383,8 +416,6 @@ class Graph(object):
         from SceneGraph import core
         for item in self.scene.items():
             if isinstance(item, core.nodes.NodeBase):
-                self.scene.removeItem(item)
-            elif isinstance(item, core.nodes.LineClass):
                 self.scene.removeItem(item)
 
     def validNodeName(self, name):
@@ -451,8 +482,9 @@ class Graph(object):
             self.network.clear()
             graph_data = tmp_data.get('graph', [])
             nodes = tmp_data.get('nodes', [])
-
-            # build graph attributes
+            edges = tmp_data.get('links', [])
+            
+            # update graph attributes
             for gdata in graph_data:
                 if len(gdata):
                     self.network.graph[gdata[0]]=gdata[1]
@@ -465,6 +497,13 @@ class Graph(object):
 
                 # add the dag node/widget
                 node_widget = self.addNode(node_type, **node_attrs)
+
+            for edge_attrs in edges:
+                #self.addEdge
+                src_str = '%s.%s' % (edge_attrs.get('src_node'), edge_attrs.get('src_attr'))
+                dest_str = '%s.%s' % (edge_attrs.get('dest_node'), edge_attrs.get('dest_attr'))
+
+                self.addEdge(src=src_str, dest=dest_str)
 
             return self.setScene(filename)
 
