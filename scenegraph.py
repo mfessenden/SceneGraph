@@ -370,7 +370,7 @@ class SceneGraphUI(form_class, base_class):
             val = '1'
         os.environ["SCENEGRAPH_DEBUG"] = val
         SCENEGRAPH_DEBUG = val
-        self.scene.update()        
+        self.scene.update()      
 
     def sizeHint(self):
         return QtCore.QSize(1070, 800)
@@ -448,6 +448,8 @@ class SceneGraphUI(form_class, base_class):
         qcurs = QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
         scene_pos = self.view.mapToScene(view_pos)
+
+        # add the node at the scene pos
         add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos_x=scene_pos.x(), pos_y=scene_pos.y()))
         tab_menu.exec_(qcurs.pos())
 

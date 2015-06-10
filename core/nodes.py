@@ -79,6 +79,16 @@ class NodeBase(object):
             return self._widget.pos().y()
         return 0
 
+    @pos_x.setter
+    def pos_x(self, val):
+        if self._widget:
+            self._widget.setX(val)
+
+    @pos_y.setter
+    def pos_y(self, val):
+        if self._widget:
+            self._widget.setY(val)
+
     @property
     def width(self):
         if self._widget:

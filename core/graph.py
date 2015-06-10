@@ -238,7 +238,7 @@ class Graph(object):
             nn['height'] = node.height
 
             self.scene.addItem(node)
-            #node.setPos(pos_x, pos_y)
+            node.setPos(pos_x, pos_y)
             return node
         return dag
 

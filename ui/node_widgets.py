@@ -9,8 +9,6 @@ from .. import options
 reload(options)
 
 
-
-
 class NodeWidget(QtGui.QGraphicsObject):
     
     Type                = QtGui.QGraphicsObject.UserType + 3
@@ -51,6 +49,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         # colors
         self._color             = [180, 180, 180]
         self.color_mult         = 0.5
+        self.debug_color        = [0, 0, 0]
 
         # input/output terminals
         self.input_widget      = ConnectionWidget(self)
@@ -60,7 +59,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.output_widget.setParentItem(self)
         
         # font/label attributes
-        self.label              = QtGui.QGraphicsTextItem(parent=self)
+        self.label              = NodeLabel(self)
+
         self.font               = kwargs.get('font', 'Monospace')
         self._font_size         = 8
         self._font_bold         = False
@@ -68,16 +68,11 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.qfont              = QtGui.QFont(self.font)
 
         # widget flags
-        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsObject.ItemIsMovable | QtGui.QGraphicsObject.ItemIsFocusable)
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsObject.ItemIsMovable | QtGui.QGraphicsObject.ItemIsFocusable | QtGui.QGraphicsObject.ItemSendsGeometryChanges)
         self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
         self.setCacheMode(self.DeviceCoordinateCache)
         self.setZValue(1)
-
-        # set the postition
-        pos_x = kwargs.get('pos_x', 0)
-        pos_y = kwargs.get('pos_y', 0)
-        self.setPos(pos_x, pos_y)
 
     def __repr__(self):
         return '< %s: %s >' % (self.node_class.title(), self.dagnode.name)
@@ -125,17 +120,19 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         return self.mapToScene(QPointF(0, 0))
 
-    def defaultInputPos(self):
+    def input_pos(self):
         """
         Returns the default input connection center.
         """
-        return QtCore.QPointF(self.boundingRect().left() - self.height_collapsed/2, self.height_collapsed/2)
+        ipos = -self.height - self.bufferX*2 + self.height_collapsed + self.bufferY*2
+        return QtCore.QPointF(self.boundingRect().left(), ipos/2)
 
-    def defaultOutputPos(self):
+    def output_pos(self):
         """
         Returns the default output connection center.
         """
-        return QtCore.QPointF(self.boundingRect().right() - self.height_collapsed/2, self.height_collapsed/2)
+        ipos = -self.height - self.bufferX*2 + self.height_collapsed + self.bufferY*2
+        return QtCore.QPointF(self.boundingRect().right(), ipos/2)
 
     def itemChange(self, change, value):
         if change == QtGui.QGraphicsObject.ItemScenePositionHasChanged:
@@ -148,7 +145,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         a rounded rectangle for speed purposes.
         """
         return QtCore.QRectF(-self.width/2  - self.bufferX,  -self.height/2 - self.bufferY,
-                              self.width  + 3 + self.bufferX, self.height + 3 + self.bufferY)
+                              self.width  + self.bufferX*2, self.height + self.bufferY*2)
     
     #- Events -----
     def hoverEnterEvent(self, event):
@@ -265,43 +262,12 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.moveBy(0, -175 + 4)
         self.update()
         
-    def buildNodeLabel(self, shadow=True):
-        """
-        Build the node's label attribute.
-        """
-        self.label.setX(-(self.width/2 - self.bufferX + 3))
-        self.label.setY(-(self.height/2 + self.bufferY))
-        #self.label.setY(self.boundingRect().top() + (self.height_collapsed - self.bufferY*1.5))
-
-        self.qfont = QtGui.QFont(self.font)
-        self.qfont.setPointSize(self._font_size)
-        self.qfont.setBold(self._font_bold)
-        self.qfont.setItalic(self._font_italic)
-
-        self.label.setFont(self.qfont)
-        self.label.setPlainText(self.dagnode.name)
-        self.label.setDefaultTextColor(QtGui.QColor(0, 0, 0))
-
-        # make the label editable
-        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-        label_doc = self.label.document()
-        label_doc.setMaximumBlockCount(1)
-        label_doc.contentsChanged.connect(self.nodeNameChanged)
-
-        # drop shadow
-        if shadow:
-            self.tdropshd = QtGui.QGraphicsDropShadowEffect()
-            self.tdropshd.setBlurRadius(6)
-            self.tdropshd.setColor(QtGui.QColor(0,0,0,120))
-            self.tdropshd.setOffset(1,2)
-            self.label.setGraphicsEffect(self.tdropshd)
-
     def paint(self, painter, option, widget):
         """
         Draw the node.
         """
-        #self.scene().removeItem(self.label)
-        self.buildNodeLabel()
+        # position the label
+        self.label.setPos(-self.width/2 + self.bufferX*2, -self.height/2 - self.bufferY)
 
         # label & line
         if self.expanded:    
@@ -323,6 +289,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
 
+        # draw the node background
         fullRect = self.boundingRect()
         painter.drawRoundedRect(fullRect, 7, 7)
 
@@ -337,10 +304,24 @@ class NodeWidget(QtGui.QGraphicsObject):
             self.expand_widget = self.getExpandedIcon()
         else:
             self.expand_widget = self.getHiddenIcon()
-        self.label.setPlainText(self.dagnode.name)
 
-        self.output_widget.update()
+
+        if self.debug_mode:
+            debug_color = QtGui.QColor(*self.debug_color)
+            painter.setBrush(QtCore.Qt.NoBrush)
+
+            green_color = QtGui.QColor(0, 255, 0)
+            painter.setPen(QtGui.QPen(green_color, 0.5, QtCore.Qt.SolidLine))
+            painter.drawEllipse(self.output_pos(), 4, 4)
+
+            yellow_color = QtGui.QColor(255, 255, 0)
+            painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
+            painter.drawEllipse(self.input_pos(), 4, 4)
+            
+
         self.input_widget.update()
+        self.output_widget.update()
+        self.label.update()
 
 
 class ConnectionWidget(QtGui.QGraphicsObject):
@@ -357,23 +338,18 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.color          = [255, 255, 0]
         self.dagnode        = parent.dagnode
-        self.radius         = 8.0
+        self.radius         = 8
+        self.draw_radius    = self.radius/2
         self.max_conn       = 1 
 
         # debugging
         self.debug_mode     = False
 
         self.is_input       = is_input
-        self.attribute      = kwargs.get('attribute', None)
-        self.centerpoint    = QtCore.QPointF(0, 0)
+        self.attribute      = kwargs.get('attribute', 'output')
 
-        if self.attribute is None:
-            if self.is_input:
-                self.attribute ='input'
-                self.centerpoint = parent.defaultInputPos()
-            else:
-                self.attribute = 'output'
-                self.centerpoint = parent.defaultOutputPos()
+        if self.is_input:
+            self.attribute ='input'
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
@@ -414,12 +390,24 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         rect = self.boundingRect()
         return QtCore.QRectF(rect.topLeft().x() - adjustment/2,  rect.topLeft().y() - adjustment/2, rect.width() + adjustment, rect.height() + adjustment)
 
+    @property
+    def center_point(self):
+        """
+        Get the center point for the connector.
+        """
+        if self.is_input:
+            return self.node.input_pos()               
+        return self.node.output_pos()
+
     def boundingRect(self):
         """
         Defines the clickable hit box.
 
         top left, width, height
         """
+        #return QtCore.QRectF(-self.center_point.x() - self.radius/2, -self.center_point.y() - self.radius/2, self.radius, self.radius)
+        #return QtCore.QRectF(-self.node.input_pos().x() - self.radius/2, -self.node.input_pos().y() - self.radius/2, self.radius, self.radius)
+        #return QtCore.QRectF(-self.node.output_pos().x() - self.radius/2, -self.node.output_pos().y() - self.radius/2, self.radius, self.radius)
         if self.is_input:
             return QtCore.QRectF(self.parentItem().boundingRect().left() - self.radius/2, 
                                             self.parentItem().boundingRect().center().y() - self.radius/2, 
@@ -436,7 +424,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         Aids in selection.
         """
         path = QtGui.QPainterPath()
-        polyon = QtGui.QPolygonF(self.getHitbox())
+        polyon = QtGui.QPolygonF(self.boundingRect())
         path.addPolygon(polyon)
         return path
 
@@ -446,19 +434,22 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         """
         # DEBUG
         if self.debug_mode:
-            blackColor = QtGui.QColor(0, 0, 0)
+            conn_color = QtGui.QColor(175, 229, 168)
+            if self.isInputConnection():
+                conn_color = QtGui.QColor(255, 255, 190)
             painter.setBrush(QtCore.Qt.NoBrush)
-            painter.setPen(QtGui.QPen(blackColor, 0.25, QtCore.Qt.DashDotLine))
+            painter.setPen(QtGui.QPen(conn_color, 1, QtCore.Qt.SolidLine))
             painter.drawRect(self.getHitbox())
 
         self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
         # background
-        gradient = QtGui.QLinearGradient(0, -self.radius/2, 0, self.radius/2)
+        gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)
         grad = .5
 
         if self.isInputConnection():
             color = self.color
 
+        # green
         if self.isOutputConnection():
             color = [0, 255, 0]
 
@@ -477,16 +468,17 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad)), 0.5, QtCore.Qt.SolidLine))
         painter.setBrush(QtGui.QBrush(gradient))
+
+        #painter.drawEllipse(self.center_point, self.draw_radius, self.draw_radius)
         painter.drawEllipse(self.boundingRect())
 
-
     def isInputConnection(self):
-        if self.is_input:
+        if self.is_input == True:
             return True
         return False
 
     def isOutputConnection(self):
-        if self.is_input:
+        if self.is_input == True:
             return False
         return True
 
@@ -501,7 +493,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         # The arrow that's drawn in the center of the line
         self.arrowhead      = QtGui.QPolygonF()
-        self.color          = QtCore.Qt.white
+        self.color          = [224, 224, 224]
 
         self.source_item    = source_item
         self.dest_item      = dest_item
@@ -513,8 +505,8 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         self.source_point   = QtCore.QPointF(self.source_item.boundingRect().center())
         self.dest_point     = QtCore.QPointF(self.dest_item.boundingRect().center())
-        self.centerpoint    = QtCore.QPointF()  # for bezier lines       
-        self.bezier_path    = None
+        self.center_point   = QtCore.QPointF()  # for bezier lines       
+        self.bezier_path    = QtGui.QPainterPath()
 
         # debugging
         self.debug_mode     = False
@@ -528,7 +520,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setPen(QtGui.QPen(self.color, 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
+        self.setPen(QtGui.QPen(QtGui.QColor(*self.color), 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
         
         self.name = "%s.%s" % (self.source_item, self.dest_item)
         self.setZValue(-1.0)
@@ -634,6 +626,9 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         line = self.getLine()
         p1 = line.p1()
         p2 = line.p2()
+
+        # TODO: see if this works
+        #brect = self.bezier_path.controlPointRect()
         return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
@@ -682,10 +677,12 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.show_conn = False
         painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
 
+        draw_color = QtGui.QColor(*self.color)
+
         line = self.getLine()
-        painter.setBrush(self.color)
+        painter.setBrush(draw_color)
         epen = self.pen()
-        epen.setColor(self.color)
+        epen.setColor(draw_color)
         painter.setPen(epen)
 
         if option.state & QtGui.QStyle.State_Selected:
@@ -773,7 +770,9 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
 
 class ControlPoint(QtGui.QGraphicsObject):
-    
+    """
+    Bezier control point widget.
+    """
     def __init__(self, center, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
@@ -816,3 +815,92 @@ class ControlPoint(QtGui.QGraphicsObject):
 
             cp = self.mapToScene(self.center_point)
             self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))
+
+
+class NodeLabel(QtGui.QGraphicsObject):
+
+    labelChanged = QtCore.Signal(str)
+
+    def __init__(self, parent):
+        QtGui.QGraphicsObject.__init__(self, parent)
+        
+        self.node           = parent
+        self.dagnode        = parent.dagnode
+        self.UUID           = parent.dagnode.UUID
+
+        self.font           = 'Monospace'
+        self.color          = [0, 0, 0]
+        self._font_size     = 8
+        self._font_bold     = False
+        self._font_italic   = False
+        self.width          = 80
+
+        self.label = QtGui.QGraphicsTextItem(self.dagnode.name, self)
+        self._document = self.label.document()
+
+        # flags/signals
+        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        self._document.setMaximumBlockCount(1)
+        self._document.contentsChanged.connect(self.nodeNameChanged)
+        
+        self.rect_item = QtGui.QGraphicsRectItem(self.label.boundingRect(), self)
+        self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        self.rect_item.stackBefore(self.label)
+        #self.setZValue(2)
+  
+    def boundingRect(self):
+        return self.label.boundingRect()
+  
+    def paint(self, painter, option, widget):
+        """
+        Draw the label.
+        """
+        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+        qfont = QtGui.QFont(self.font)
+        qfont.setPointSize(self._font_size)
+        qfont.setBold(self._font_bold)
+        qfont.setItalic(self._font_italic)
+        self.label.setFont(qfont)
+
+        self.label.setDefaultTextColor(QtGui.QColor(*self.color))
+        self.text = self.dagnode.name
+    
+        # add a drop shadow for the label
+        self.tdropshd = QtGui.QGraphicsDropShadowEffect()
+        self.tdropshd.setBlurRadius(6)
+        self.tdropshd.setColor(QtGui.QColor(0,0,0,120))
+        self.tdropshd.setOffset(1,2)
+        self.label.setGraphicsEffect(self.tdropshd)
+
+    def focusOutEvent(self, event):
+        QtGui.QGraphicsObject.focusOutEvent(self, event)
+        self.labelChanged()
+        
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Enter or event.key() == QtCore.Qt.Key_Return:
+            print 'ooh'
+            self.labelChanged()
+        else:
+            QtGui.QGraphicsObject.keyPressEvent(self, event)
+        
+    @QtCore.Slot()
+    def nodeNameChanged(self):       
+        new_name = self.text
+        if new_name != self.dagnode.name:
+            self.dagnode.name = new_name
+            
+        # re-center the label
+        bounds = self.boundingRect()
+        self.label.setPos(bounds.width()/2. - self.label.boundingRect().width()/2, 0)
+
+    def mouseDoubleClickEvent(self, event):        
+        QtGui.QGraphicsObject.mouseDoubleClickEvent(self, event)
+
+    @property
+    def text(self):
+        return str(self._document.toPlainText())
+
+    @text.setter
+    def text(self, text):
+        self._document.setPlainText(text)
+        return self.text
