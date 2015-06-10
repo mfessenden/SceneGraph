@@ -318,9 +318,12 @@ class NodeWidget(QtGui.QGraphicsObject):
             painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
             painter.drawEllipse(self.input_pos(), 4, 4)
             
+        self.input_widget.setPos(self.input_pos())
+        self.output_widget.setPos(self.output_pos())
 
         self.input_widget.update()
         self.output_widget.update()
+        
         self.label.update()
 
 
@@ -338,9 +341,15 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.color          = [255, 255, 0]
         self.dagnode        = parent.dagnode
-        self.radius         = 8
-        self.draw_radius    = self.radius/2
+        self.radius         = 16
+        self.draw_radius    = self.radius/4
         self.max_conn       = 1 
+
+        # create a bbox that is larger than what we'll be drawing
+        self.bounds         = QtGui.QGraphicsRectItem(-self.radius/2, -self.radius/2, self.radius, self.radius, self)
+        self.bounds.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        self.bounds.setFlags(QtGui.QGraphicsObject.ItemStacksBehindParent)
+        self.bounds.setZValue(-1)
 
         # debugging
         self.debug_mode     = False
@@ -380,44 +389,9 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         Assistance for the QT windowing toolkit.
         """
         return NodeWidget.Type
-    
-    def getHitbox(self, adjustment=15):
-        """
-        DEBUGGING:  
-
-            - get adjusted hitbox for easier selection.
-        """
-        rect = self.boundingRect()
-        return QtCore.QRectF(rect.topLeft().x() - adjustment/2,  rect.topLeft().y() - adjustment/2, rect.width() + adjustment, rect.height() + adjustment)
-
-    @property
-    def center_point(self):
-        """
-        Get the center point for the connector.
-        """
-        if self.is_input:
-            return self.node.input_pos()               
-        return self.node.output_pos()
 
     def boundingRect(self):
-        """
-        Defines the clickable hit box.
-
-        top left, width, height
-        """
-        #return QtCore.QRectF(-self.center_point.x() - self.radius/2, -self.center_point.y() - self.radius/2, self.radius, self.radius)
-        #return QtCore.QRectF(-self.node.input_pos().x() - self.radius/2, -self.node.input_pos().y() - self.radius/2, self.radius, self.radius)
-        #return QtCore.QRectF(-self.node.output_pos().x() - self.radius/2, -self.node.output_pos().y() - self.radius/2, self.radius, self.radius)
-        if self.is_input:
-            return QtCore.QRectF(self.parentItem().boundingRect().left() - self.radius/2, 
-                                            self.parentItem().boundingRect().center().y() - self.radius/2, 
-                                            self.radius, 
-                                            self.radius)
-        else:
-            return QtCore.QRectF(self.parentItem().boundingRect().right() - self.radius/2, 
-                                self.parentItem().boundingRect().center().y() - self.radius/2, 
-                                self.radius, 
-                                self.radius)
+        return self.bounds.mapRectToParent(self.bounds.boundingRect())
 
     def shape(self):
         """
@@ -439,7 +413,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
                 conn_color = QtGui.QColor(255, 255, 190)
             painter.setBrush(QtCore.Qt.NoBrush)
             painter.setPen(QtGui.QPen(conn_color, 1, QtCore.Qt.SolidLine))
-            painter.drawRect(self.getHitbox())
+            painter.drawRect(self.boundingRect())
 
         self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
         # background
@@ -468,9 +442,8 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(color[0]*grad, color[1]*grad, color[2]*grad)), 0.5, QtCore.Qt.SolidLine))
         painter.setBrush(QtGui.QBrush(gradient))
-
-        #painter.drawEllipse(self.center_point, self.draw_radius, self.draw_radius)
-        painter.drawEllipse(self.boundingRect())
+        painter.drawEllipse(QtCore.QPointF(0,0), self.draw_radius, self.draw_radius)
+        #painter.drawEllipse(self.boundingRect())
 
     def isInputConnection(self):
         if self.is_input == True:
