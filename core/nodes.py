@@ -13,7 +13,7 @@ reload(options)
 class NodeBase(object):
     
     Type    = QtGui.QGraphicsItem.UserType + 3
-    PRIVATE = ['name', 'node_type', 'UUID']
+    PRIVATE = ['name', 'node_type', 'UUID', 'color']
 
     def __init__(self, node_type='default', **kwargs):
         
@@ -61,6 +61,7 @@ class NodeBase(object):
         data['pos_y'] = self.pos_y
         data['width'] = self.width
         data['height'] = self.height
+        data['color'] = self.color
         for k, v in self._data.iteritems():
             if k not in self.PRIVATE:
                 data[k] = v
@@ -137,6 +138,8 @@ class NodeBase(object):
                             if util.is_number(val):
                                 val = float(val)
                             setattr(self._widget, attr, val)
+            else:
+                setattr(self, attr, val)
 
     def removeNodeAttributes(self, *args):
         """

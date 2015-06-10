@@ -6,6 +6,9 @@ import simplejson as json
 import networkx as nx
 from functools import partial
 from PySide import QtCore, QtGui
+from . import logger
+
+log = logger.myLogger()
 
 
 class Graph(object):
@@ -272,11 +275,12 @@ class Graph(object):
             if self.view:
                 from SceneGraph import ui
                 reload(ui)
-
+                print 'looking for nodes: %s > %s' % (src_name, dest_name)
                 src_node = self.getSceneNode(src_name)
                 dest_node = self.getSceneNode(dest_name)
 
                 if src_node and dest_node:
+                    print 'connecting: %s > %s' % (src_node.name, dest_node.name)
                     # TODO: need a method to return a named input/output widget (for when we have complex nodes)
                     edge = ui.EdgeWidget(src_node.output_widget, dest_node.input_widget)
                     self.scene.addItem(node)
@@ -476,6 +480,7 @@ class Graph(object):
         """
         import os
         from SceneGraph.core import log
+
         if os.path.exists(filename):
             raw_data = open(filename).read()
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
@@ -503,12 +508,11 @@ class Graph(object):
                 src_str = '%s.%s' % (edge_attrs.get('src_node'), edge_attrs.get('src_attr'))
                 dest_str = '%s.%s' % (edge_attrs.get('dest_node'), edge_attrs.get('dest_attr'))
 
+                print '# Graph: edge read: %s > %s' % (src_str, dest_str)
+
                 self.addEdge(src=src_str, dest=dest_str)
 
             return self.setScene(filename)
-
-        else:
-            log.error('filename "%s" does not exist' % filename)
         return 
 
     #- CONNECTIONS ----

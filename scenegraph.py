@@ -100,6 +100,8 @@ class SceneGraphUI(form_class, base_class):
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
+        # remove the Draw tab
+        self.tabWidget.removeTab(2)
 
     def setupFonts(self, font='SansSerif', size=9):
         """
@@ -293,7 +295,10 @@ class SceneGraphUI(form_class, base_class):
         if filename == "":
             return
 
-        self.graph.reset()
+        if not os.path.exists(filename):
+            log.error('filename %s does not exist' % filename)
+            return
+
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
@@ -304,8 +309,11 @@ class SceneGraphUI(form_class, base_class):
 
     # TODO: combine this with readGraph
     def readRecentGraph(self, filename):
+        if not os.path.exists(filename):
+            log.error('file %s does not exist' % filename)
+            return
+
         self.resetGraph()
-        self.graph.reset()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
@@ -319,6 +327,7 @@ class SceneGraphUI(form_class, base_class):
         """
         self.graph.reset()
         self.view.scene().clear()
+
         self.action_save_graph.setEnabled(False)
         self.network.clear()
         self.buildWindowTitle()
@@ -373,6 +382,7 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
+        print '# Node changed: ', node
         self.updateOutput()
 
     # TODO: disabling this, causing lag

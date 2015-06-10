@@ -32,7 +32,8 @@ class GraphicsView(QtGui.QGraphicsView):
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        #self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
@@ -196,13 +197,14 @@ class GraphicsView(QtGui.QGraphicsView):
 
         if event.key() == QtCore.Qt.Key_A:
             # get the bounding rect of the graphics scene
-            boundsRect = graphicsScene.itemsBoundingRect()
+            boundsRect = graphicsScene.itemsBoundingRect()            
             
-            # set it to the GraphicsScene item selection bounds...
-            #self.setSceneRect(boundsRect)
-
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
+            #self.setSceneRect(boundsRect) # this resizes the scene rect to the bounds rect, not desirable
+
+        if event.key() == QtCore.Qt.Key_F:
+            self.fitInView(graphicsScene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = graph.selectedNodes()
@@ -220,6 +222,7 @@ class GraphicsView(QtGui.QGraphicsView):
                         log.info('deleting node "%s"' % item.dagnode.name)
                         graphicsScene.network.remove_node(str(item.dagnode.UUID))
                         graphicsScene.removeItem(item)
+                        graphicsScene.sceneNodes.pop(str(item.dagnode.UUID))
                         continue
 
                     if item.node_class in ['edge']:
@@ -275,6 +278,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         self.line        = None    # temp line
         self.sceneNodes  = weakref.WeakValueDictionary()
+        self.sceneEdges  = weakref.WeakValueDictionary()
         self.graph       = None
         self.network     = None
 
@@ -298,6 +302,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         node = self.sceneNodes.get(UUID, None)
         if node:
             self.nodeChanged.emit(node)
+            print '# GraphicsScene: sending node changed: ', node
             self.update()
 
     def dropEvent(self, event):
@@ -351,6 +356,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.update()
 
     def mouseReleaseEvent(self, event):
+        """
+        Add an edge if two connections are selected and valid.
+        """
         if self.line:
             source_items = self.items(self.line.line().p1())
             if len(source_items) and source_items[0] == self.line:
@@ -361,12 +369,17 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
             self.removeItem(self.line)
             if len(source_items) and len(dest_items):
+
+                # what are these?
                 source_node = source_items[0]
                 dest_node = dest_items[0]
+                print '# source: %s\n' % source_node, 
+                print '# dest:   %s\n' % dest_node
 
                 if self.validateConnection(source_node, dest_node):
                     edge = node_widgets.EdgeWidget(source_node, dest_node)
                     self.addItem(edge)
+                    self.sceneEdges[edge.connection]=edge
                     self.network.add_edge(str(source_node.dagnode.UUID), 
                         str(dest_node.dagnode.UUID),
                         src_node=str(source_node.dagnode.UUID),

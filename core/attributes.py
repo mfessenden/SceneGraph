@@ -17,7 +17,6 @@ class Attribute(object):
         # value & overrides
         self._value           = value
         self._value_override  = None        # secondary "override" value
-        self._has_override    = False       # signifies that the value has an override
 
         # indexing
         self._index           = index       # internal index (for recalling in order)
@@ -53,12 +52,19 @@ class Attribute(object):
         return util.clean_name(self.name)
 
     @property
+    def has_override(self):
+        """
+        Returns true if the attribute has an override value.
+        """
+        return self._value_override is not None
+    
+    @property
     def value(self):
         """
         Returns the current value. If the attribute has an override,
         return that instead.
         """
-        if self._has_override:
+        if self.has_override:
             return self._value_override
         return self._value
 
@@ -69,7 +75,7 @@ class Attribute(object):
         has an override, set that.
         """
         if not self.is_locked:
-            if self._has_override:
+            if self.has_override:
                 return self._value_override
             else:
                 self._value = value
@@ -79,13 +85,20 @@ class Attribute(object):
     def attribute_type(self):
         return self._type
 
+    @property
+    def connectable(self):
+        """
+        Returns true if the attribute can accept a connection.
+        """
+        return self._type
+
     #- Overrides ----
     def addOverride(self, value=None):
         """
         Override the attribute value with another.
         """
         if not self.is_locked:
-            self._has_override = True
+            self.has_override = True
             if self._value_override != value:
                 self._value_override = value
         return self.value
@@ -96,7 +109,7 @@ class Attribute(object):
         value for future use.
         """
         if not self._is_locked:
-            self._has_override = False
+            self._value_override = None
 
     #- Locking ---
     @property

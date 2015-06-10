@@ -82,7 +82,7 @@ class AttributeEditor(QtGui.QWidget):
                     self.__current_row+=1
                     val_edit.editingFinished.connect(partial(self.updateNodeAttribute, val_edit, attr))
 
-                    val_edit.setEnabled(attr not in node_item.dagnode.PRIVATE)
+                    #val_edit.setEnabled(attr not in node_item.dagnode.PRIVATE)
                 
             spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
             self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)
@@ -109,7 +109,9 @@ class AttributeEditor(QtGui.QWidget):
         """
         Update the node from an attribute
         """
-        self._current_node.dagnode.addNodeAttributes(**{attribute:str(lineEdit.text())})
+        new_value = str(lineEdit.text())
+        new_value = eval(new_value)
+        self._current_node.dagnode.addNodeAttributes(**{attribute:new_value})
         self.setNode(self._current_node)
     
     def nodeUpdatedFilter(self):
