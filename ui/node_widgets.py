@@ -571,30 +571,24 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         path = QtGui.QPainterPath()
         path.moveTo(line.p1().x(), line.p1().y())
 
+        # some very crude bezier math here
         x1 = line.p1().x()
         x2 = line.p2().x()
 
         y1 = line.p1().y()
         y2 = line.p2().y()
 
-        lx = x2 - x1
-        hy = y2 - y1
+        dx = x2 - x1
+        dy = y2 - y1
 
-        r = 0
-        if lx and hy:
-            r  = lx/hy
+        cx1 = x1 + (dx/4)
+        cx2 = x2 - (dx/4)
 
-        sx = lx/4
+        cy1 = y1 - (dy/4)
+        cy2 = y2 + (dy/4)
 
-        #print 'ratio: %.2f' % r
-        #print 'len x: ', lx
-        #print 'len y: ', hy
-
-        x11 = x1 + sx*1
-        x12 = x11 + sx*2
-
-        self.c1 = QtCore.QPointF(x11, y1 - lx/6)
-        self.c2 = QtCore.QPointF(x12, y2 + lx/6)
+        self.c1 = QtCore.QPointF(cx1, cy1)
+        self.c2 = QtCore.QPointF(cx2, cy2)
         curvePoly = QtGui.QPolygonF([line.p1(), self.c1, self.c2, line.p2()])
         #
         path.cubicTo(self.c1, self.c2, line.p2())
@@ -756,16 +750,8 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
                 #painter.drawEllipse(self.c1, 4, 4)
                 #painter.drawEllipse(self.c2, 4, 4)
 
-                #self.cp1.scene().removeItem(self.cp1)
-                #self.cp2.scene().removeItem(self.cp2)
-
-                #self.cp1 = ControlPoint(self.c1, self)
-                #self.cp2 = ControlPoint(self.c2, self)
                 self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
                 self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
-
-                #self.cp1.update()
-                #self.cp2.update()
 
 
     def hoverEnterEvent(self, event):
@@ -782,7 +768,7 @@ class ControlPoint(QtGui.QGraphicsObject):
         self.edge           = parent
 
         self.color          = kwargs.get('color', [225, 35, 35])
-        self.radius         = kwargs.get('radius', 4.0)
+        self.radius         = kwargs.get('radius', 3.0)
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemSendsGeometryChanges)
@@ -809,6 +795,7 @@ class ControlPoint(QtGui.QGraphicsObject):
         # control points
         painter.setPen(cp_pen)
         painter.setBrush(QtGui.QBrush(red_color))
-        painter.drawEllipse(self.center_point, 4, 4)
+        painter.drawEllipse(self.center_point, self.radius, self.radius)
 
-        self.setToolTip("(%.2f, %.2f)" % (self.center_point.x(), self.center_point.y()))
+        cp = self.mapToScene(self.center_point)
+        self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))
