@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+import os
+import weakref
 from PySide import QtCore, QtGui, QtSvg
 from functools import partial
-import weakref
 
 from SceneGraph import core
 from . import node_widgets
@@ -286,6 +287,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def setNodeManager(self, val):
         self.graph = val
         self.network = val.network
+
+    def update(self, *args):
+        for item in self.items():
+            if hasattr(item, 'debug_mode'):
+                item.debug_mode = bool(eval(os.getenv("SCENEGRAPH_DEBUG", "0")))
+        QtGui.QGraphicsScene.update(self, *args)
 
     def addItem(self, item):
         """

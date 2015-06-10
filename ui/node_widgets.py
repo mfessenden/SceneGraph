@@ -9,6 +9,8 @@ from .. import options
 reload(options)
 
 
+
+
 class NodeWidget(QtGui.QGraphicsObject):
     
     Type                = QtGui.QGraphicsObject.UserType + 3
@@ -42,6 +44,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         # buffers
         self.bufferX            = 3
         self.bufferY            = 3
+
+        # debugging
+        self.debug_mode         = False
 
         # colors
         self._color             = [180, 180, 180]
@@ -355,6 +360,9 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.radius         = 8.0
         self.max_conn       = 1 
 
+        # debugging
+        self.debug_mode     = False
+
         self.is_input       = is_input
         self.attribute      = kwargs.get('attribute', None)
         self.centerpoint    = QtCore.QPointF(0, 0)
@@ -437,11 +445,11 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         Draw the connection widget.
         """
         # DEBUG
-        blackColor = QtGui.QColor(0, 0, 0)
-        painter.setBrush(QtCore.Qt.NoBrush)
-        painter.setPen(QtGui.QPen(blackColor, 0.25, QtCore.Qt.DashDotLine))
-        painter.drawRect(self.getHitbox())
-
+        if self.debug_mode:
+            blackColor = QtGui.QColor(0, 0, 0)
+            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.setPen(QtGui.QPen(blackColor, 0.25, QtCore.Qt.DashDotLine))
+            painter.drawRect(self.getHitbox())
 
         self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
         # background
@@ -508,6 +516,10 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.centerpoint    = QtCore.QPointF()  # for bezier lines       
         self.bezier_path    = None
 
+        # debugging
+        self.debug_mode     = False
+
+        # control points of bezier
         self.c1             = QtCore.QPointF(0,0)
         self.c2             = QtCore.QPointF(0,0)
 
@@ -727,31 +739,32 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
                 painter.setBrush(QtCore.Qt.NoBrush)
                 painter.drawPath(self.bezier_path)
 
-                # DEBUG: draw control points
-                red_color = QtGui.QColor(226,36,36)
-                blue_color = QtGui.QColor(155, 195, 226)
+                if self.debug_mode:
+                    # DEBUG: draw control points
+                    red_color = QtGui.QColor(226,36,36)
+                    blue_color = QtGui.QColor(155, 195, 226)
 
-                cp_pen = QtGui.QPen(QtCore.Qt.SolidLine)
-                cp_pen.setColor(red_color)
+                    cp_pen = QtGui.QPen(QtCore.Qt.SolidLine)
+                    cp_pen.setColor(red_color)
 
-                l_pen = QtGui.QPen(QtCore.Qt.SolidLine)
-                l_pen.setColor(blue_color)
+                    l_pen = QtGui.QPen(QtCore.Qt.SolidLine)
+                    l_pen.setColor(blue_color)
 
-                # control lines
-                painter.setPen(l_pen)
-                l1 = QtCore.QLineF(line.p1(), self.c1)
-                l2 = QtCore.QLineF(self.c1, self.c2)
-                l3 = QtCore.QLineF(self.c2, line.p2())
-                painter.drawLines([l1, l2, l3])
+                    # control lines
+                    painter.setPen(l_pen)
+                    l1 = QtCore.QLineF(line.p1(), self.c1)
+                    l2 = QtCore.QLineF(self.c1, self.c2)
+                    l3 = QtCore.QLineF(self.c2, line.p2())
+                    painter.drawLines([l1, l2, l3])
 
-                # control points
-                painter.setPen(cp_pen)
-                painter.setBrush(QtGui.QBrush(red_color))
-                #painter.drawEllipse(self.c1, 4, 4)
-                #painter.drawEllipse(self.c2, 4, 4)
+                    # control points
+                    painter.setPen(cp_pen)
+                    painter.setBrush(QtGui.QBrush(red_color))
+                    #painter.drawEllipse(self.c1, 4, 4)
+                    #painter.drawEllipse(self.c2, 4, 4)
 
-                self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
-                self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
+                    self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
+                    self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
 
 
     def hoverEnterEvent(self, event):
@@ -769,6 +782,9 @@ class ControlPoint(QtGui.QGraphicsObject):
 
         self.color          = kwargs.get('color', [225, 35, 35])
         self.radius         = kwargs.get('radius', 3.0)
+
+        # debugging
+        self.debug_mode     = False
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemSendsGeometryChanges)
@@ -793,9 +809,10 @@ class ControlPoint(QtGui.QGraphicsObject):
         cp_pen.setColor(red_color)
 
         # control points
-        painter.setPen(cp_pen)
-        painter.setBrush(QtGui.QBrush(red_color))
-        painter.drawEllipse(self.center_point, self.radius, self.radius)
+        if self.debug_mode:
+            painter.setPen(cp_pen)
+            painter.setBrush(QtGui.QBrush(red_color))
+            painter.drawEllipse(self.center_point, self.radius, self.radius)
 
-        cp = self.mapToScene(self.center_point)
-        self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))
+            cp = self.mapToScene(self.center_point)
+            self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))

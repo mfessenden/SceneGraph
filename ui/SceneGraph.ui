@@ -95,7 +95,7 @@
         <item>
          <widget class="QGraphicsView" name="graphicsView">
           <property name="styleSheet">
-           <string notr="true">color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 rgba(255, 1, 1, 255), stop:0.512821 rgba(179, 0, 0, 255), stop:0.529915 rgba(100, 0, 0, 255), stop:0.991453 rgba(100, 0, 0, 255), stop:1 rgba(255, 255, 255, 255));</string>
+           <string notr="true"/>
           </property>
          </widget>
         </item>
@@ -163,6 +163,7 @@
     <addaction name="menu_view"/>
     <addaction name="separator"/>
     <addaction name="action_reset_ui"/>
+    <addaction name="action_debug_mode"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menuGraph"/>
@@ -436,6 +437,11 @@
   <action name="action_reset_scale">
    <property name="text">
     <string>100%</string>
+   </property>
+  </action>
+  <action name="action_debug_mode">
+   <property name="text">
+    <string>Debug mode</string>
    </property>
   </action>
  </widget>

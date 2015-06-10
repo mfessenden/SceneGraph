@@ -16,7 +16,9 @@ reload(ui)
 
 
 log = core.log
+global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
+SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', '0')
 
 
 def loadUiType(uiFile):
@@ -150,8 +152,10 @@ class SceneGraphUI(form_class, base_class):
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
         self.view.statusEvent.connect(self.updateConsole)
 
-        # file menu
+        # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
+        self.menu_ui.aboutToShow.connect(self.initializeUIMenu)
+
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
@@ -159,6 +163,8 @@ class SceneGraphUI(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.resetUI)
         self.action_exit.triggered.connect(self.close)
+
+        self.action_debug_mode.triggered.connect(self.toggleDebug)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -178,6 +184,16 @@ class SceneGraphUI(form_class, base_class):
         if not current_scene:
             self.action_save_graph.setEnabled(False)
         self.initializeRecentFilesMenu()
+
+    def initializeUIMenu(self):
+        """
+        Setup the ui menu before it is drawn.
+        """
+        global SCENEGRAPH_DEBUG
+        db_label = 'Debug on'
+        if SCENEGRAPH_DEBUG == '1':
+            db_label = 'Debug off'
+        self.action_debug_mode.setText(db_label)
 
     def initializeRecentFilesMenu(self):
         """
@@ -343,6 +359,18 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.clear()
         self.setupUi(self)
         self.initializeUI()
+
+    def toggleDebug(self):
+        """
+        Set the debug environment variable.
+        """
+        global SCENEGRAPH_DEBUG
+        val = '0'
+        if SCENEGRAPH_DEBUG == '0':
+            val = '1'
+        os.environ["SCENEGRAPH_DEBUG"] = val
+        SCENEGRAPH_DEBUG = val
+        self.scene.update()        
 
     def sizeHint(self):
         return QtCore.QSize(1070, 800)
