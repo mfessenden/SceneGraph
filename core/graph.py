@@ -226,7 +226,7 @@ class Graph(object):
         returns:
             (list)
         """
-        return self.dagnodes.values()
+        return self.dagedges.values()
 
     def getDagEdge(self, node):
         """
@@ -238,13 +238,12 @@ class Graph(object):
         returns:
             (obj)
         """
-        if node in self.dagnodes:
-            return self.dagnodes.get(node)
+        if node in self.dagedges:
+            return self.dagedges.get(node)
         
-        if self.dagnodes:
-            for UUID in self.dagnodes:
-                dag = self.dagnodes.get(UUID)
-                print 'dag: ', dag.name
+        if self.dagedges:
+            for UUID in self.dagedges:
+                dag = self.dagedges.get(UUID)
                 if dag and dag.name == node:
                     return dag
         return
@@ -263,8 +262,6 @@ class Graph(object):
         """
         from SceneGraph import core
         reload(core)
-
-        log = core.log
 
         UUID = kwargs.pop('id', None)
         name   = kwargs.pop('name', 'node1')
@@ -307,7 +304,6 @@ class Graph(object):
             return node
         return dag
 
-    # TODO: auto-parse NodeBase objects
     def addEdge(self, src, dest, **kwargs):
         """
         Add an edge connecting two nodes.
@@ -315,6 +311,7 @@ class Graph(object):
           src = source node string, ie "node1.output"
           dest = source node string, ie "node1.output"
         """
+        UUID = kwargs.pop('id', None)
         if src is None or dest is None:
             return False
 
@@ -322,7 +319,7 @@ class Graph(object):
             from SceneGraph import core
             reload(core)
 
-            edge = core.EdgeBase(src, dest)
+            edge = core.EdgeBase(src, dest, id=UUID)
 
             src_name = edge.src_name
             src_id = self.getNodeID(src_name)
@@ -333,10 +330,13 @@ class Graph(object):
 
             self.network.add_edge(src_id, 
                 dest_id,
+                id=str(edge.UUID),
                 src_id=src_id,
                 dest_id=dest_id,
                 src_node=edge.source_node, 
                 dest_node=edge.dest_node)
+
+            self.dagedges[str(edge.UUID)] = edge
 
             if self.view:
                 from SceneGraph import ui
@@ -352,13 +352,41 @@ class Graph(object):
                     self.scene.addItem(edge_widget)
             return edge
 
+    def removeEdge(self, conn=None, UUID=None):
+        """
+        Removes an edge from the graph
+
+        params:
+            UUID    - (str) edge UUID
+
+        returns:
+            (object)  - removed edge
+        """
+        if UUID is None:
+            if conn is None:
+                log.error('please enter a valid edge connection string or UUID')
+                return False
+            UUID = self.getNodeID(conn)
+
+        if UUID and UUID in self.dagedges:
+            dag = self.dagedges.pop(UUID)
+            log.info('Removing edge: "%s"' % dag.name)
+            self.network.remove_edge(*dag.ids)
+
+            # remove the widget from the graph
+            if self.view:                
+                if UUID in self.scene.sceneEdges.keys():
+                    widget = self.scene.sceneEdges.pop(UUID)
+                    self.scene.removeItem(widget)
+            return True
+        return False
 
     def getNodeID(self, name):
         """
         Return the node given a name.
 
         params:
-            name - (str) node name
+            name - (str) node ID
         """
         result = None
         for node in self.network.nodes(data=True):
@@ -366,6 +394,32 @@ class Graph(object):
             if 'name' in data:
                 if data['name'] == name:
                     result = UUID
+        return result 
+
+    def getEdgeID(self, conn):
+        """
+        Return the edge given a connection.
+
+            connection: "node1.output,node2.input"
+
+        params:
+            name - (str) edge ID
+        """
+        result = None
+        for data in self.network.edges(data=True):
+
+            src_id = data[0]
+            dest_id = data[1]
+            edge_attrs = data[2]
+
+            src_str = edge_attrs.get('src_node')
+            dest_str = edge_attrs.get('dest_node')
+            edge_id = edge_attrs.get('id')
+            # todo: do some string cleanup here
+            conn_str = '%s,%s' % (src_str, dest_str)
+
+            if conn_str == conn:
+                result = edge_id
         return result 
 
     def removeNode(self, name):
@@ -389,7 +443,6 @@ class Graph(object):
             if self.view:                
                 if UUID in self.scene.sceneNodes.keys():
                     widget = self.scene.sceneNodes.pop(UUID)
-                    print 'widget: ', widget
                     self.scene.removeItem(widget)
             return True
         return False
@@ -575,7 +628,7 @@ class Graph(object):
 
             for edge_attrs in edges:
                 print '# Graph: edge read: %s > %s' % (edge_attrs.get('src_node'), edge_attrs.get('dest_node'))
-                self.addEdge(src=edge_attrs.get('src_node'), dest=edge_attrs.get('dest_node'))
+                self.addEdge(src=edge_attrs.get('src_node'), dest=edge_attrs.get('dest_node'), id=edge_attrs.get('id'))
 
             return self.setScene(filename)
         return 
