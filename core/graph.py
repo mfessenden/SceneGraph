@@ -24,6 +24,7 @@ class Graph(object):
         self.mode           = 'standalone'
 
         self.dagnodes       = dict()
+        self.dagedges       = dict()
 
         self._copied_nodes  = []
 
@@ -42,8 +43,10 @@ class Graph(object):
         """
         Add default attributes to the networkx graph.
         """
-        # add the current scene attribute
+        from SceneGraph.options import VERSION_AS_STRING
+        self.network.graph['version'] = VERSION_AS_STRING
         self.network.graph['scene'] = scene
+        self.network.graph['environment'] = 'command_line' 
 
     def initializeUI(self, view):
         """
@@ -140,7 +143,7 @@ class Graph(object):
 
     def getDagNodes(self):
         """
-        Returns a list of all dag node.
+        Returns a list of all dag nodes.
 
         returns:
             (list)
@@ -183,6 +186,68 @@ class Graph(object):
             if nn.isSelected():
                 selected_nodes.append(nn)
         return selected_nodes
+
+    def getSceneEdges(self):
+        """
+        Returns a list of all scene edge widgets.
+
+        returns:
+            (list)
+        """
+        if not self.view:
+            return []
+
+        return self.scene.sceneEdges.values()
+
+    def getSceneEdge(self, name):
+        """
+        Get a scene edge by name.
+
+        params:
+            name - (str) name of node to query
+
+        returns:
+            (obj)
+        """
+        if not self.view:
+            return
+
+        nodes = self.getSceneEdges()
+        if nodes:
+            for node in nodes:
+                if node.dagnode.name == name:
+                    return node
+        return
+
+    def getDagEdges(self):
+        """
+        Returns a list of all dag edges.
+
+        returns:
+            (list)
+        """
+        return self.dagnodes.values()
+
+    def getDagEdge(self, node):
+        """
+        Return a dag edge by name.
+
+        params:
+            node - (str) name of edge to return
+
+        returns:
+            (obj)
+        """
+        if node in self.dagnodes:
+            return self.dagnodes.get(node)
+        
+        if self.dagnodes:
+            for UUID in self.dagnodes:
+                dag = self.dagnodes.get(UUID)
+                print 'dag: ', dag.name
+                if dag and dag.name == node:
+                    return dag
+        return
 
     def addNode(self, node_type, **kwargs):
         """
@@ -243,47 +308,49 @@ class Graph(object):
         return dag
 
     # TODO: auto-parse NodeBase objects
-    def addEdge(self, **kwargs):
+    def addEdge(self, src, dest, **kwargs):
         """
         Add an edge connecting two nodes.
-        """
-        src_node=kwargs.get('src', None)
-        dest_node=kwargs.get('dest', None)
 
-        if src_node is None or dest_node is None:
+          src = source node string, ie "node1.output"
+          dest = source node string, ie "node1.output"
+        """
+        if src is None or dest is None:
             return False
 
-        if src_node and dest_node:
-
+        if src and dest:
             from SceneGraph import core
             reload(core)
 
-            edge = core.EdgeBase(src=src_node, dest=dest_node)
+            edge = core.EdgeBase(src, dest)
 
-            src_name = edge.src_node
+            src_name = edge.src_name
             src_id = self.getNodeID(src_name)
-            dest_name = edge.dest_node
-            dest_id = self.getNodeID(src_name)
+            dest_name = edge.dest_name
+            dest_id = self.getNodeID(dest_name)
+
+            edge.ids = (src_id, dest_id)
 
             self.network.add_edge(src_id, 
                 dest_id,
-                src_node=src_id,
-                dest_node=dest_id,
-                src_attr=edge.src_attr, 
-                dest_attr=edge.dest_attr)
+                src_id=src_id,
+                dest_id=dest_id,
+                src_node=edge.source_node, 
+                dest_node=edge.dest_node)
 
             if self.view:
                 from SceneGraph import ui
                 reload(ui)
-                print 'looking for nodes: %s > %s' % (src_name, dest_name)
-                src_node = self.getSceneNode(src_name)
-                dest_node = self.getSceneNode(dest_name)
 
-                if src_node and dest_node:
-                    print 'connecting: %s > %s' % (src_node.name, dest_node.name)
+                # get the widgets
+                src_widget = self.getSceneNode(src_name)
+                dest_widget= self.getSceneNode(dest_name)
+
+                if src_widget and dest_widget:
                     # TODO: need a method to return a named input/output widget (for when we have complex nodes)
-                    edge = ui.EdgeWidget(src_node.output_widget, dest_node.input_widget)
-                    self.scene.addItem(node)
+                    edge_widget = ui.EdgeWidget(src_widget.output_widget, dest_widget.input_widget, edge=edge)
+                    self.scene.addItem(edge_widget)
+            return edge
 
 
     def getNodeID(self, name):
@@ -317,10 +384,13 @@ class Graph(object):
             log.info('Removing node: "%s"' % name)
             self.dagnodes.pop(UUID)
             self.network.remove_node(UUID)
-            if self.view:
-                self.scene.removeItem(node)
-                if name in self.scene.sceneNodes.keys():
-                    self.scene.sceneNodes.pop(name)
+
+            # remove the widget from the graph
+            if self.view:                
+                if UUID in self.scene.sceneNodes.keys():
+                    widget = self.scene.sceneNodes.pop(UUID)
+                    print 'widget: ', widget
+                    self.scene.removeItem(widget)
             return True
         return False
 
@@ -504,13 +574,8 @@ class Graph(object):
                 node_widget = self.addNode(node_type, **node_attrs)
 
             for edge_attrs in edges:
-                #self.addEdge
-                src_str = '%s.%s' % (edge_attrs.get('src_node'), edge_attrs.get('src_attr'))
-                dest_str = '%s.%s' % (edge_attrs.get('dest_node'), edge_attrs.get('dest_attr'))
-
-                print '# Graph: edge read: %s > %s' % (src_str, dest_str)
-
-                self.addEdge(src=src_str, dest=dest_str)
+                print '# Graph: edge read: %s > %s' % (edge_attrs.get('src_node'), edge_attrs.get('dest_node'))
+                self.addEdge(src=edge_attrs.get('src_node'), dest=edge_attrs.get('dest_node'))
 
             return self.setScene(filename)
         return 

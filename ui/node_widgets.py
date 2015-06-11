@@ -2,6 +2,7 @@
 import os
 import math
 import uuid
+import weakref
 from PySide import QtGui, QtCore, QtSvg
 import simplejson as json
 
@@ -344,7 +345,9 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.dagnode        = parent.dagnode
         self.radius         = 24
         self.draw_radius    = self.radius/6
-        self.max_conn       = 1 
+        self.max_conn       = 1                     # max number of connections
+
+        self.connections    = weakref.WeakValueDictionary()
 
         # create a bbox that is larger than what we'll be drawing
         self.bounds         = QtGui.QGraphicsRectItem(-self.radius/2, -self.radius/2, self.radius, self.radius, self)
@@ -380,6 +383,21 @@ class ConnectionWidget(QtGui.QGraphicsObject):
     @property
     def node_class(self):
         return 'connection'  
+
+    @property
+    def is_connected(self):
+        return len(self.connections)  
+
+    @property
+    def is_connectable(self):
+        """
+        Returns true if the connection can take a connection.
+
+         0 - unlimited connections
+        """
+        if self.max_conn == 0:
+            return True
+        return len(self.connections) < self.max_conn
 
     @property
     def UUID(self):
@@ -460,24 +478,27 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
 
 # edge class for connecting nodes
-class EdgeWidget(QtGui.QGraphicsLineItem):
+class EdgeWidget(QtGui.QGraphicsObject):
 
-    adjustment = 5
+    adjustment           = 5
 
-    def __init__(self, source_item, dest_item, *args, **kwargs):
-        QtGui.QGraphicsLineItem.__init__(self, *args, **kwargs)
 
+    def __init__(self, source_item, dest_item, edge, *args, **kwargs):
+        QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
+
+        self.dagnode        = edge
+        self._widget        = QtGui.QGraphicsLineItem(self)
         # The arrow that's drawn in the center of the line
         self.arrowhead      = QtGui.QPolygonF()
         self.color          = [224, 224, 224]
 
+        # items are Connection widgets
         self.source_item    = source_item
         self.dest_item      = dest_item
 
         self.arrow_size     = 8
         self.show_conn      = False             # show connection string
         self.multi_conn     = False             # multiple connections (future)
-        self.conn_label     = None      
         self.edge_type      = 'bezier'
 
         self.source_point   = QtCore.QPointF(self.source_item.boundingRect().center())
@@ -500,13 +521,16 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setPen(QtGui.QPen(QtGui.QColor(*self.color), 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
+        self._widget.setPen(QtGui.QPen(QtGui.QColor(*self.color), 1, QtCore.Qt.SolidLine, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
         
-        self.name = "%s.%s" % (self.source_item, self.dest_item)
         self.setZValue(-1.0)
 
         # signals, slots
         self.cp.clicked.connect(self.centerPointClickedAction)
+
+        # add this instance to the connected nodes connection widgets
+        self.source_item.connections[self.dest_item.name] = self
+        self.dest_item.connections[self.source_item.name] = self
 
     @property
     def node_class(self):
@@ -514,16 +538,22 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
     def __repr__(self):
         return '< Edge: %s >' % self.connection
-    
+
+    @property
+    def UUID(self):
+        if self.dagnode:
+            return self.dagnode.UUID
+        return None
+
     @property
     def connection(self):
         if self.source_item and self.dest_item:
-            return '%s>%s' % (self.source_item, self.dest_item)
+            return '%s,%s' % (self.source_item.name, self.dest_item.name)
         else:
             if not self.source_item:
-                return '>%s' % self.dest_item
+                return 'None,%s' % self.dest_item.name
             if not self.dest_item:
-                return '%s>' % self.source_item
+                return '%s,None' % self.source_item.name
 
     def deleteNode(self):
         if self:
@@ -536,7 +566,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             self.deleteNode()
             self.update()
         else:
-            QtGui.QGraphicsLineItem.keyPressEvent(self, event)
+            QtGui.QGraphicsObject.keyPressEvent(self, event)
 
     def getLine(self):
         """
@@ -546,7 +576,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         p2 = self.dest_item.sceneBoundingRect().center()
 
         # offset the end point a few pixels
-        p2 = QtCore.QPointF(p2.x()-4, p2.y())
+        p2 = QtCore.QPointF(p2.x(), p2.y())
         return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
 
     def getBezierPath(self, poly=False):
@@ -613,13 +643,16 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.dest_item.connectedLine.append(self)
 
     def boundingRect(self):
-        extra = (self.pen().width() + 100)  / 2.0
+        """
+        Create a bounding rect for the line.
+
+         todo: see why self.bezier_path.controlPointRect()
+         doesn't work.
+        """
+        extra = (self._widget.pen().width() + 100)  / 2.0
         line = self.getLine()
         p1 = line.p1()
         p2 = line.p2()
-
-        # TODO: see if this works
-        #brect = self.bezier_path.controlPointRect()
         return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
 
     def shape(self):
@@ -680,11 +713,12 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
         line = self.getLine()
         painter.setBrush(draw_color)
-        epen = self.pen()
+        epen = self._widget.pen()
         epen.setColor(draw_color)
         painter.setPen(epen)
 
         self.cp.visible = False
+        draw_arrowhead = True
 
         if option.state & QtGui.QStyle.State_Selected:
             painter.setBrush(QtCore.Qt.yellow)
@@ -697,6 +731,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             painter.setPen(epen)
             self.show_conn = True
             self.cp.visible = True
+            draw_arrowhead = False
 
         # get the bezier line center
         
@@ -728,9 +763,10 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             for point in [center_point, arrow_p1, arrow_p2]:
                 self.arrowhead.append(point)
 
-            if line:                
+            if line:
+                if draw_arrowhead:
+                    painter.drawPolygon(self.arrowhead)    
 
-                painter.drawPolygon(self.arrowhead)                
                 painter.setBrush(QtCore.Qt.NoBrush)
 
                 if self.edge_type == 'bezier':
@@ -805,7 +841,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
 
 
     def hoverEnterEvent(self, event):
-        QtGui.QGraphicsLineItem.hoverEnterEvent(self, event)
+        QtGui.QGraphicsObject.hoverEnterEvent(self, event)
 
 
 
@@ -819,6 +855,7 @@ class ControlPoint(QtGui.QGraphicsObject):
     def __init__(self, center, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
+        self.node_class     = 'control'
         self.center_point   = center
         self.edge           = parent
 
@@ -838,7 +875,6 @@ class ControlPoint(QtGui.QGraphicsObject):
                               self.radius  + self.radius, self.radius + self.radius)
 
     def keyPressEvent(self, event):
-        print 'key pressed'
         if event.key() == QtCore.Qt.Key_Control:
             if self.visible:
                 self.clicked.emit(True)
@@ -855,12 +891,13 @@ class ControlPoint(QtGui.QGraphicsObject):
         """
         red_color = QtGui.QColor(226,36,36)
         blue_color = QtGui.QColor(128,197,255)
+        green_color = QtGui.QColor(52,162,255)
         cp_pen = QtGui.QPen(QtCore.Qt.NoPen)
         painter.setPen(cp_pen)
         
         # show center point
         if self.visible:
-            painter.setBrush(QtGui.QBrush(QtCore.Qt.green))
+            painter.setBrush(QtGui.QBrush(green_color))
 
         # show bezier control points
         if self.debug_mode:

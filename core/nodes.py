@@ -162,20 +162,40 @@ class NodeBase(object):
 
 #- Edges -----
 class EdgeBase(object):
-    
+    """
+    Represents an edge in a graph.
+
+    To use it, instantiate the class with two strings:
+
+        src  = "node1.output"
+        dest = "node2.input"
+    """
     Type    = QtGui.QGraphicsItem.UserType + 2
     PRIVATE = []
 
-    def __init__(self, **kwargs):        
-        
-        src     = kwargs.get('src', None)
-        dest    = kwargs.get('dest', None)
+    def __init__(self, src, dest, **kwargs):
+
+        UUID            = kwargs.pop('id', None)
+        self.UUID       = UUID if UUID else uuid.uuid4()
+        self.ids        = ()
 
         if src is not None:
-            self.src_node, self.src_attr = self.getNodeConnection(src)
+            self.src_name, self.src_attr = self.getNodeConnection(src)
 
         if dest is not None:
-            self.dest_node, self.dest_attr = self.getNodeConnection(dest)
+            self.dest_name, self.dest_attr = self.getNodeConnection(dest)
+
+    @property
+    def source_node(self):
+        return '%s.%s'  % (self.src_name, self.src_attr)
+
+    @property
+    def dest_node(self):
+        return '%s.%s'  % (self.dest_name, self.dest_attr)
+
+    @property
+    def name(self):
+        return '%s.%s' % (self.source_node, self.dest_node)
 
     def getNodeConnection(self, node, src=True):
         """

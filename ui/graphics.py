@@ -40,6 +40,10 @@ class GraphicsView(QtGui.QGraphicsView):
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
 
+        # update mode - full fixes bg errors on resize # 
+        #self.setViewportUpdateMode(QtGui.QGraphicsView.SmartViewportUpdate)
+        self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+
         self.setMouseTracking(True)
         self.boxing = False
         self.modifierBoxOrigin = None
@@ -84,9 +88,9 @@ class GraphicsView(QtGui.QGraphicsView):
         return [scale_x, scale_y]
 
     def resizeEvent(self, event):
-        #self.sendConsoleStatus(event)
+        #self.sendConsoleStatus(event)        
+        self.updateSceneRect(self.scene().sceneRect())  
         QtGui.QGraphicsView.resizeEvent(self, event)
-        self.scene().update()
 
     def viewportEvent(self, event):
         #self.sendConsoleStatus(event)
@@ -185,7 +189,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Capture the tab key press event.
         """
-        if (event.type()==QtCore.QEvent.KeyPress) and (event.key()==QtCore.Qt.Key_Tab):
+        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Tab:
             self.tabPressed.emit()
         return QtGui.QGraphicsView.event(self, event)
 
@@ -227,9 +231,12 @@ class GraphicsView(QtGui.QGraphicsView):
                         continue
 
                     if item.node_class in ['edge']:
+
+                        # need output node uuid, input node uuid
                         log.info('deleting connection "%s"' % item)
-                        #graphicsScene.network.remove_node(str(item.dagnode.UUID))
+                        graphicsScene.network.remove_edge(*item.dagnode.ids)
                         graphicsScene.removeItem(item)
+                        graphicsScene.sceneEdges.pop(str(item.dagnode.UUID))
                         continue
 
 
@@ -272,7 +279,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     """
     nodeAdded          = QtCore.Signal(object)
+    edgeAdded          = QtCore.Signal(object)
     nodeChanged        = QtCore.Signal(object)
+    edgeChanged        = QtCore.Signal(object)
 
     def __init__(self, parent=None):
         QtGui.QGraphicsScene.__init__(self, parent)
@@ -307,11 +316,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def addItem(self, item):
         """
         item = NodeWidget
-        """
-        self.nodeAdded.emit(item)
-        if hasattr(item, 'UUID'):
-            self.sceneNodes[str(item.UUID)] = item
-            item.nodeChanged.connect(self.nodeChangedAction)
+        """        
+        if hasattr(item, 'node_class'):
+            if item.node_class in ['dagnode']:
+                self.sceneNodes[str(item.UUID)] = item
+                self.nodeAdded.emit(item)
+                item.nodeChanged.connect(self.nodeChangedAction)
+
+            if item.node_class in ['edge']:
+                self.sceneEdges[str(item.UUID)] = item
+                self.edgeAdded.emit(item)
+
+                # edges are QGraphicsLineItems, no signals
+                #item.nodeChanged.connect(self.edgeChangedAction)
         QtGui.QGraphicsScene.addItem(self, item)
 
     def nodeChangedAction(self, UUID, attrs):
@@ -320,6 +337,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if node:
             self.nodeChanged.emit(node)
             print '# GraphicsScene: sending node changed: ', node
+            self.update()
+
+    def edgeChangedAction(self, UUID, attrs):
+        # find the node widget
+        edge = self.sceneEdges.get(UUID, None)
+        if edge:
+            self.edgeChanged.emit(edge)
+            print '# GraphicsScene: sending edge changed: ', edge
             self.update()
 
     def dropEvent(self, event):
@@ -346,9 +371,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         return True
 
+    def keyPressEvent(self, event):
+        if event.key() == QtCore.Qt.Key_Control:
+            pass
+        QtGui.QGraphicsScene.keyPressEvent(self, event)
+
     def resizeEvent(self, event):
-        QtGui.QGraphicsScene.resizeEvent(self, event)
         self.update()
+        QtGui.QGraphicsScene.resizeEvent(self, event)        
 
     def mousePressEvent(self, event):
         item = self.itemAt(event.scenePos())
@@ -391,13 +421,21 @@ class GraphicsScene(QtGui.QGraphicsScene):
             self.removeItem(self.line)
             if len(source_items) and len(dest_items):
 
-                # what are these?
-                source_node = source_items[0]
-                dest_node = dest_items[0]
-                print '# source: %s\n' % source_node, 
-                print '# dest:   %s\n' % dest_node
+                # these are connection widgets
+                source_conn = source_items[0]
+                dest_conn = dest_items[0]
 
-                if self.validateConnection(source_node, dest_node):
+                if self.validateConnection(source_conn, dest_conn):
+
+                    source_node = source_conn.node
+                    dest_node = dest_conn.node
+
+                    src_dag = source_node.dagnode
+                    dest_dag = source_node.dagnode
+
+                    edge = self.graph.addEdge(src=source_conn.name, dest=dest_conn.name)
+
+                    """
                     edge = node_widgets.EdgeWidget(source_node, dest_node)
                     self.addItem(edge)
                     self.sceneEdges[edge.connection]=edge
@@ -407,6 +445,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         dest_node=str(dest_node.dagnode.UUID),
                         src_attr=source_node.attribute, 
                         dest_attr=dest_node.attribute)
+                    """
 
 
         self.line = None
@@ -424,6 +463,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     item.setExpanded(not item.expanded)
                     item.setY(item.pos().y() - posy)
                     item.update()
+
+                if hasattr(item, 'node_class'):
+                    if item.node_class == 'control':
+                        if item.visible:
+                            edge = item.edge
+                            print '# splitting nodes: ', edge.source_item, edge.dest_item
+
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
         self.update()
 

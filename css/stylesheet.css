@@ -55,8 +55,8 @@ QMenuBar::item:selected { /* when selected using mouse or keyboard */
     background: #707070;
 }
 
-
 QMenu{
+    font-size: 9pt;
     border: 1px solid;
     border-bottom-color: #1f1f1f;
     border-top-color: #333333;
@@ -64,6 +64,10 @@ QMenu{
     border-right-color: #1f1f1f;
     background-color: #333333;
     /*box-shadow: 0px 1px 0px 0px #191919;*/
+}
+
+QAction {
+    font-size: 9pt;
 }
 
 QMenu::indicator {

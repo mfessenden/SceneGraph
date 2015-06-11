@@ -25,6 +25,6 @@ def main(debug=False):
     except:
         pass
 
-    win = scenegraph.SceneGraphUI(getMayaWindow())
+    win = scenegraph.SceneGraphUI(getMayaWindow(), env='maya')
     win.show()
     return win

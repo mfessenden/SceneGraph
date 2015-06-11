@@ -61,6 +61,8 @@ class SceneGraphUI(form_class, base_class):
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+
+        self.environment      = kwargs.get('env', 'standalone')  
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
 
@@ -81,6 +83,7 @@ class SceneGraphUI(form_class, base_class):
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
+
         ssf.close()
 
         self.resetStatus()
@@ -91,7 +94,10 @@ class SceneGraphUI(form_class, base_class):
         Install an event filter to filter key presses away from the parent.
         """
         if event.type() == QtCore.QEvent.KeyPress:
-            return True
+            #if event.key() == QtCore.Qt.Key_Delete:
+            if self.hasFocus():
+                return True
+            return False
         else:
             return super(SceneGraphUI, self).eventFilter(obj, event)
 
@@ -137,7 +143,8 @@ class SceneGraphUI(form_class, base_class):
 
         # initialize the Graph
         self.graph = core.Graph(viewport=self.view)
-        self.network = self.graph.network.graph
+        self.network = self.graph.network
+        self.network.graph['environment'] = self.environment
 
         self.scene.setNodeManager(self.graph)
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
@@ -237,7 +244,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Build the window title
         """
-        title_str = 'Scene Graph - v%s' % options.VERSION_AS_STRING
+        title_str = 'Scene Graph'
         if self.graph.getScene():
             title_str = '%s - %s' % (title_str, self.graph.getScene())
         self.setWindowTitle(title_str)
@@ -370,9 +377,10 @@ class SceneGraphUI(form_class, base_class):
         self.view.scene().clear()
 
         self.action_save_graph.setEnabled(False)
-        self.network.clear()
+        self.network.graph.clear()
         self.buildWindowTitle()
         self.updateOutput()
+        self.initializeGraphicsView()
 
     def resetScale(self):
         self.view.resetMatrix()      
@@ -470,15 +478,21 @@ class SceneGraphUI(form_class, base_class):
         """
         Build a context menu at the current pointer pos.
         """
+        nodes=['default', 'dot']
         tab_menu = QtGui.QMenu(parent)
         tab_menu.clear()
-        add_action = tab_menu.addAction('Add default node')        
+        add_menu = QtGui.QMenu('Add node:')
+
         qcurs = QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
         scene_pos = self.view.mapToScene(view_pos)
 
-        # add the node at the scene pos
-        add_action.triggered.connect(partial(self.graph.addNode, node_type='default', pos_x=scene_pos.x(), pos_y=scene_pos.y()))
+        for node in nodes:
+            node_action = add_menu.addAction(node)
+            # add the node at the scene pos
+            node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos_x=scene_pos.x(), pos_y=scene_pos.y()))
+
+        tab_menu.addMenu(add_menu)
         tab_menu.exec_(qcurs.pos())
 
     def initializeViewContextMenu(self):
