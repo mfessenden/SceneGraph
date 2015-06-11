@@ -278,6 +278,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         QtGui.QGraphicsScene.__init__(self, parent)
 
         self.line        = None    # temp line
+        self.edge_type   = 'bezier'
         self.sceneNodes  = weakref.WeakValueDictionary()
         self.sceneEdges  = weakref.WeakValueDictionary()
         self.graph       = None
@@ -289,9 +290,18 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.network = val.network
 
     def update(self, *args):
+        """
+        Update certain node/edge attributes on update.
+        """
         for item in self.items():
             if hasattr(item, 'debug_mode'):
                 item.debug_mode = bool(eval(os.getenv("SCENEGRAPH_DEBUG", "0")))
+                item.update()
+
+            if hasattr(item, 'edge_type'):  
+                item.edge_type = self.edge_type
+                item.update()
+
         QtGui.QGraphicsScene.update(self, *args)
 
     def addItem(self, item):

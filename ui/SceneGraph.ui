@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>887</width>
-    <height>674</height>
+    <width>800</width>
+    <height>675</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
   </property>
   <property name="dockOptions">
-   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::ForceTabbedDocks</set>
+   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -110,7 +110,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>887</width>
+     <width>800</width>
      <height>25</height>
     </rect>
    </property>
@@ -132,11 +132,12 @@
     <addaction name="separator"/>
     <addaction name="action_exit"/>
    </widget>
-   <widget class="QMenu" name="menuGraph">
+   <widget class="QMenu" name="menu_graph">
     <property name="title">
      <string>Graph</string>
     </property>
     <addaction name="action_clear_graph"/>
+    <addaction name="action_edge_type"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
     <property name="title">
@@ -166,7 +167,7 @@
     <addaction name="action_debug_mode"/>
    </widget>
    <addaction name="menu_file"/>
-   <addaction name="menuGraph"/>
+   <addaction name="menu_graph"/>
    <addaction name="menu_nodes"/>
    <addaction name="menu_ui"/>
   </widget>
@@ -285,7 +286,7 @@
           <x>0</x>
           <y>0</y>
           <width>256</width>
-          <height>271</height>
+          <height>272</height>
          </rect>
         </property>
         <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -442,6 +443,14 @@
   <action name="action_debug_mode">
    <property name="text">
     <string>Debug mode</string>
+   </property>
+  </action>
+  <action name="action_edge_type">
+   <property name="text">
+    <string>Bezier Lines</string>
+   </property>
+   <property name="toolTip">
+    <string>Bezier lines</string>
    </property>
   </action>
  </widget>

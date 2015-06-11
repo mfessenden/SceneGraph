@@ -154,17 +154,20 @@ class SceneGraphUI(form_class, base_class):
 
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
+        self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
         self.menu_ui.aboutToShow.connect(self.initializeUIMenu)
+
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_reset_scale.triggered.connect(self.resetScale)
-        self.action_reset_ui.triggered.connect(self.resetUI)
+        self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
 
         self.action_debug_mode.triggered.connect(self.toggleDebug)
+        self.action_edge_type.triggered.connect(self.toggleEdgeTypes)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -184,6 +187,15 @@ class SceneGraphUI(form_class, base_class):
         if not current_scene:
             self.action_save_graph.setEnabled(False)
         self.initializeRecentFilesMenu()
+
+    def initializeGraphMenu(self):
+        """
+        Setup the graph menu before it is drawn.
+        """
+        edge_type = 'bezier'
+        if self.scene.edge_type == 'bezier':
+            edge_type = 'polygon'
+        self.action_edge_type.setText('%s lines' % edge_type.title())
 
     def initializeUIMenu(self):
         """
@@ -219,6 +231,9 @@ class SceneGraphUI(form_class, base_class):
         if self.graph.getScene():
             title_str = '%s - %s' % (title_str, self.graph.getScene())
         self.setWindowTitle(title_str)
+
+    def sizeHint(self):
+        return QtCore.QSize(800, 675)
 
     #- STATUS MESSAGING ------
     # TODO: this is temp, find a better way to redirect output
@@ -350,15 +365,7 @@ class SceneGraphUI(form_class, base_class):
         self.updateOutput()
 
     def resetScale(self):
-        self.view.resetMatrix()
-
-    def resetUI(self):
-        """
-        Attempts to restore docks and window to factory fresh state.
-        """
-        self.qtsettings.clear()
-        self.setupUi(self)
-        self.initializeUI()
+        self.view.resetMatrix()      
 
     def toggleDebug(self):
         """
@@ -372,8 +379,18 @@ class SceneGraphUI(form_class, base_class):
         SCENEGRAPH_DEBUG = val
         self.scene.update()      
 
-    def sizeHint(self):
-        return QtCore.QSize(1070, 800)
+    def toggleEdgeTypes(self):
+        """
+        Toggle the edge types.
+        """
+        if self.scene.edge_type == 'bezier':
+            self.scene.edge_type = 'polygon'
+
+        elif self.scene.edge_type == 'polygon':
+            self.scene.edge_type = 'bezier'
+
+        print '# setting edge type: ', self.scene.edge_type
+        self.scene.update()
 
     def removeDetailWidgets(self):
         """
@@ -469,14 +486,18 @@ class SceneGraphUI(form_class, base_class):
         """
         Read Qt settings from file
         """
-        self.qtsettings.beginGroup('MainWindow')
-        self.resize(self.qtsettings.value("size", QtCore.QSize(400, 256)))
-        self.move(self.qtsettings.value("pos", QtCore.QPoint(200, 200)))
-
-        if 'windowState' in self.qtsettings.childKeys():
-            self.restoreState(self.qtsettings.value("windowState"))
-
+        self.qtsettings.beginGroup("MainWindow")
+        self.restoreGeometry(self.qtsettings.value("geometry"))
+        self.restoreState(self.qtsettings.value("windowState"))
         self.qtsettings.endGroup()
+
+        # read the dock settings
+        for w in self.findChildren(QtGui.QDockWidget):
+            dock_name = w.objectName()
+            self.qtsettings.beginGroup(dock_name)
+            if "geometry" in self.qtsettings.childKeys():
+                w.restoreGeometry(self.qtsettings.value("geometry"))
+            self.qtsettings.endGroup()
 
     def writeSettings(self):
         """
@@ -485,10 +506,44 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.beginGroup('MainWindow')
         width = self.width()
         height = self.height()
-        self.qtsettings.setValue("size", QtCore.QSize(width, height))
-        self.qtsettings.setValue("pos", self.pos())
+        self.qtsettings.setValue("geometry", self.saveGeometry())
         self.qtsettings.setValue("windowState", self.saveState())
         self.qtsettings.endGroup()
+
+        # write the dock settings
+        for w in self.findChildren(QtGui.QDockWidget):
+            dock_name = w.objectName()
+            no_default = False
+            # this is the first launch
+            if dock_name not in self.qtsettings.childGroups():
+                no_default = True
+
+            self.qtsettings.beginGroup(dock_name)
+            # save defaults
+            if no_default:
+                self.qtsettings.setValue("geometry/default", w.saveGeometry())
+            self.qtsettings.setValue("geometry", w.saveGeometry())
+            self.qtsettings.endGroup()
+
+    def restoreDefaultSettings(self):
+        """
+        Attempts to restore docks and window to factory fresh state.
+        """
+        pos = self.pos()
+        # read the mainwindow defaults
+        main_geo_key = 'MainWindow/geometry/default'
+        main_state_key = 'MainWindow/windowState/default'
+        
+        self.restoreGeometry(self.qtsettings.value(main_geo_key))
+        self.restoreState(self.qtsettings.value(main_state_key))
+        
+        for w in self.findChildren(QtGui.QDockWidget):
+            dock_name = w.objectName()
+
+            defaults_key = '%s/geometry/default' % dock_name
+            if defaults_key in self.qtsettings.allKeys():
+                w.restoreGeometry(self.qtsettings.value(defaults_key))
+        self.move(pos)
 
     def updateOutput(self):
         """
@@ -571,7 +626,8 @@ class SceneGraphUI(form_class, base_class):
 
 
 class Settings(QtCore.QSettings):
-    def __init__(self, filename, frmt, parent=None, max_files=10):
+
+    def __init__(self, filename, frmt=QtCore.QSettings.IniFormat, parent=None, max_files=10):
         QtCore.QSettings.__init__(self, filename, frmt, parent)
 
         self._max_files     = max_files
@@ -579,19 +635,34 @@ class Settings(QtCore.QSettings):
         self._initialize()
 
     def _initialize(self):
+        """
+        Setup the file for the first time.
+        """
+        if 'MainWindow' not in self.childGroups():
+            if self._parent is not None:
+                self.setValue('MainWindow/geometry/default', self._parent.saveGeometry())
+                self.setValue('MainWindow/windowState/default', self._parent.saveState())
+
         if 'RecentFiles' not in self.childGroups():
             self.beginWriteArray('RecentFiles', 0)
             self.endArray()
 
-    def save(self, state='default'):
-        self.beginGroup("Mainwindow/%s" % state)
+    def save(self, key='default'):
+        """
+        Save, with optional category.
+        """
+        self.beginGroup("Mainwindow/%s" % key)
         self.setValue("size", QtCore.QSize(self._parent.width(), self._parent.height()))
         self.setValue("pos", self._parent.pos())
         self.setValue("windowState", self._parent.saveState())
         self.endGroup()
 
-    def load(self, state='default'):
+    def load(self, key='default'):
         pass
+
+    def deleteFile(self):
+        print '# deleting settings: ', self.fileName()
+        return os.remove(self.fileName())
 
     def getRecentFiles(self):
         """

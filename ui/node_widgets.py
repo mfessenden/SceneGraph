@@ -38,6 +38,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.width              = kwargs.get('width', 120)        
         self.height_collapsed   = 15
         self.height             = kwargs.get('height', 175) if self.expanded else self.height_collapsed
+        self.enabled            = True
 
         # buffers
         self.bufferX            = 3
@@ -176,7 +177,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         p2 = self.boundingRect().topRight()
         p2.setY(p2.y() + self.bufferY*7)
         return QtCore.QLineF(p1, p2)
-    
+            
     def getHiddenIcon(self):
         """
         Returns an icon for the hidden state of the node
@@ -323,7 +324,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         self.input_widget.update()
         self.output_widget.update()
-        
+
         self.label.update()
 
 
@@ -341,13 +342,15 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
         self.color          = [255, 255, 0]
         self.dagnode        = parent.dagnode
-        self.radius         = 16
-        self.draw_radius    = self.radius/4
+        self.radius         = 24
+        self.draw_radius    = self.radius/6
         self.max_conn       = 1 
 
         # create a bbox that is larger than what we'll be drawing
         self.bounds         = QtGui.QGraphicsRectItem(-self.radius/2, -self.radius/2, self.radius, self.radius, self)
         self.bounds.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+
+        # parent item should be on top, so that mouseEvents focus on parent
         self.bounds.setFlags(QtGui.QGraphicsObject.ItemStacksBehindParent)
         self.bounds.setZValue(-1)
 
@@ -412,7 +415,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
             if self.isInputConnection():
                 conn_color = QtGui.QColor(255, 255, 190)
             painter.setBrush(QtCore.Qt.NoBrush)
-            painter.setPen(QtGui.QPen(conn_color, 1, QtCore.Qt.SolidLine))
+            painter.setPen(QtGui.QPen(conn_color, 0.5, QtCore.Qt.DashLine))
             painter.drawRect(self.boundingRect())
 
         self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
@@ -475,11 +478,13 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.show_conn      = False             # show connection string
         self.multi_conn     = False             # multiple connections (future)
         self.conn_label     = None      
+        self.edge_type      = 'bezier'
 
         self.source_point   = QtCore.QPointF(self.source_item.boundingRect().center())
         self.dest_point     = QtCore.QPointF(self.dest_item.boundingRect().center())
         self.center_point   = QtCore.QPointF()  # for bezier lines       
         self.bezier_path    = QtGui.QPainterPath()
+        self.poly_line      = QtGui.QPolygonF()
 
         # debugging
         self.debug_mode     = False
@@ -542,7 +547,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
     def getBezierPath(self, poly=False):
         """
         Returns a bezier path based on the current line.
-        Hacky, but works.
+        Crude, but works.
         """
         line = self.getLine()
         path = QtGui.QPainterPath()
@@ -555,19 +560,27 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         y1 = line.p1().y()
         y2 = line.p2().y()
 
+        # distances
         dx = x2 - x1
         dy = y2 - y1
 
-        cx1 = x1 + (dx/4)
-        cx2 = x2 - (dx/4)
+        # bezier percentage
+        t = .25
 
-        cy1 = y1 - (dy/4)
-        cy2 = y2 + (dy/4)
+        # x coord
+        cx1 = x1 + (dx * t)
+        cx2 = x2 - (dx * t)
 
+        # y coord
+        cy1 = y1 - (dy * (t/4))
+        cy2 = y2 + (dy * (t/4))
+
+        # create the control points
         self.c1 = QtCore.QPointF(cx1, cy1)
         self.c2 = QtCore.QPointF(cx2, cy2)
-        curvePoly = QtGui.QPolygonF([line.p1(), self.c1, self.c2, line.p2()])
-        #
+
+        # create a polyline
+        self.poly_line = QtGui.QPolygonF([line.p1(), self.c1, self.c2, line.p2()])
         path.cubicTo(self.c1, self.c2, line.p2())
         #path.quadTo(line.p1(), line.p2())
         return path
@@ -617,6 +630,11 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         return stroker.createStroke(path)
 
     def buildConnectionLabel(self):
+        """
+        Displays a label with connection information.
+
+         ** unused
+        """
         line = self.getLine()
         p1 = line.p1()
         p2 = line.p2()
@@ -669,72 +687,107 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             painter.setPen(epen)
             self.show_conn = True
 
+        # get the bezier line center
+        
+        self.bezier_path = self.getBezierPath()
         # calculate the arrowhead geometry
         if line.length() > 0.0:
             angle = math.acos(line.dx() / line.length())
+            if self.edge_type == 'bezier':
+                bline = QtCore.QLineF(self.bezier_path.pointAtPercent(0.47), self.bezier_path.pointAtPercent(0.53))  
+                angle = math.acos(bline.dx() / bline.length())
+
             if line.dy() >= 0:
                 angle = (math.pi * 2.0) - angle
 
-            if self.source_item.is_input:
-                revArrow = 1
-            else:
-                revArrow = -1
-
+            revArrow = -1
 
             center_point = self.getCenterPoint()
             end_point = self.getEndPoint()
-            
-            if self.bezier_path:
-                end_point = self.bezier_path.pointAtPercent(0.95)
-                #bangle = math.atan2f(point3.y - point2.y, point3.x - point2.x)
-                #end_point = QtCore.QPointF(bp.x, bp.y)
 
-            arrow_p1 = end_point + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * self.arrow_size * revArrow,
+            arrow_p1 = center_point + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * self.arrow_size * revArrow,
                                         math.cos(angle + math.pi / 3.0) * self.arrow_size * revArrow)
-            arrow_p2 = end_point + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow,
+            arrow_p2 = center_point + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow,
                                         math.cos(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow)
             # clear the arrow
             self.arrowhead.clear()
 
+
             # set the polygon points
-            for point in [end_point, arrow_p1, arrow_p2]:
+            for point in [center_point, arrow_p1, arrow_p2]:
                 self.arrowhead.append(point)
 
-            #self.scene().removeItem(self.conn_label)
-            #self.conn_label = self.buildConnectionLabel()
-            if line:
-                painter.drawPolygon(self.arrowhead)
-                self.bezier_path = self.getBezierPath()
-                #painter.drawLine(line)
+            if line:                
+
+                painter.drawPolygon(self.arrowhead)                
                 painter.setBrush(QtCore.Qt.NoBrush)
-                painter.drawPath(self.bezier_path)
+
+                if self.edge_type == 'bezier':
+                    painter.drawPath(self.bezier_path)
+
+                if self.edge_type == 'polygon':
+                    painter.drawLine(line)
+                
 
                 if self.debug_mode:
-                    # DEBUG: draw control points
-                    red_color = QtGui.QColor(226,36,36)
-                    blue_color = QtGui.QColor(155, 195, 226)
 
-                    cp_pen = QtGui.QPen(QtCore.Qt.SolidLine)
-                    cp_pen.setColor(red_color)
+                    self.cp1.hide()
+                    self.cp2.hide()
 
-                    l_pen = QtGui.QPen(QtCore.Qt.SolidLine)
-                    l_pen.setColor(blue_color)
+                    if self.edge_type == 'bezier':
 
-                    # control lines
-                    painter.setPen(l_pen)
-                    l1 = QtCore.QLineF(line.p1(), self.c1)
-                    l2 = QtCore.QLineF(self.c1, self.c2)
-                    l3 = QtCore.QLineF(self.c2, line.p2())
-                    painter.drawLines([l1, l2, l3])
+                        self.cp1.show()
+                        self.cp2.show()
 
-                    # control points
-                    painter.setPen(cp_pen)
-                    painter.setBrush(QtGui.QBrush(red_color))
-                    #painter.drawEllipse(self.c1, 4, 4)
-                    #painter.drawEllipse(self.c2, 4, 4)
+                        # DEBUG: draw control points
+                        red_color = QtGui.QColor(226,36,36)
+                        blue_color = QtGui.QColor(155, 195, 226)
 
-                    self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
-                    self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
+                        cp_pen = QtGui.QPen(QtCore.Qt.SolidLine)
+                        cp_pen.setColor(red_color)
+
+                        l_pen = QtGui.QPen(QtCore.Qt.SolidLine)
+                        l_pen.setColor(blue_color)
+
+                        # control lines
+                        painter.setPen(l_pen)
+                        l1 = QtCore.QLineF(line.p1(), self.c1)
+                        l2 = QtCore.QLineF(self.c1, self.c2)
+                        l3 = QtCore.QLineF(self.c2, line.p2())
+                        painter.drawLines([l1, l2, l3])
+
+                        # control points
+                        painter.setPen(cp_pen)
+                        painter.setBrush(QtGui.QBrush(red_color))
+
+                        self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
+                        self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
+
+                        # angle output
+                        angle_str = '( %.2f deg )' % angle
+                        a_pen = QtGui.QPen(QtCore.Qt.SolidLine)
+                        a_pen.setColor(draw_color)
+                        painter.setPen(a_pen)
+                        painter.setBrush(QtGui.QBrush(draw_color))
+                        angle_pt = QtCore.QPointF(self.getCenterPoint().x() + 10, self.getCenterPoint().y())
+                        painter.drawText(angle_pt, angle_str)
+
+                    # draw the center point
+                    painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+                    painter.setBrush(QtGui.QBrush(draw_color))
+                    painter.drawEllipse(self.getCenterPoint(), 1.5, 1.5)
+
+                    # draw the arrow p1 (blue)
+                    painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+                    p1_color= QtGui.QColor(130,130,255)
+                    painter.setBrush(QtGui.QBrush(p1_color))
+                    painter.drawEllipse(arrow_p1, 1.5, 1.5)
+
+                    # draw the arrow p2 (pink)
+                    painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+                    p2_color= QtGui.QColor(237,171,204)
+                    painter.setBrush(QtGui.QBrush(p2_color))
+                    painter.drawEllipse(arrow_p2, 1.5, 1.5)
 
 
     def hoverEnterEvent(self, event):
