@@ -177,7 +177,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         p2 = self.boundingRect().topRight()
         p2.setY(p2.y() + self.bufferY*7)
         return QtCore.QLineF(p1, p2)
-            
+
     def getHiddenIcon(self):
         """
         Returns an icon for the hidden state of the node
@@ -474,7 +474,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.source_item    = source_item
         self.dest_item      = dest_item
 
-        self.arrow_size     = 12
+        self.arrow_size     = 8
         self.show_conn      = False             # show connection string
         self.multi_conn     = False             # multiple connections (future)
         self.conn_label     = None      
@@ -493,8 +493,10 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         self.c1             = QtCore.QPointF(0,0)
         self.c2             = QtCore.QPointF(0,0)
 
-        self.cp1            = ControlPoint(self.source_point, self) 
-        self.cp2            = ControlPoint(self.dest_point, self)
+        # control point widgets
+        self.cp             = ControlPoint(self.center_point, self, visible=False, radius=4) 
+        self.cp1            = ControlPoint(self.source_point, self, visible=False) 
+        self.cp2            = ControlPoint(self.dest_point, self, visible=False)
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
@@ -502,6 +504,9 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         
         self.name = "%s.%s" % (self.source_item, self.dest_item)
         self.setZValue(-1.0)
+
+        # signals, slots
+        self.cp.clicked.connect(self.centerPointClickedAction)
 
     @property
     def node_class(self):
@@ -660,6 +665,9 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         text.setPos(center.x()-tw/2, center.y()-th/2)
         return text
 
+    def centerPointClickedAction(self, val):
+        print '# splitting nodes: ', self.source_item, self.dest_item
+
     def paint(self, painter, option, widget=None):
         """
         Draw the line and arrow.
@@ -676,6 +684,8 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
         epen.setColor(draw_color)
         painter.setPen(epen)
 
+        self.cp.visible = False
+
         if option.state & QtGui.QStyle.State_Selected:
             painter.setBrush(QtCore.Qt.yellow)
             epen.setColor(QtCore.Qt.yellow)
@@ -686,6 +696,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
             epen.setColor(QtCore.Qt.green)
             painter.setPen(epen)
             self.show_conn = True
+            self.cp.visible = True
 
         # get the bezier line center
         
@@ -728,6 +739,8 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
                 if self.edge_type == 'polygon':
                     painter.drawLine(line)
                 
+                # translate the center point
+                self.cp.setPos(self.mapToScene(self.getCenterPoint()))
 
                 if self.debug_mode:
 
@@ -760,6 +773,7 @@ class EdgeWidget(QtGui.QGraphicsLineItem):
                         painter.setPen(cp_pen)
                         painter.setBrush(QtGui.QBrush(red_color))
 
+                        # moving the control points here                        
                         self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
                         self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
 
@@ -799,12 +813,16 @@ class ControlPoint(QtGui.QGraphicsObject):
     """
     Bezier control point widget.
     """
+
+    clicked     = QtCore.Signal(bool)
+
     def __init__(self, center, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
         self.center_point   = center
         self.edge           = parent
 
+        self.visible        = kwargs.get('visible', True)
         self.color          = kwargs.get('color', [225, 35, 35])
         self.radius         = kwargs.get('radius', 3.0)
 
@@ -819,6 +837,13 @@ class ControlPoint(QtGui.QGraphicsObject):
         return QtCore.QRectF(-self.radius/2  - self.radius,  -self.radius/2 - self.radius,
                               self.radius  + self.radius, self.radius + self.radius)
 
+    def keyPressEvent(self, event):
+        print 'key pressed'
+        if event.key() == QtCore.Qt.Key_Control:
+            if self.visible:
+                self.clicked.emit(True)
+        QtGui.QGraphicsObject.keyPressEvent(self, event)
+
     def setPos(self, pos):
         pos = self.mapFromScene(pos)
         self.translate(pos.x(), pos.y())
@@ -829,18 +854,23 @@ class ControlPoint(QtGui.QGraphicsObject):
         Draw the line and arrow.
         """
         red_color = QtGui.QColor(226,36,36)
+        blue_color = QtGui.QColor(128,197,255)
+        cp_pen = QtGui.QPen(QtCore.Qt.NoPen)
+        painter.setPen(cp_pen)
+        
+        # show center point
+        if self.visible:
+            painter.setBrush(QtGui.QBrush(QtCore.Qt.green))
 
-        cp_pen = QtGui.QPen(QtCore.Qt.SolidLine)
-        cp_pen.setColor(red_color)
-
-        # control points
+        # show bezier control points
         if self.debug_mode:
-            painter.setPen(cp_pen)
             painter.setBrush(QtGui.QBrush(red_color))
-            painter.drawEllipse(self.center_point, self.radius, self.radius)
+            
+        cp = self.mapToScene(self.center_point)
+        self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))
 
-            cp = self.mapToScene(self.center_point)
-            self.setToolTip("(%.2f, %.2f)" % (cp.x(), cp.y()))
+        if self.visible or self.debug_mode:
+            painter.drawEllipse(self.center_point, self.radius, self.radius)
 
 
 class NodeLabel(QtGui.QGraphicsObject):

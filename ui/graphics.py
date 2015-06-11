@@ -366,9 +366,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.update()
 
     def mouseMoveEvent(self, event):
+        item = self.itemAt(event.scenePos())
+        if item:
+            pass
         if self.line:
             newLine = QtCore.QLineF(self.line.line().p1(), event.scenePos())
             self.line.setLine(newLine)
+
         QtGui.QGraphicsScene.mouseMoveEvent(self, event)
         self.update()
 

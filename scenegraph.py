@@ -84,6 +84,16 @@ class SceneGraphUI(form_class, base_class):
         ssf.close()
 
         self.resetStatus()
+        QtGui.QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        """
+        Install an event filter to filter key presses away from the parent.
+        """
+        if event.type() == QtCore.QEvent.KeyPress:
+            return True
+        else:
+            return super(SceneGraphUI, self).eventFilter(obj, event)
 
     def initializeUI(self):
         """
@@ -444,7 +454,8 @@ class SceneGraphUI(form_class, base_class):
         Write window prefs when UI is closed
         """
         self.writeSettings()
-        event.accept()
+        QtGui.QApplication.instance().removeEventFilter(self)
+        return super(SceneGraphUI, self).closeEvent(event)
 
     def graphicsView_wheelEvent(self, event):
         factor = 1.41 ** ((event.delta()*.5) / 240.0)
@@ -691,13 +702,4 @@ class Settings(QtCore.QSettings):
             self.setArrayIndex(i)
             self.setValue('file', recent_files[i])
         self.endArray()
-
-
-class MouseEventFilter(QtCore.QObject):
-    def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.MouseButtonPress:
-            # call a function here..
-            # obj.doSomething()
-            return True
-        return QtGui.QMainWindow.eventFilter(self, obj, event)
 
