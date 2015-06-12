@@ -224,19 +224,19 @@ class GraphicsView(QtGui.QGraphicsView):
             for item in graphicsScene.selectedItems():
                 if hasattr(item, 'node_class'):
                     if item.node_class in ['dagnode']:
-                        log.info('deleting node "%s"' % item.dagnode.name)
-                        graphicsScene.network.remove_node(str(item.dagnode.UUID))
+                        log.info('deleting node "%s"' % item.dagnode.name)                        
                         graphicsScene.removeItem(item)
                         graphicsScene.sceneNodes.pop(str(item.dagnode.UUID))
+                        graphicsScene.network.remove_node(str(item.dagnode.UUID))
                         continue
 
                     if item.node_class in ['edge']:
 
                         # need output node uuid, input node uuid
-                        log.info('deleting connection "%s"' % item)
-                        graphicsScene.network.remove_edge(*item.dagnode.ids)
+                        log.info('deleting connection "%s"' % item)                        
                         graphicsScene.removeItem(item)
                         graphicsScene.sceneEdges.pop(str(item.dagnode.UUID))
+                        graphicsScene.network.remove_edge(*item.dagnode.ids)
                         continue
 
 
@@ -315,7 +315,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def addItem(self, item):
         """
-        item = NodeWidget
+        item = widget type
         """        
         if hasattr(item, 'node_class'):
             if item.node_class in ['dagnode']:
@@ -330,6 +330,22 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 # edges are QGraphicsLineItems, no signals
                 #item.nodeChanged.connect(self.edgeChangedAction)
         QtGui.QGraphicsScene.addItem(self, item)
+
+    def removeItem(self, item):
+        """
+        item = widget type
+        """        
+        if hasattr(item, 'node_class'):
+            if item.node_class in ['dagnode']:
+                print '# deleting node...'
+                #item.deleteLater()
+                item.deleteNode()
+
+            if item.node_class in ['edge']:
+                print '# deleting edge...'
+                # update connected nodes
+                item.deleteEdge()
+        QtGui.QGraphicsScene.removeItem(self, item)
 
     def nodeChangedAction(self, UUID, attrs):
         # find the node widget
@@ -368,7 +384,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         if source_item.isInputConnection() or dest_item.isOutputConnection():
             return False
-
         return True
 
     def keyPressEvent(self, event):
@@ -432,21 +447,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                     src_dag = source_node.dagnode
                     dest_dag = source_node.dagnode
-
+                    
                     edge = self.graph.addEdge(src=source_conn.name, dest=dest_conn.name)
-
-                    """
-                    edge = node_widgets.EdgeWidget(source_node, dest_node)
-                    self.addItem(edge)
-                    self.sceneEdges[edge.connection]=edge
-                    self.network.add_edge(str(source_node.dagnode.UUID), 
-                        str(dest_node.dagnode.UUID),
-                        src_node=str(source_node.dagnode.UUID),
-                        dest_node=str(dest_node.dagnode.UUID),
-                        src_attr=source_node.attribute, 
-                        dest_attr=dest_node.attribute)
-                    """
-
 
         self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)

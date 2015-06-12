@@ -87,12 +87,12 @@ class SceneGraphUI(form_class, base_class):
         ssf.close()
 
         self.resetStatus()
-        QtGui.QApplication.instance().installEventFilter(self)
+        #QtGui.QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
         """
         Install an event filter to filter key presses away from the parent.
-        """
+        """        
         if event.type() == QtCore.QEvent.KeyPress:
             #if event.key() == QtCore.Qt.Key_Delete:
             if self.hasFocus():
@@ -195,6 +195,9 @@ class SceneGraphUI(form_class, base_class):
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
+
+        # evaluate button
+        self.evaluate_button.clicked.connect(self.graph.evaluate)
 
     def initializeFileMenu(self):
         """
@@ -373,14 +376,11 @@ class SceneGraphUI(form_class, base_class):
         """
         Reset the current graph
         """
-        self.graph.reset()
         self.view.scene().clear()
-
+        self.graph.reset()
         self.action_save_graph.setEnabled(False)
-        self.network.graph.clear()
         self.buildWindowTitle()
         self.updateOutput()
-        self.initializeGraphicsView()
 
     def resetScale(self):
         self.view.resetMatrix()      

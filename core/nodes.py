@@ -195,7 +195,7 @@ class EdgeBase(object):
 
     @property
     def name(self):
-        return '%s.%s' % (self.source_node, self.dest_node)
+        return '%s,%s' % (self.source_node, self.dest_node)
 
     def getNodeConnection(self, node, src=True):
         """

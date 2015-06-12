@@ -106,8 +106,18 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Assistance for the QT windowing toolkit.
         """
-        return NodeWidget.Type
-    
+        return NodeWidget.Type    
+
+    def listConnections(self, **kwargs):
+        result = dict()
+        for item in self.output_widget.connections.items():
+            # conn str = item[0], edge = item[1]
+            result[item[0]] = item[1]
+
+        for item in self.input_widget.connections.items():
+            result[item[0]] = item[1]
+        return result
+
     def shape(self):
         """
         Aids in selection.
@@ -152,6 +162,19 @@ class NodeWidget(QtGui.QGraphicsObject):
     #- Events -----
     def hoverEnterEvent(self, event):
         QtGui.QGraphicsObject.hoverEnterEvent(self, event)
+
+    def deleteNode(self):
+        """
+        Called before the node is properly deleted; 
+        this removes all edges.
+        """
+        connections = self.listConnections()
+        if connections:
+            for conn_name, edge in connections.iteritems():
+                print '# checking connection "%s"' % conn_name
+                if self in edge.listConnections():
+                    print '# removing invalid edge: "%s"' % edge.dagnode.name
+                    self.scene().graph.removeEdge(UUID=edge.UUID)
 
     @QtCore.Slot()
     def nodeChangedAction(self):
@@ -488,6 +511,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
         self.dagnode        = edge
         self._widget        = QtGui.QGraphicsLineItem(self)
+
         # The arrow that's drawn in the center of the line
         self.arrowhead      = QtGui.QPolygonF()
         self.color          = [224, 224, 224]
@@ -547,26 +571,43 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
     @property
     def connection(self):
-        if self.source_item and self.dest_item:
-            return '%s,%s' % (self.source_item.name, self.dest_item.name)
-        else:
-            if not self.source_item:
-                return 'None,%s' % self.dest_item.name
-            if not self.dest_item:
-                return '%s,None' % self.source_item.name
+        if not self.is_valid:
+            return 'invalid'
+        return '%s,%s' % (self.source_item.name, self.dest_item.name)
 
-    def deleteNode(self):
-        if self:
-            self.scene().removeItem(self)
-            self.source_item.connectedLine.remove(self)
-            self.dest_item.connectedLine.remove(self)
+    @property 
+    def is_valid(self):
+        """
+        Returns true if the edge has two connections.
+        """
+        if self.source_item in self.scene().items():
+            if self.dest_item in self.scene().items():
+                return True
+        return False
 
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Delete:
-            self.deleteNode()
-            self.update()
-        else:
-            QtGui.QGraphicsObject.keyPressEvent(self, event)
+    def listConnections(self):
+        """
+        Returns a list of connected nodes.
+        """
+        return (self.source_item.node, self.dest_item.node)
+
+    def deleteEdge(self):
+        """
+        Called before the edge is properly deleted; 
+        this removes it from all connections.
+        """
+        srcconn = self.source_item
+        dstconn = self.dest_item
+
+        if self in srcconn.connections.values():
+            dest_key = self.dagnode.dest_node
+            srcconn.connections.pop(dest_key)
+            print '# removing connection to "%s"' % dest_key
+
+        if self in dstconn.connections.values():
+            src_key = self.dagnode.source_node
+            dstconn.connections.pop(src_key)
+            print '# removing connection to "%s"' % src_key
 
     def getLine(self):
         """
