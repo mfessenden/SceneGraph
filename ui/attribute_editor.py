@@ -15,6 +15,7 @@ class AttributeEditor(QtGui.QWidget):
 
         self.gridLayout     = QtGui.QGridLayout(self)
         self.gridLayout.setContentsMargins(9, 2, 9, 9)
+        self.setObjectName('AttributeEditor')
 
     def initializeMenubar(self):
         """
@@ -33,59 +34,67 @@ class AttributeEditor(QtGui.QWidget):
         deleteAttrAction = QtGui.QAction('Delete attributes...', self)        
         attrMenu.addAction(deleteAttrAction)
 
-    def setNode(self, node_item, force=True):
+    def setNode(self, node_item, force=False):
         """
         Set the currently focused node
         """
-        if node_item and node_item != self._current_node:
-            # removed for testing
-            #node_item.nodeChanged.connect(partial(self.setNode, node_item))
-            
-            # clear the layout
-            self._clearGrid()                
-            
-            self.nameLabel = QtGui.QLabel(self)
-            self.gridLayout.addWidget(self.nameLabel, 0, 0, 1, 1)
-            self.nameEdit = QtGui.QLineEdit(self)
-            self.gridLayout.addWidget(self.nameEdit, 0, 1, 1, 1)
-    
-            self.pathLabel = QtGui.QLabel(self)
-            self.gridLayout.addWidget(self.pathLabel, 1, 0, 1, 1)
-            self.pathEdit = QtGui.QLineEdit(self)
-            self.gridLayout.addWidget(self.pathEdit, 1, 1, 1, 1)
-    
-            self.__current_row = 2
-    
-            self.nameLabel.setText("Name:")
-            self.nameLabel.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-            self.pathLabel.setText("Path:")
-            self.pathLabel.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-            
-            self._current_node = node_item
-            self.nameEdit.setText(node_item.dagnode.name)
-            self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
-            self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
+        if node_item:
+            if node_item != self._current_node:
+                # removed for testing
+                #node_item.nodeChanged.connect(partial(self.setNode, node_item))
+                self._current_node = node_item
+                
+                # clear the layout
+                self._clearGrid()                  
+                self.__current_row = 0
 
-            #self.pathEdit.setText(node_item.path())
-            self.pathEdit.setEnabled(False)
-                        
-            for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
-                if attr not in node_item.dagnode.PRIVATE or force:
+                #self.nameEdit.textEdited.connect(self.nodeUpdatedFilter)
+                #self.nameEdit.editingFinished.connect(self.nodeFinalizedFilter)
+
+                #self.pathEdit.setText(node_item.path())
+                #self.pathEdit.setEnabled(False)
+                
+                for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
+                    editable = True
+                    if attr in node_item.dagnode.PRIVATE:
+                        editable = False
+
+                    # create an attribute label
                     attr_label = QtGui.QLabel(self)
+                    attr_label.setObjectName('%s_label' % attr)
                     self.gridLayout.addWidget(attr_label, self.__current_row, 0, 1, 1)
+
+                    # create an attribute editor
                     val_edit = QtGui.QLineEdit(self)
+                    val_edit.setObjectName('%s_edit' % attr)
+
                     self.gridLayout.addWidget(val_edit, self.__current_row, 1, 1, 1)
                     
                     attr_label.setText('%s: ' % attr)
                     attr_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
                     val_edit.setText(str(val))
+                    val_edit.setEnabled(editable)
+
+                    if not force:
+                        attr_label.setHidden(not editable)
+                        val_edit.setHidden(not editable)
+
                     self.__current_row+=1
                     val_edit.editingFinished.connect(partial(self.updateNodeAttribute, val_edit, attr))
 
-                    #val_edit.setEnabled(attr not in node_item.dagnode.PRIVATE)
-                
-            spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-            self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)
+                    
+                spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+                self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)
+
+            else:
+                # update existing attribute editors
+                for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
+                    editor = self.findChild(QtGui.QLineEdit, '%s_edit' % attr)
+                    if editor:
+                        editor.blockSignals(True)
+                        editor.setText(str(val))
+                        editor.blockSignals(False)
+
 
     
     def updateAttributes(self):
@@ -110,7 +119,10 @@ class AttributeEditor(QtGui.QWidget):
         Update the node from an attribute
         """
         new_value = str(lineEdit.text())
-        new_value = eval(new_value)
+        try:
+            new_value = eval(new_value)
+        except NameError:
+            pass
         self._current_node.dagnode.addNodeAttributes(**{attribute:new_value})
         self.setNode(self._current_node)
     

@@ -382,8 +382,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
             self.update()
 
     def itemPositionChanged(self, item, pos):
+        """
+        Update the dag node when the widget position changes
+        """
         item.dagnode.pos_x = pos[0]
-        item.dagnode.pos_1 = pos[1]
+        item.dagnode.pos_y = pos[1]
+        self.nodeChanged.emit(item)
 
     def edgeChangedAction(self, UUID, attrs):
         # find the node widget
@@ -496,7 +500,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     posy = item.boundingRect().topRight().y()
 
                     # expand/collapse the node
-                    item.setExpanded(not item.expanded)
+                    item.setExpanded(not item.dagnode.expanded)
                     item.setY(item.pos().y() - posy)
                     item.update()
 

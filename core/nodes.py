@@ -13,25 +13,28 @@ reload(options)
 class NodeBase(object):
     
     Type    = QtGui.QGraphicsItem.UserType + 3
-    PRIVATE = ['name', 'node_type', 'UUID', 'color', 'enabled']
+    PRIVATE = ['UUID', 'node_type', 'height_collapsed', 'height_expanded']
 
     def __init__(self, node_type='default', **kwargs):
-        
-        self.name            = kwargs.pop('name', 'node1')
-        self.node_type       = kwargs.pop('node_type', 'default')
-        UUID                 = kwargs.pop('id', None)
-        self.UUID            = UUID if UUID else uuid.uuid4()
+        # data attribute for arbitrary attributes
+        self._data              = dict() 
+
+        self.name               = kwargs.pop('name', 'node1')
+        self.node_type          = kwargs.pop('node_type', 'default')
+        self.color              = kwargs.pop('color', [180, 180, 180])
+        self.expanded           = kwargs.pop('expanded', False)
+        self.height_collapsed   = kwargs.pop('height_collapsed', 15)
+        self.height_expanded    = kwargs.pop('height_expanded', 175)
+        UUID                    = kwargs.pop('id', None)
+
+        self.UUID               = UUID if UUID else uuid.uuid4()
         
         # edges attribute
-        self._edge_list      = dict()
+        self._edge_list         = dict()
 
         # node widget
-        self._widget         = None   
-
-        # data attribute for arbitrary attributes
-        self._data           = dict()        
-        self.color           = [180, 180, 180]
-        self.enabled         = kwargs.pop('enabled', True)   
+        self._widget            = None   
+        self.enabled            = kwargs.pop('enabled', True)   
 
         # add any arbitrary attributes
         self.addNodeAttributes(**kwargs)
@@ -57,70 +60,120 @@ class NodeBase(object):
 
     @property
     def data(self):
-        data = dict()
-        data['pos_x'] = self.pos_x
-        data['pos_y'] = self.pos_y
-        data['width'] = self.width
-        data['height'] = self.height
-        data['color'] = self.color
-        for k, v in self._data.iteritems():
-            if k not in self.PRIVATE:
-                data[k] = v
+        data = self._data
+        data.update(name=self.name, 
+                    UUID=str(self.UUID), 
+                    width=self.width, 
+                    height=self.height,
+                    expanded=self.expanded
+                    )
         return data
-    
-    @property
-    def pos_x(self):
-        if self._widget:
-            return self._widget.pos().x()
-        return 0
 
     @property
-    def pos_y(self):
-        if self._widget:
-            return self._widget.pos().y()
-        return 0
+    def name(self):
+        return self._data.get('name', 'node1')
+
+    @name.setter
+    def name(self, val):
+        self._data.update(name=val)
+        return self.name
+
+    @property
+    def node_type(self):
+        return self._data.get('node_type', 'default')
+
+    @node_type.setter
+    def node_type(self, val):
+        self._data.update(node_type=val)
+        return self.node_type
+
+    @property
+    def expanded(self):
+        return self._data.get('expanded', False)
+
+    @expanded.setter
+    def expanded(self, val):
+        self._data.update(expanded=val)
+        return self.expanded
+
+    @property
+    def pos_x(self):
+        return self._data.get('pos_x', 0)
 
     @pos_x.setter
     def pos_x(self, val):
-        if self._widget:
-            self._widget.setX(val)
+        self._data.update(pos_x=val)
+        return self.pos_x
+
+    @property
+    def pos_y(self):
+        return self._data.get('pos_y', 0)
 
     @pos_y.setter
     def pos_y(self, val):
-        if self._widget:
-            self._widget.setY(val)
+        self._data.update(pos_y=val)
+        return self.pos_y
 
     @property
     def width(self):
-        if self._widget:
-            return self._widget.width
-        return 125
-
-    @property
-    def height(self):
-        if self._widget:
-            return self._widget.height
-        return 15
+        return self._data.get('width', 120)
 
     @width.setter
     def width(self, val):
-        if self._widget:
-            self._widget.width = val
-            return True
-        return False
+        self._data.update(width=val)
+        return self.width
 
     @property
     def height(self):
-        if self._widget:
-            return self._widget.height
-        return 0
+        if not self.expanded:
+            return self.height_collapsed
+        return self.height_expanded
 
     @height.setter
     def height(self, val):
-        if self._widget:
-            self._widget.height = val
-            return True
-        return False
+        if not self.expanded:
+            self._data.update(height_collapsed=val)
+        else:
+            self._data.update(height_expanded=val)
+        return self.height
+
+    @property
+    def height_collapsed(self):
+        return self._data.get('height_collapsed', 15)
+
+    @height_collapsed.setter
+    def height_collapsed(self, val):
+        return self._data.update(height_collapsed=val)
+
+    @property
+    def height_expanded(self):
+        return self._data.get('height_expanded', 175)
+
+    @height_expanded.setter
+    def height_expanded(self, val):
+        return self._data.update(height_expanded=val)
+
+    @height.setter
+    def height(self, val):
+        if not self.expanded:
+            self._data.update(height_collapsed=val)
+        else:
+            self._data.update(height_expanded=val)
+        return self.height
+
+    @property
+    def color(self):
+        return self._data.get('color', [180, 180, 180])
+
+    @color.setter
+    def color(self, val):
+        self._data.update(color=val)
+        return self.color
+
+    @height.setter
+    def height(self, val):
+        self._data.update(height=val)
+        return self.width
 
     def path(self):
         return '/%s' % self.name
@@ -138,19 +191,7 @@ class NodeBase(object):
         from SceneGraph import util
         reload(util)
         for attr, val in kwargs.iteritems():
-            # haxx here
-            if attr not in self.PRIVATE:
-                if not self._widget or attr not in self._widget.PRIVATE:
-                    self._data[attr] = val
-                    continue
-                else:
-                    if self._widget:
-                        if attr in self._widget.PRIVATE:
-                            if util.is_number(val):
-                                val = float(val)
-                            setattr(self._widget, attr, val)
-            else:
-                setattr(self, attr, val)
+            self._data[attr] = val
 
     def removeNodeAttributes(self, *args):
         """

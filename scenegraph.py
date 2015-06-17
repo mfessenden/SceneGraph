@@ -134,7 +134,7 @@ class SceneGraphUI(form_class, base_class):
 
     def initializeGraphicsView(self, filter=False):
         """
-        Initialize the graphics view and graph object.
+        Initialize the graphics view/scen and graph objects.
         """
         # scene view signals
         self.scene.nodeAdded.connect(self.nodeAddedAction)
@@ -155,7 +155,6 @@ class SceneGraphUI(form_class, base_class):
 
         # maya online
         self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
-
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
         # TESTING: disable
@@ -429,11 +428,27 @@ class SceneGraphUI(form_class, base_class):
         if len(nodes) == 1:
 
             node = nodes[0]
+            self.updateAttributeEditor(node)
+
+    def getAttributeEditorWidget(self):
+        return self.attrEditorWidget.findChild(QtGui.QWidget, 'AttributeEditor')
+
+    def updateAttributeEditor(self, nodes, **attrs):
+        """
+        Update the attribute editor with a selected node.
+        """
+        if type(nodes) not in [list, tuple]:
+            nodes = [nodes,]
+
+        for node in nodes:
             if hasattr(node, 'node_class'):
-                if node.node_class in ['dagnode']:                
-                    nodeAttrWidget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)
-                    nodeAttrWidget.setNode(node)
-                    self.attributeScrollAreaLayout.addWidget(nodeAttrWidget)
+                if node.node_class in ['dagnode']:
+                    attr_widget = self.getAttributeEditorWidget()
+                    
+                    if not attr_widget:
+                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)                    
+                        self.attributeScrollAreaLayout.addWidget(attr_widget)
+                    attr_widget.setNode(node)
 
     def nodeAddedAction(self, node):
         """
@@ -445,7 +460,7 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
-        print '# Node changed: ', node
+        self.updateAttributeEditor(node)
         self.updateOutput()
 
     # TODO: disabling this, causing lag
@@ -497,7 +512,7 @@ class SceneGraphUI(form_class, base_class):
         ssf.open(QtCore.QFile.ReadOnly)
         add_menu.setStyleSheet(str(ssf.readAll()))
         tab_menu.setStyleSheet(str(ssf.readAll()))
-        
+
         tab_menu.addMenu(add_menu)
         tab_menu.exec_(qcurs.pos())
 

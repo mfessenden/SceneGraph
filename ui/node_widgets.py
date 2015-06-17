@@ -54,9 +54,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.expand_widget      = None
 
         # width/height attributes
-        self.width              = kwargs.get('width', 120)        
-        self.height_collapsed   = 15
-        self.height             = kwargs.get('height', 175) if self.expanded else self.height_collapsed
         self.enabled            = True
 
         # buffers
@@ -106,6 +103,51 @@ class NodeWidget(QtGui.QGraphicsObject):
         if self.dagnode:
             return self.dagnode.UUID
         return None
+
+    @property
+    def width(self):        
+        return self.dagnode.width
+
+    @width.setter
+    def width(self, val):
+        self.dagnode.width
+        return self.dagnode.width
+
+    @property
+    def height(self):        
+        return self.dagnode.height
+
+    @height.setter
+    def height(self, val):
+        self.dagnode.height = val
+        return self.dagnode.height
+
+    @property
+    def expanded(self):        
+        return self.dagnode.expanded
+
+    @expanded.setter
+    def expanded(self, val):
+        self.dagnode.expanded=val
+        return self.dagnode.expanded
+
+    @property
+    def height_collapsed(self):
+        return self.dagnode.height_collapsed
+
+    @height_collapsed.setter
+    def height_collapsed(self, val):
+        self.dagnode.height_collapsed=val
+        return self.dagnode.height_collapsed
+
+    @property
+    def height_expanded(self):
+        return self.dagnode.height_expanded
+
+    @height_expanded.setter
+    def height_expanded(self, val):
+        self.dagnode.height_expanded=val
+        return self.dagnode.height_expanded
 
     @property
     def color(self):
@@ -297,7 +339,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Toggle the node's expanded value.
         """
-        self.expanded = val
+        self.dagnode.expanded = val
         top_val = self.boundingRect().top()
         if val:
             self.height = 175
@@ -312,12 +354,12 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Draw the node.
         """
-        # position the label
-        self.label.setPos(-self.width/2 + self.bufferX*2, -self.height/2 - self.bufferY)
-
         # label & line
         if self.expanded:    
             label_line = self.getLabelLine()
+            
+        # position the label
+        self.label.setPos(-self.width/2 + self.bufferX*2, -self.height/2 - self.bufferY)
 
         painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         
@@ -380,7 +422,6 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         self.input_widget.update()
         self.output_widget.update()
-
         self.label.update()
 
 
