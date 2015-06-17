@@ -180,6 +180,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
+        self.action_evaluate.triggered.connect(self.graph.evaluate)
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
@@ -197,8 +198,6 @@ class SceneGraphUI(form_class, base_class):
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
 
-        # evaluate button
-        self.evaluate_button.clicked.connect(self.graph.evaluate)
 
     def initializeFileMenu(self):
         """
@@ -443,10 +442,15 @@ class SceneGraphUI(form_class, base_class):
         """
         self.removeDetailWidgets()
         nodes = self.scene.selectedItems()
-        if len(nodes) == 1:
-
-            node = nodes[0]
-            self.updateAttributeEditor(node)
+        if nodes:
+            if len(nodes) == 1:
+                node = nodes[0]
+                self.updateAttributeEditor(node)
+        else:
+            # clear the attribute editor
+            attr_widget = self.getAttributeEditorWidget()
+            if attr_widget:
+                attr_widget.deleteLater()
 
     def getAttributeEditorWidget(self):
         return self.attrEditorWidget.findChild(QtGui.QWidget, 'AttributeEditor')

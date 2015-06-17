@@ -363,15 +363,21 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = widget type
         """        
         if hasattr(item, 'node_class'):
+            dagnode = item.dagnode
+            nid = str(dagnode.UUID)
             if item.node_class in ['dagnode']:
-                print '# deleting node...'
+                print '# deleting node: "%s"' % dagnode.name 
                 #item.deleteLater()
                 item.deleteNode()
+                self.graph.dagnodes.pop(nid)
+
 
             if item.node_class in ['edge']:
-                print '# deleting edge...'
+                print '# deleting edge: "%s"' % dagnode.name 
                 # update connected nodes
                 item.deleteEdge()
+                self.graph.dagedges.pop(nid)
+
         QtGui.QGraphicsScene.removeItem(self, item)
 
     def nodeChangedAction(self, UUID, attrs):

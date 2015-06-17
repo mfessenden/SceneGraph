@@ -297,10 +297,11 @@ class Graph(object):
         nn['name'] = name
         nn['node_type'] = node_type
 
-
         if self.view:
             self.scene.addItem(node)
             node.setPos(dag.pos_x, dag.pos_y)
+            node.setSelected(True)
+            self.view.parent.updateAttributeEditor(node)
 
         return dag
 
@@ -546,6 +547,8 @@ class Graph(object):
         # clear the Graph
         self.network.clear()
         self.scene.clear()
+        self.dagnodes = dict()
+        self.dagedges = dict()
 
     def downstream(self, node):
         """

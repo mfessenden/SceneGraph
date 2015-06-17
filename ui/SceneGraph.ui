@@ -42,13 +42,6 @@
           <layout class="QVBoxLayout" name="gviewLayout"/>
          </widget>
         </item>
-        <item>
-         <widget class="QPushButton" name="evaluate_button">
-          <property name="text">
-           <string>Evaluate</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="outputTab">
@@ -144,6 +137,9 @@
      <string>Graph</string>
     </property>
     <addaction name="action_clear_graph"/>
+    <addaction name="separator"/>
+    <addaction name="action_evaluate"/>
+    <addaction name="separator"/>
     <addaction name="action_edge_type"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
@@ -257,7 +253,11 @@
           <height>108</height>
          </rect>
         </property>
-        <layout class="QVBoxLayout" name="sceneScrollAreaLayout"/>
+        <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
+         <item>
+          <widget class="QListView" name="listView"/>
+         </item>
+        </layout>
        </widget>
       </widget>
      </item>
@@ -458,6 +458,14 @@
    </property>
    <property name="toolTip">
     <string>Bezier lines</string>
+   </property>
+  </action>
+  <action name="action_evaluate">
+   <property name="text">
+    <string>Evaluate...</string>
+   </property>
+   <property name="toolTip">
+    <string>evaluate the graph</string>
    </property>
   </action>
  </widget>
