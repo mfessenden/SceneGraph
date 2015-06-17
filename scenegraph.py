@@ -66,6 +66,9 @@ class SceneGraphUI(form_class, base_class):
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
 
+        # temp file
+        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')  
+
         # preferences
         self.settings_file    = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
         self.qtsettings       = Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
@@ -173,7 +176,6 @@ class SceneGraphUI(form_class, base_class):
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
         self.menu_ui.aboutToShow.connect(self.initializeUIMenu)
 
-
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
@@ -205,6 +207,8 @@ class SceneGraphUI(form_class, base_class):
         current_scene = self.graph.getScene()
         if not current_scene:
             self.action_save_graph.setEnabled(False)
+
+        # create the recent files menu
         self.initializeRecentFilesMenu()
 
     def initializeGraphMenu(self):
@@ -237,9 +241,10 @@ class SceneGraphUI(form_class, base_class):
         if recent_files:
             # Recent files menu
             for filename in reversed(recent_files):
-                file_action = QtGui.QAction(filename, self.menu_recent_files)
-                file_action.triggered.connect(partial(self.readRecentGraph, filename))
-                self.menu_recent_files.addAction(file_action)
+                if filename:
+                    file_action = QtGui.QAction(filename, self.menu_recent_files)
+                    file_action.triggered.connect(partial(self.readRecentGraph, filename))
+                    self.menu_recent_files.addAction(file_action)
             self.menu_recent_files.setEnabled(True)
 
     def buildWindowTitle(self):
@@ -337,6 +342,16 @@ class SceneGraphUI(form_class, base_class):
         self.initializeRecentFilesMenu()
         return self.graph.getScene()      
 
+    def saveTempFile(self):
+        """
+        Save a temp file when the graph changes.
+        """
+        temp_scene = self.temp_scene
+        if 'temp_scene' not in self.graph.network.graph:
+            self.graph.network.graph['temp_scene'] = self.temp_scene
+        self.graph.write(temp_scene)
+        return temp_scene
+
     def readGraph(self):
         """
         Read the current graph from a json file
@@ -353,8 +368,11 @@ class SceneGraphUI(form_class, base_class):
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
-        self.graph.setScene(filename)
-        self.qtsettings.addRecentFile(filename)
+
+        if filename != self.temp_scene:
+            self.graph.setScene(filename)
+            self.qtsettings.addRecentFile(filename)
+            print '# DEBUG: adding recent file: %s' % filename
         self.buildWindowTitle()
 
     # TODO: combine this with readGraph
@@ -462,6 +480,7 @@ class SceneGraphUI(form_class, base_class):
         """
         self.updateAttributeEditor(node)
         self.updateOutput()
+        self.saveTempFile()
 
     # TODO: disabling this, causing lag
     def sceneChangedAction(self, event):

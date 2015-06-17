@@ -46,7 +46,8 @@ class Graph(object):
         from SceneGraph.options import VERSION_AS_STRING
         self.network.graph['version'] = VERSION_AS_STRING
         self.network.graph['scene'] = scene
-        self.network.graph['environment'] = 'command_line' 
+        self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
+        self.network.graph['environment'] = 'command_line'
 
     def initializeUI(self, view):
         """
@@ -92,7 +93,9 @@ class Graph(object):
         returns:
             scene (str)
         """
-        self.network.graph['scene'] = scene
+        tmp_dir = os.getenv('TMPDIR')
+        if tmp_dir not in scene:
+            self.network.graph['scene'] = scene
         return self.getScene()
 
     def listNodes(self):
@@ -270,26 +273,19 @@ class Graph(object):
         """
         from SceneGraph import core
         reload(core)
-
-        UUID = kwargs.pop('id', None)
         name   = kwargs.pop('name', 'node1')
-        
-        pos_x = kwargs.pop('pos_x', 0)
-        pos_y = kwargs.pop('pos_y', 0)
-        width = kwargs.pop('width', 120)
-        height = kwargs.pop('height', 175)
-        expanded = kwargs.pop('expanded', False)
 
         if not self.validNodeName(name):
             name = self._nodeNamer(name)
 
-        dag = core.NodeBase(node_type, name=name, id=UUID, **kwargs)
+        dag = core.NodeBase(node_type, name=name, **kwargs)
         self.dagnodes[str(dag.UUID)] = dag
 
         if self.view:
             from SceneGraph import ui
             reload(ui)
-            node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
+            #node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
+            node = ui.NodeWidget(dag)
             log.info('adding scene graph node "%s"' % name)
         else:
             log.info('adding node "%s"' % name)
@@ -301,14 +297,10 @@ class Graph(object):
         nn['name'] = name
         nn['node_type'] = node_type
 
-        if self.view:
-            nn['pos_x'] = node.pos().x()
-            nn['pos_y'] = node.pos().y()
-            nn['width'] = node.width
-            nn['height'] = node.height
 
+        if self.view:
             self.scene.addItem(node)
-            node.setPos(pos_x, pos_y)
+            node.setPos(dag.pos_x, dag.pos_y)
 
         return dag
 
@@ -541,7 +533,11 @@ class Graph(object):
             return False
 
         for node in self.getDagNodes():
-            self.network.node[str(node.UUID)].update(node.getNodeAttributes())
+            nid = str(node.UUID)
+            if nid in self.network.nodes():
+                self.network.node[nid].update(node.getNodeAttributes())
+            else:
+                print '# ERROR: node id "%s" not found.' % nid
 
     def reset(self):
         """
@@ -613,6 +609,7 @@ class Graph(object):
         fn = open(filename, 'w')
         json.dump(graph_data, fn, indent=4)
         fn.close()
+
         return self.setScene(filename)
 
     def read(self, filename):

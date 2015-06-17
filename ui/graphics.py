@@ -257,7 +257,8 @@ class GraphicsView(QtGui.QGraphicsView):
         elif event.key() == QtCore.Qt.Key_D:
             items = graphicsScene.selectedItems()
             for item in items:
-                if hasattr(item, 'enabled'):
+                dag = item.dagnode
+                if hasattr(dag, 'enabled'):
                     try:
                         item.enabled = not item.enabled
                         #item.setSelected(False)

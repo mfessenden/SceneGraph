@@ -121,7 +121,7 @@ class AttributeEditor(QtGui.QWidget):
         new_value = str(lineEdit.text())
         try:
             new_value = eval(new_value)
-        except NameError:
+        except:
             pass
         self._current_node.dagnode.addNodeAttributes(**{attribute:new_value})
         self.setNode(self._current_node)

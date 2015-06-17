@@ -50,11 +50,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # flag for an expanded node
         self.is_expandable      = True
-        self.expanded           = kwargs.get('expanded', False)
         self.expand_widget      = None
-
-        # width/height attributes
-        self.enabled            = True
 
         # buffers
         self.bufferX            = 3
@@ -130,6 +126,15 @@ class NodeWidget(QtGui.QGraphicsObject):
     def expanded(self, val):
         self.dagnode.expanded=val
         return self.dagnode.expanded
+
+    @property
+    def enabled(self):        
+        return self.dagnode.enabled
+
+    @enabled.setter
+    def enabled(self, val):
+        self.dagnode.enabled=val
+        return self.dagnode.enabled
 
     @property
     def height_collapsed(self):
@@ -357,7 +362,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         # label & line
         if self.expanded:    
             label_line = self.getLabelLine()
-            
+
         # position the label
         self.label.setPos(-self.width/2 + self.bufferX*2, -self.height/2 - self.bufferY)
 

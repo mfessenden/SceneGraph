@@ -13,7 +13,7 @@ reload(options)
 class NodeBase(object):
     
     Type    = QtGui.QGraphicsItem.UserType + 3
-    PRIVATE = ['UUID', 'node_type', 'height_collapsed', 'height_expanded']
+    PRIVATE = ['UUID', 'node_type', 'height_collapsed', 'height_expanded', 'expanded']
 
     def __init__(self, node_type='default', **kwargs):
         # data attribute for arbitrary attributes
@@ -40,7 +40,7 @@ class NodeBase(object):
         self.addNodeAttributes(**kwargs)
 
     def __str__(self):
-        data = """%s %s {""" % (type(self).__name__, self.name)
+        data = '''%s "%s" {''' % (type(self).__name__, self.name)
         for k, v in self.data.iteritems():
             data += "\n   %s: %s," % (k, str(v))
         data += "\n}"
@@ -62,10 +62,10 @@ class NodeBase(object):
     def data(self):
         data = self._data
         data.update(name=self.name, 
-                    UUID=str(self.UUID), 
                     width=self.width, 
                     height=self.height,
-                    expanded=self.expanded
+                    expanded=self.expanded,
+                    enabled=self.enabled,
                     )
         return data
 
@@ -191,6 +191,7 @@ class NodeBase(object):
         from SceneGraph import util
         reload(util)
         for attr, val in kwargs.iteritems():
+            #print '# "%s.%s": %s' % (self.name, attr, str(val))
             self._data[attr] = val
 
     def removeNodeAttributes(self, *args):
