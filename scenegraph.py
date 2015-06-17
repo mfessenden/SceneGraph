@@ -492,6 +492,12 @@ class SceneGraphUI(form_class, base_class):
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos_x=scene_pos.x(), pos_y=scene_pos.y()))
 
+        # haxx: stylesheet should work here
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        add_menu.setStyleSheet(str(ssf.readAll()))
+        tab_menu.setStyleSheet(str(ssf.readAll()))
+        
         tab_menu.addMenu(add_menu)
         tab_menu.exec_(qcurs.pos())
 

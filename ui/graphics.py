@@ -89,7 +89,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def resizeEvent(self, event):
         #self.sendConsoleStatus(event)        
-        self.updateSceneRect(self.scene().sceneRect())  
+        #self.updateSceneRect(self.scene().sceneRect())  
         QtGui.QGraphicsView.resizeEvent(self, event)
 
     def viewportEvent(self, event):
@@ -162,7 +162,8 @@ class GraphicsView(QtGui.QGraphicsView):
             self.current_cursor_pos = event.pos()
         else:
             self.current_cursor_pos = event.pos()
-        
+
+
         # Handle Modifier+MouseClick box behavior
         if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
             if self.boxing:
@@ -170,6 +171,19 @@ class GraphicsView(QtGui.QGraphicsView):
                 self.modifierBox.show()
                 event.accept()
                 return
+
+        if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.AltModifier:
+            item = self.itemAt(event.pos())
+            if item:
+                if hasattr(item, 'node_class'):
+                    if item.node_class in ['dagnode']:
+                        UUID = item.dagnode.UUID
+                        if UUID:
+                            # get downstream nodes 
+                            ds_ids = self.scene().graph.downstream(UUID)
+                            for nid in ds_ids:
+                                node_widget = self.scene().graph.getSceneNode(UUID=nid)
+                                node_widget.setSelected(True)
 
         self.updateNetworkGraphAttributes()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
@@ -179,7 +193,7 @@ class GraphicsView(QtGui.QGraphicsView):
         Pan the viewport if the control key is pressed
         """
         #self.sendConsoleStatus(event)
-        if event.modifiers() == QtCore.Qt.ControlModifier:
+        if event.modifiers() & QtCore.Qt.ControlModifier:
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
         else:
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
@@ -239,8 +253,19 @@ class GraphicsView(QtGui.QGraphicsView):
                         graphicsScene.network.remove_edge(*item.dagnode.ids)
                         continue
 
+        # disable selected nodes
+        elif event.key() == QtCore.Qt.Key_D:
+            items = graphicsScene.selectedItems()
+            for item in items:
+                if hasattr(item, 'enabled'):
+                    try:
+                        item.enabled = not item.enabled
+                        #item.setSelected(False)
+                    except:
+                        pass
 
         self.updateNetworkGraphAttributes()
+        graphicsScene.update()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def get_scroll_state(self):
@@ -322,6 +347,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 self.sceneNodes[str(item.UUID)] = item
                 self.nodeAdded.emit(item)
                 item.nodeChanged.connect(self.nodeChangedAction)
+                item.scenePositionChanged.connect(self.itemPositionChanged)
 
             if item.node_class in ['edge']:
                 self.sceneEdges[str(item.UUID)] = item
@@ -355,6 +381,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
             print '# GraphicsScene: sending node changed: ', node
             self.update()
 
+    def itemPositionChanged(self, item, pos):
+        item.dagnode.pos_x = pos[0]
+        item.dagnode.pos_1 = pos[1]
+
     def edgeChangedAction(self, UUID, attrs):
         # find the node widget
         edge = self.sceneEdges.get(UUID, None)
@@ -384,16 +414,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         if source_item.isInputConnection() or dest_item.isOutputConnection():
             return False
+
+        # check here to see if destination can take another connection
+        if hasattr(dest_item, 'is_connectable'):
+            if not dest_item.is_connectable:
+                return False
         return True
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Control:
-            pass
-        QtGui.QGraphicsScene.keyPressEvent(self, event)
+        return QtGui.QGraphicsScene.keyPressEvent(self, event)
 
-    def resizeEvent(self, event):
-        self.update()
-        QtGui.QGraphicsScene.resizeEvent(self, event)        
+    def resizeEvent(self, event):        
+        QtGui.QGraphicsScene.resizeEvent(self, event)
+        self.update()        
 
     def mousePressEvent(self, event):
         item = self.itemAt(event.scenePos())
@@ -403,7 +436,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
                     self.addItem(self.line)
                     self.update(self.itemsBoundingRect())
-        
+            
+
         if event.button() == QtCore.Qt.RightButton:
             pass
 

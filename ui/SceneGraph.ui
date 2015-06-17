@@ -42,6 +42,13 @@
           <layout class="QVBoxLayout" name="gviewLayout"/>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="evaluate_button">
+          <property name="text">
+           <string>Evaluate</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="outputTab">
@@ -285,8 +292,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>243</width>
-          <height>271</height>
+          <width>256</width>
+          <height>272</height>
          </rect>
         </property>
         <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -365,13 +372,6 @@
          </item>
         </layout>
        </widget>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="evaluate_button">
-       <property name="text">
-        <string>Evaluate</string>
-       </property>
       </widget>
      </item>
     </layout>

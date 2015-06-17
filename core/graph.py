@@ -551,6 +551,21 @@ class Graph(object):
         self.network.clear()
         self.scene.clear()
 
+    def downstream(self, node):
+        """
+        Return downstream nodes from the given node.
+        """
+        nid = None
+        if node not in self.network.nodes():
+            if self.getNodeID(node):
+                nid = self.getNodeID(node)
+        else:
+            nid = node
+
+        if nid is not None:
+            return nx.descendants(self.network, nid)
+        return []
+
     def validNodeName(self, name):
         """
         Returns true if name not already assigned to a node.

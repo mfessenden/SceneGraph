@@ -66,15 +66,6 @@ QMenu{
     /*box-shadow: 0px 1px 0px 0px #191919;*/
 }
 
-QAction {
-    font-size: 9pt;
-}
-
-QMenu::indicator {
-    width: 13px;
-    height: 13px;
-}
-
 QMenu::item {
     padding: 2px 25px 2px 20px;
     border: 1px solid transparent; /* reserve space for selection border */
@@ -82,6 +73,21 @@ QMenu::item {
 
 QMenu::item:selected {
     background: rgba(100, 100, 100, 150);
+}
+
+QMenu::tearoff {
+    font-size: 9pt;
+    border: 1px solid;
+    border-bottom-color: #1f1f1f;
+    border-top-color: #333333;
+    border-left-color: #585858;
+    border-right-color: #1f1f1f;
+    background-color: #333333;
+}
+
+QMenu::indicator {
+    width: 13px;
+    height: 13px;
 }
 
 QMenu::item:disabled {

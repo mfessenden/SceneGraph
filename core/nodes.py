@@ -13,7 +13,7 @@ reload(options)
 class NodeBase(object):
     
     Type    = QtGui.QGraphicsItem.UserType + 3
-    PRIVATE = ['name', 'node_type', 'UUID', 'color']
+    PRIVATE = ['name', 'node_type', 'UUID', 'color', 'enabled']
 
     def __init__(self, node_type='default', **kwargs):
         
@@ -31,6 +31,7 @@ class NodeBase(object):
         # data attribute for arbitrary attributes
         self._data           = dict()        
         self.color           = [180, 180, 180]
+        self.enabled         = kwargs.pop('enabled', True)   
 
         # add any arbitrary attributes
         self.addNodeAttributes(**kwargs)
