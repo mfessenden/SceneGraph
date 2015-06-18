@@ -86,8 +86,11 @@ class SceneGraphUI(form_class, base_class):
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
-
         ssf.close()
+
+        # list model
+        self.listModel = ui.NodeListModel()
+        self.listView.setModel(self.listModel)
 
         self.resetStatus()
         #QtGui.QApplication.instance().installEventFilter(self)
@@ -442,10 +445,28 @@ class SceneGraphUI(form_class, base_class):
         """
         self.removeDetailWidgets()
         nodes = self.scene.selectedItems()
+
+        # clear the list view
+        self.listModel.clear()
+        self.listView.reset()
+        
         if nodes:
             if len(nodes) == 1:
                 node = nodes[0]
                 self.updateAttributeEditor(node)
+
+                if hasattr(node, 'node_class'):
+                    if node.node_class in ['dagnode']:
+                        UUID = node.dagnode.UUID
+                        if UUID:
+                            ds_ids = self.scene.graph.downstream(UUID)
+                            dagnodes = []
+                            for nid in ds_ids:
+                                dagnode = self.scene.graph.getDagNode(UUID=nid)
+                                if dagnode:
+                                    dagnodes.append(dagnode)
+
+                            self.listModel.addNodes(dagnodes)
         else:
             # clear the attribute editor
             attr_widget = self.getAttributeEditorWidget()
