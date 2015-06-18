@@ -32,8 +32,8 @@ class GraphicsView(QtGui.QGraphicsView):
         # Mouse Interaction
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
-        self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
-        #self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        #self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
         self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
@@ -89,7 +89,8 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def resizeEvent(self, event):
         #self.sendConsoleStatus(event)        
-        #self.updateSceneRect(self.scene().sceneRect())  
+        #self.updateSceneRect(self.scene().sceneRect()) 
+        self.scene().update() 
         QtGui.QGraphicsView.resizeEvent(self, event)
 
     def viewportEvent(self, event):
@@ -154,6 +155,10 @@ class GraphicsView(QtGui.QGraphicsView):
         self.current_cursor_pos = event.pos()
         self.sendConsoleStatus(event)
 
+        # set up timer for node drops
+        timer = QtCore.QTimer()
+        timer.timeout.connect(partial(self.edgeDrop, event))
+
         # Panning
         if event.buttons() & QtCore.Qt.MiddleButton:
             delta = event.pos() - self.current_cursor_pos
@@ -164,7 +169,7 @@ class GraphicsView(QtGui.QGraphicsView):
             self.current_cursor_pos = event.pos()
 
 
-        # Handle Modifier+MouseClick box behavior
+        # translate the view when left mouse/control are active
         if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
             if self.boxing:
                 self.modifierBox.setGeometry(QtCore.QRect(self.modifierBoxOrigin, event.pos()).normalized())
@@ -172,21 +177,45 @@ class GraphicsView(QtGui.QGraphicsView):
                 event.accept()
                 return
 
-        if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.AltModifier:
-            item = self.itemAt(event.pos())
+        item = self.itemAt(event.pos())
+        if event.buttons() & QtCore.Qt.LeftButton:
+            
+            if event.modifiers() & QtCore.Qt.AltModifier:            
+                if item:
+                    if hasattr(item, 'node_class'):
+                        if item.node_class in ['dagnode']:
+                            UUID = item.dagnode.UUID
+                            if UUID:
+                                # get downstream nodes 
+                                ds_ids = self.scene().graph.downstream(UUID)
+                                for nid in ds_ids:
+                                    node_widget = self.scene().graph.getSceneNode(UUID=nid)
+                                    node_widget.setSelected(True)
             if item:
-                if hasattr(item, 'node_class'):
-                    if item.node_class in ['dagnode']:
-                        UUID = item.dagnode.UUID
-                        if UUID:
-                            # get downstream nodes 
-                            ds_ids = self.scene().graph.downstream(UUID)
-                            for nid in ds_ids:
-                                node_widget = self.scene().graph.getSceneNode(UUID=nid)
-                                node_widget.setSelected(True)
+                timer.start(1)
+
+
 
         self.updateNetworkGraphAttributes()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
+
+    def edgeDrop(self, event):
+        print 'drop'
+        item = self.itemAt(event.pos())
+        if item:
+            if hasattr(item, 'node_class'):
+                collisions = self.scene().collidingItems(item)
+                edges = []
+                if collisions:
+                    for c in collisions:
+                        if hasattr(c, 'node_class'):
+                            if c.node_class == 'edge':
+                                edges.append(c)
+                if edges:
+                    edge = edges[0]
+                    source_item = edge.source_item
+                    dest_item = edge.source_item
+                    print 'dropping node: ', item
 
     def mousePressEvent(self, event):
         """
@@ -363,20 +392,21 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = widget type
         """        
         if hasattr(item, 'node_class'):
-            dagnode = item.dagnode
-            nid = str(dagnode.UUID)
-            if item.node_class in ['dagnode']:
-                print '# deleting node: "%s"' % dagnode.name 
-                #item.deleteLater()
-                item.deleteNode()
-                self.graph.dagnodes.pop(nid)
+            if hasattr(item, 'dagnode'):
+                dagnode = item.dagnode
+                nid = str(dagnode.UUID)
+                if item.node_class in ['dagnode']:
+                    print '# deleting node: "%s"' % dagnode.name 
+                    #item.deleteLater()
+                    item.deleteNode()
+                    self.graph.dagnodes.pop(nid)
 
 
-            if item.node_class in ['edge']:
-                print '# deleting edge: "%s"' % dagnode.name 
-                # update connected nodes
-                item.deleteEdge()
-                self.graph.dagedges.pop(nid)
+                if item.node_class in ['edge']:
+                    print '# deleting edge: "%s"' % dagnode.name 
+                    # update connected nodes
+                    item.deleteEdge()
+                    self.graph.dagedges.pop(nid)
 
         QtGui.QGraphicsScene.removeItem(self, item)
 
@@ -512,7 +542,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     item.update()
 
                 if hasattr(item, 'node_class'):
-                    if item.node_class == 'control':
+                    if item.node_class == 'edge':
                         if item.visible:
                             edge = item.edge
                             print '# splitting nodes: ', edge.source_item, edge.dest_item

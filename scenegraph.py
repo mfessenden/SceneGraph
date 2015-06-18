@@ -61,7 +61,6 @@ class SceneGraphUI(form_class, base_class):
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-
         self.environment      = kwargs.get('env', 'standalone')  
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
@@ -77,10 +76,6 @@ class SceneGraphUI(form_class, base_class):
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
 
-        self.initializeUI()
-        self.readSettings()       
-        self.connectSignals()
-
         # stylesheet
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
         ssf = QtCore.QFile(self.stylesheet)
@@ -88,9 +83,16 @@ class SceneGraphUI(form_class, base_class):
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
-        # list model
-        self.listModel = ui.NodeListModel()
-        self.listView.setModel(self.listModel)
+        # item view/model
+        self.tableView = ui.TableView(self.sceneWidgetContents)
+        self.sceneScrollAreaLayout.addWidget(self.tableView)
+        self.tableModel = ui.GraphTableModel(headers=['Node Type', 'Node'])
+        self.tableView.setModel(self.tableModel)
+        self.tableSelectionModel = self.tableView.selectionModel()
+
+        self.initializeUI()
+        self.readSettings()       
+        self.connectSignals()
 
         self.resetStatus()
         #QtGui.QApplication.instance().installEventFilter(self)
@@ -200,7 +202,10 @@ class SceneGraphUI(form_class, base_class):
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
+        self.action_spin.triggered.connect(self.spinAction)
 
+        # table view
+        self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
 
     def initializeFileMenu(self):
         """
@@ -376,6 +381,7 @@ class SceneGraphUI(form_class, base_class):
             self.qtsettings.addRecentFile(filename)
             print '# DEBUG: adding recent file: %s' % filename
         self.buildWindowTitle()
+        self.scene.clearSelection()
 
     # TODO: combine this with readGraph
     def readRecentGraph(self, filename):
@@ -390,6 +396,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.setScene(filename)
         self.qtsettings.addRecentFile(filename)
         self.buildWindowTitle()
+        self.scene.clearSelection()
 
     def resetGraph(self):
         """
@@ -447,13 +454,13 @@ class SceneGraphUI(form_class, base_class):
         nodes = self.scene.selectedItems()
 
         # clear the list view
-        self.listModel.clear()
-        self.listView.reset()
+        self.tableModel.clear()
+        self.tableView.reset()
         
         if nodes:
             if len(nodes) == 1:
                 node = nodes[0]
-                self.updateAttributeEditor(node)
+                self.updateAttributeEditor(node.dagnode)
 
                 if hasattr(node, 'node_class'):
                     if node.node_class in ['dagnode']:
@@ -466,7 +473,8 @@ class SceneGraphUI(form_class, base_class):
                                 if dagnode:
                                     dagnodes.append(dagnode)
 
-                            self.listModel.addNodes(dagnodes)
+                            dagnodes = [x for x in reversed(dagnodes)]
+                            self.tableModel.addNodes(dagnodes)
         else:
             # clear the attribute editor
             attr_widget = self.getAttributeEditorWidget()
@@ -484,14 +492,23 @@ class SceneGraphUI(form_class, base_class):
             nodes = [nodes,]
 
         for node in nodes:
-            if hasattr(node, 'node_class'):
-                if node.node_class in ['dagnode']:
+            if hasattr(node, 'Type'):
+                if node.Type == 65539:
                     attr_widget = self.getAttributeEditorWidget()
                     
                     if not attr_widget:
                         attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)                    
                         self.attributeScrollAreaLayout.addWidget(attr_widget)
                     attr_widget.setNode(node)
+
+    def tableSelectionChangedAction(self):
+        """
+        Update the attribute editor when a node is selected in the graph list.
+        """
+        if self.tableSelectionModel.selectedRows():
+            idx = self.tableSelectionModel.selectedRows()[0]
+            dagnode = self.tableModel.nodes[idx.row()]
+            self.updateAttributeEditor(dagnode)
 
     def nodeAddedAction(self, node):
         """
@@ -503,7 +520,7 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
-        self.updateAttributeEditor(node)
+        self.updateAttributeEditor(node.dagnode)
         self.updateOutput()
         self.saveTempFile()
 
@@ -570,6 +587,13 @@ class SceneGraphUI(form_class, base_class):
 
     def renameNodeAction(self):
         print 'renaming node...'
+
+    def spinAction(self):
+        self.timer.timeout.connect(self.rotateView)
+        self.timer.start(90)
+
+    def rotateView(self):
+        self.view.rotate(4)
 
     #- Settings -----
     def readSettings(self):
@@ -654,6 +678,8 @@ class SceneGraphUI(form_class, base_class):
         self.outputPlainTextEdit.setFont(self.fonts.get('output'))
 
         self.outputPlainTextEdit.scrollContentsBy(0, posy)
+        self.outputPlainTextEdit.setReadOnly(True)
+
 
     def updateConsole(self, status):
         """

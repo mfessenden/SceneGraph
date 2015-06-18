@@ -16,4 +16,5 @@ GraphicsScene       = graphics.GraphicsScene
 NodeWidget          = node_widgets.NodeWidget
 EdgeWidget          = node_widgets.EdgeWidget
 ConnectionWidget    = node_widgets.ConnectionWidget
-NodeListModel	    = models.NodeListModel
+GraphTableModel	    = models.GraphTableModel
+TableView			= models.TableView

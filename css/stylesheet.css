@@ -132,3 +132,30 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none;
 }
+
+QTableView {
+    selection-background-color: #707070;
+    border-radius: 2px;
+    border: 1px solid #2e2e2d;
+
+}
+
+QHeaderView::section {
+    padding-left: 4px;
+    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #323232, stop: 0.5 #242424, stop:1 #323232);
+    color: #d4d4d4;    
+    border: .5px solid #323232;
+}
+
+QHeaderView::section:checked{
+    /* background-color: #707070; */
+}
+
+/* style the sort indicator */
+QHeaderView::down-arrow {
+    image: url(down_arrow.png);
+}
+
+QHeaderView::up-arrow {
+    image: url(up_arrow.png);
+}

@@ -593,6 +593,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         # The arrow that's drawn in the center of the line
         self.arrowhead      = QtGui.QPolygonF()
         self.color          = [224, 224, 224]
+        self.visible        = True
 
         # items are Connection widgets
         self.source_item    = source_item
@@ -846,6 +847,13 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.cp.visible = False
         draw_arrowhead = True
 
+        self.cp1.hide()
+        self.cp2.hide()
+
+        # move the control points here                        
+        self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
+        self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
+
         if option.state & QtGui.QStyle.State_Selected:
             painter.setBrush(QtCore.Qt.yellow)
             epen.setColor(QtCore.Qt.yellow)
@@ -906,9 +914,6 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
                 if self.debug_mode:
 
-                    self.cp1.hide()
-                    self.cp2.hide()
-
                     if self.edge_type == 'bezier':
 
                         self.cp1.show()
@@ -935,9 +940,6 @@ class EdgeWidget(QtGui.QGraphicsObject):
                         painter.setPen(cp_pen)
                         painter.setBrush(QtGui.QBrush(red_color))
 
-                        # moving the control points here                        
-                        self.cp1.setPos(self.mapToScene(QtCore.QPointF(self.c1.x(), self.c1.y())))
-                        self.cp2.setPos(self.mapToScene(QtCore.QPointF(self.c2.x(), self.c2.y())))
 
                         # add a string of text to the center point
                         dx = line.p2().x() - line.p1().x()
@@ -971,7 +973,6 @@ class ControlPoint(QtGui.QGraphicsObject):
     def __init__(self, center, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
-        self.node_class     = 'control'
         self.center_point   = center
         self.edge           = parent
 
@@ -985,6 +986,10 @@ class ControlPoint(QtGui.QGraphicsObject):
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsMovable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemSendsGeometryChanges)
         self.setZValue(1)
+
+    @property
+    def node_class(self):
+        return 'control_point' 
 
     def boundingRect(self):
         return QtCore.QRectF(-self.radius/2  - self.radius,  -self.radius/2 - self.radius,
@@ -1010,6 +1015,7 @@ class ControlPoint(QtGui.QGraphicsObject):
         green_color = QtGui.QColor(52,162,255)
         cp_pen = QtGui.QPen(QtCore.Qt.NoPen)
         painter.setPen(cp_pen)
+        painter.setBrush(QtCore.Qt.NoBrush)
         
         # show center point
         if self.visible:
@@ -1071,8 +1077,9 @@ class NodeLabel(QtGui.QGraphicsObject):
             label_color = [125, 125, 125]
             label_italic = True
 
-        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+        #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         qfont = QtGui.QFont(self.font)
+        qfont.setStyleStrategy(QtGui.QFont.PreferAntialias)
         qfont.setPointSize(self._font_size)
         qfont.setBold(self._font_bold)
         qfont.setItalic(label_italic)

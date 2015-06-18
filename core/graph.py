@@ -301,7 +301,7 @@ class Graph(object):
             self.scene.addItem(node)
             node.setPos(dag.pos_x, dag.pos_y)
             node.setSelected(True)
-            self.view.parent.updateAttributeEditor(node)
+            self.view.parent.updateAttributeEditor(node.dagnode)
 
         return dag
 

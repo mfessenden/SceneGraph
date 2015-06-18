@@ -193,6 +193,13 @@ class NodeBase(object):
         for attr, val in kwargs.iteritems():
             #print '# "%s.%s": %s' % (self.name, attr, str(val))
             self._data[attr] = val
+            if attr in ['pos_x', 'pos_y']:
+                if self._widget is not None:
+
+                    if attr == 'pos_x':
+                        self._widget.setX(float(val))
+                    if attr == 'pos_y':
+                        self._widget.setY(float(val))
 
     def removeNodeAttributes(self, *args):
         """

@@ -54,9 +54,9 @@ class AttributeEditor(QtGui.QWidget):
                 #self.pathEdit.setText(node_item.path())
                 #self.pathEdit.setEnabled(False)
                 
-                for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
+                for attr, val in node_item.getNodeAttributes().iteritems():
                     editable = True
-                    if attr in node_item.dagnode.PRIVATE:
+                    if attr in node_item.PRIVATE:
                         editable = False
 
                     # create an attribute label
@@ -88,7 +88,7 @@ class AttributeEditor(QtGui.QWidget):
 
             else:
                 # update existing attribute editors
-                for attr, val in node_item.dagnode.getNodeAttributes().iteritems():
+                for attr, val in node_item.getNodeAttributes().iteritems():
                     editor = self.findChild(QtGui.QLineEdit, '%s_edit' % attr)
                     if editor:
                         editor.blockSignals(True)
@@ -108,11 +108,11 @@ class AttributeEditor(QtGui.QWidget):
         Update the current node
         """
         new_name = str(self.nameEdit.text())
-        if self._current_node.dagnode:
-            node = self.manager.renameNode(self._current_node.dagnode.name, new_name)
+        if self._current_node:
+            node = self.manager.renameNode(self._current_node.name, new_name)
             if node:
                 self.setNode(node)
-                node.update()
+                node._widget.update()
     
     def updateNodeAttribute(self, lineEdit, attribute):
         """
@@ -123,7 +123,7 @@ class AttributeEditor(QtGui.QWidget):
             new_value = eval(new_value)
         except:
             pass
-        self._current_node.dagnode.addNodeAttributes(**{attribute:new_value})
+        self._current_node.addNodeAttributes(**{attribute:new_value})
         self.setNode(self._current_node)
     
     def nodeUpdatedFilter(self):
