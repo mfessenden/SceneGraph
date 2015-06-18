@@ -363,6 +363,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         if self.expanded:    
             label_line = self.getLabelLine()
 
+        # pen width
+        penw = 1
+
         # position the label
         self.label.setPos(-self.width/2 + self.bufferX*2, -self.height/2 - self.bufferY)
 
@@ -376,6 +379,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_Selected:
             top_color =[255, 172, 0]
             pen_color = [255, 195, 76, 125]
+            penw = 2
        
         top_qcolor = QtGui.QColor(*top_color)       
         if not self.enabled:
@@ -387,11 +391,12 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         gradient.setColorAt(0, top_qcolor)
         gradient.setColorAt(1, btm_qcolor)
-       
-        painter.setBrush(QtGui.QBrush(gradient))
-        painter.setPen(QtGui.QPen())
+        
+        qpen = QtGui.QPen(pen_qcolor)
+        qpen.setWidthF(penw)
 
-        painter.setPen(QtGui.QPen(pen_qcolor))
+        painter.setBrush(QtGui.QBrush(gradient))
+        painter.setPen(qpen)
 
         # draw the node background
         fullRect = self.boundingRect()
@@ -447,7 +452,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         self.dagnode        = parent.dagnode
         self.radius         = 32
         self.draw_radius    = self.radius/7
-        self.max_conn       = 1                     # max number of connections
+        self.max_conn       = 1                     # max number of connections (0 means infinite)
 
         self.connections    = weakref.WeakValueDictionary()
 
@@ -659,9 +664,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Returns true if the edge has two connections.
         """
-        if self.source_item in self.scene().items():
-            if self.dest_item in self.scene().items():
-                return True
+        if self:
+            if self.source_item in self.scene().items():
+                if self.dest_item in self.scene().items():
+                    return True
         return False
 
     def listConnections(self):

@@ -399,14 +399,16 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     print '# deleting node: "%s"' % dagnode.name 
                     #item.deleteLater()
                     item.deleteNode()
-                    self.graph.dagnodes.pop(nid)
+                    if nid in self.graph.dagnodes:
+                        self.graph.dagnodes.pop(nid)
 
 
                 if item.node_class in ['edge']:
                     print '# deleting edge: "%s"' % dagnode.name 
                     # update connected nodes
                     item.deleteEdge()
-                    self.graph.dagedges.pop(nid)
+                    if nid in self.graph.dagedges:
+                        self.graph.dagedges.pop(nid)
 
         QtGui.QGraphicsScene.removeItem(self, item)
 
@@ -454,6 +456,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
             return False
 
         if source_item.isInputConnection() or dest_item.isOutputConnection():
+            return False
+
+        # don't let the user connect input/output on the same node!
+        if str(source_item.dagnode.UUID) == str(dest_item.dagnode.UUID):
             return False
 
         # check here to see if destination can take another connection

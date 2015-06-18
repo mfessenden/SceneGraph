@@ -216,6 +216,7 @@ class ColorPicker(QtGui.QWidget):
         # SIGNALS/SLOTS
         self.slider.valueChanged.connect(self.sliderChangedAction)
         self.colorSwatch.clicked.connect(self.colorPickedAction)
+        self.slider.sliderReleased.connect(self.sliderReleasedAction)
 
     def getValue(self):
         return self.colorSwatch.color
@@ -233,14 +234,27 @@ class ColorPicker(QtGui.QWidget):
 
     def sliderChangedAction(self):
         """ set the value """
-        import colorsys
-        slider_value = self.slider.value()
-        hsv=self.colorSwatch.qcolor.getHsvF()
-        #self.colorSwatch.qcolor.setHsv(hsv[0], hsv[1], new_hsv[2], 255)
-        #self.colorSwatch._update()
-        new_rgb = colorsys.hsv_to_rgb(hsv[0], hsv[1], (hsv[2]*(self.mult*slider_value)))
-        #print new_rgb
-        self.colorSwatch.setColor(new_rgb)
+        sval = float(self.slider.value())
+
+        # normalize the slider value
+        n = float(((sval - float(self.min)) / (float(self.max) - float(self.min))))
+
+        red = float(self.color[0])
+        green = float(self.color[1])
+        blue = float(self.color[2])
+        rgb = (red*n, green*n, blue*n)
+        #rgb = expandNormRGB(red*n, green*n, blue*n)
+        new_color = QtGui.QColor(*rgb)
+        self.colorSwatch.qcolor = new_color
+        self.colorSwatch._update()
+
+    def sliderReleasedAction(self):
+        """
+        Update the items' color when the slider handle is released.
+        """
+        color = self.colorSwatch.color
+        self.colorChanged.emit(self.colorSwatch.qcolor)
+        self.colorSwatch._update()
 
     def colorPickedAction(self):
         """ action to call the color picker """
@@ -320,7 +334,7 @@ class ColorSwatch(QtGui.QToolButton):
     def _update(self):
         """ update the button color """
         self.color = self.qcolor.getRgb()[0:3]
-        self.setStyleSheet("QToolButton{background-color: rgb(%d, %d, %d)}" % (self.color[0], self.color[1], self.color[2]))        
+        self.setStyleSheet("QToolButton{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgb(%d, %d, %d), stop:1 rgb(%d, %d, %d))};" % (self.color[0]*.45, self.color[1]*.45, self.color[2]*.45, self.color[0], self.color[1], self.color[2]))
 
     def _getHsvF(self):
         return self.qcolor.getHsvF()
