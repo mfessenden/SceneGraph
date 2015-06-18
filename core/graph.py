@@ -353,12 +353,13 @@ class Graph(object):
                     self.scene.addItem(edge_widget)
             return edge
 
-    def removeEdge(self, conn=None, UUID=None):
+    def removeEdge(self, conn=None, UUID=None): 
         """
         Removes an edge from the graph
 
         params:
             UUID    - (str) edge UUID
+            conn    - (str) connection string (ie "node1.output,node2.input")
 
         returns:
             (object)  - removed edge
@@ -367,7 +368,7 @@ class Graph(object):
             if conn is None:
                 log.error('please enter a valid edge connection string or UUID')
                 return False
-            UUID = self.getNodeID(conn)
+            UUID = self.getEdgeID(conn)
 
         if UUID and UUID in self.dagedges:
             dag = self.dagedges.pop(UUID)
@@ -408,17 +409,26 @@ class Graph(object):
         """
         result = None
         for data in self.network.edges(data=True):
-
             src_id = data[0]
             dest_id = data[1]
             edge_attrs = data[2]
 
-            src_str = edge_attrs.get('src_node')
-            dest_str = edge_attrs.get('dest_node')
-            edge_id = edge_attrs.get('id')
-            # todo: do some string cleanup here
-            conn_str = '%s,%s' % (src_str, dest_str)
+            src_id = edge_attrs.get('src_id')
+            dest_id = edge_attrs.get('dest_id')
 
+            src_attr = edge_attrs.get('src_attr')
+            dest_attr = edge_attrs.get('dest_attr')
+            
+            src_node = self.getDagNode(UUID=src_id)
+            dest_node = self.getDagNode(UUID=dest_id)
+
+            if src_node is None or dest_node is None:
+                return result
+
+            edge_id = edge_attrs.get('id')
+            
+            conn_str = '%s.%s,%s.%s' % (src_node.name, src_attr, dest_node.name, dest_attr)
+            # todo: do some string cleanup here
             if conn_str == conn:
                 result = edge_id
         return result 

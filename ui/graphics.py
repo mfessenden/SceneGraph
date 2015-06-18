@@ -445,7 +445,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         return self.sceneNodes.values()
 
-    def validateConnection(self, source_item, dest_item):
+    def validateConnection(self, source_item, dest_item, force=True):
         """
         When the mouse is released, validate the two connections.
         """
@@ -464,7 +464,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         # check here to see if destination can take another connection
         if hasattr(dest_item, 'is_connectable'):
-            if not dest_item.is_connectable:
+            if not dest_item.is_connectable or not force:
                 return False
         return True
 
@@ -476,13 +476,17 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.update()        
 
     def mousePressEvent(self, event):
+        """
+        Draw a line if a connection widget is selected and dragged.
+        """
         item = self.itemAt(event.scenePos())
         if event.button() == QtCore.Qt.LeftButton:
             if hasattr(item, 'node_class'):
                 if item.node_class in ['connection']:
-                    self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
-                    self.addItem(self.line)
-                    self.update(self.itemsBoundingRect())
+                    if item.isOutputConnection():
+                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
+                        self.addItem(self.line)
+                        self.update(self.itemsBoundingRect())
             
 
         if event.button() == QtCore.Qt.RightButton:
@@ -492,6 +496,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.update()
 
     def mouseMoveEvent(self, event):
+        """
+        Update the line as the user draws.
+        """
         item = self.itemAt(event.scenePos())
         if item:
             pass
@@ -504,7 +511,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def mouseReleaseEvent(self, event):
         """
-        Add an edge if two connections are selected and valid.
+        Create an edge if the connections are valid.
         """
         if self.line:
             source_items = self.items(self.line.line().p1())
@@ -521,14 +528,15 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 source_conn = source_items[0]
                 dest_conn = dest_items[0]
 
-                if self.validateConnection(source_conn, dest_conn):
+                print '# source: ', source_conn
+                print '# dest:   ', dest_conn
 
+                if self.validateConnection(source_conn, dest_conn):
                     source_node = source_conn.node
                     dest_node = dest_conn.node
 
                     src_dag = source_node.dagnode
-                    dest_dag = source_node.dagnode
-                    
+                    dest_dag = source_node.dagnode                    
                     edge = self.graph.addEdge(src=source_conn.name, dest=dest_conn.name)
 
         self.line = None
