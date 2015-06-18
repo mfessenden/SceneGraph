@@ -140,6 +140,8 @@
     <addaction name="separator"/>
     <addaction name="action_evaluate"/>
     <addaction name="separator"/>
+    <addaction name="action_show_all_attributes"/>
+    <addaction name="separator"/>
     <addaction name="action_edge_type"/>
     <addaction name="action_spin"/>
    </widget>
@@ -217,7 +219,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>262</width>
+          <width>256</width>
           <height>107</height>
          </rect>
         </property>
@@ -256,8 +258,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>262</width>
-          <height>159</height>
+          <width>256</width>
+          <height>108</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -311,8 +313,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>249</width>
-          <height>271</height>
+          <width>256</width>
+          <height>272</height>
          </rect>
         </property>
         <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -490,6 +492,11 @@
   <action name="action_spin">
    <property name="text">
     <string>Spin...</string>
+   </property>
+  </action>
+  <action name="action_show_all_attributes">
+   <property name="text">
+    <string>Show all attributes</string>
    </property>
   </action>
  </widget>

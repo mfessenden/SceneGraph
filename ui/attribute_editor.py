@@ -53,7 +53,8 @@ class AttributeEditor(QtGui.QWidget):
                 for attr, val in node_item.getNodeAttributes().iteritems():
                     editable = True
                     if attr in node_item.PRIVATE:
-                        editable = False
+                        if not force:
+                            editable = False
 
                     # create an attribute label
                     attr_label = QtGui.QLabel(self)

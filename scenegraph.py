@@ -554,7 +554,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Build a context menu at the current pointer pos.
         """
-        nodes=['default', 'dot']
+        nodes=['default', 'dot', 'merge', 'model', 'lookdev']
         tab_menu = QtGui.QMenu(parent)
         tab_menu.clear()
         add_menu = QtGui.QMenu('Add node:')

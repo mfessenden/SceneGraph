@@ -15,12 +15,12 @@ class NodeBase(object):
     Type    = QtGui.QGraphicsItem.UserType + 3
     PRIVATE = ['UUID', 'node_type', 'height_collapsed', 'height_expanded', 'expanded']
 
-    def __init__(self, node_type='default', **kwargs):
+    def __init__(self, node_type, **kwargs):
         # data attribute for arbitrary attributes
         self._data              = dict() 
 
         self.name               = kwargs.pop('name', 'node1')
-        self.node_type          = kwargs.pop('node_type', 'default')
+        self.node_type          = node_type
         self.color              = kwargs.pop('color', [180, 180, 180])
         self.expanded           = kwargs.pop('expanded', False)
         self.height_collapsed   = kwargs.pop('height_collapsed', 15)
@@ -61,7 +61,8 @@ class NodeBase(object):
     @property
     def data(self):
         data = self._data
-        data.update(name=self.name, 
+        data.update(name=self.name,
+                    node_type=self.node_type,
                     width=self.width, 
                     height=self.height,
                     expanded=self.expanded,
