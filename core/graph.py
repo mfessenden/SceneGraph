@@ -23,10 +23,17 @@ class Graph(object):
         self.scene          = None      
         self.mode           = 'standalone'
 
+        # attribute for dynamically loaded nodes
+        self._node_types    = dict()
+
         self.dagnodes       = dict()
         self.dagedges       = dict()
 
+        # temp attributes
         self._copied_nodes  = []
+
+        # setup node types
+        self.initializeNodeTypes()
 
         # if we're in graphics mode
         self.initializeUI(viewport)
@@ -38,16 +45,6 @@ class Graph(object):
         import networkx.readwrite.json_graph as nxj
         graph_data = nxj.node_link_data(self.network)
         return json.dumps(graph_data, indent=5)
-
-    def initializeGraph(self, scene=None):
-        """
-        Add default attributes to the networkx graph.
-        """
-        from SceneGraph.options import VERSION_AS_STRING
-        self.network.graph['version'] = VERSION_AS_STRING
-        self.network.graph['scene'] = scene
-        self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
-        self.network.graph['environment'] = 'command_line'
 
     def initializeUI(self, view):
         """
@@ -62,16 +59,140 @@ class Graph(object):
             self.view = view
             self.scene = view.scene()
 
-    def evaluate(self):
+    def initializeNodeTypes(self):
+        """
+        Scan the dag nodes directory for node types.
+        """
+        from SceneGraph.options import SCENEGRAPH_NODE_PATH
+        self._node_types = self.scanNodeTypes(SCENEGRAPH_NODE_PATH)
+
+        if 'SCENEGRAPH_EXT_NODES' in os.environ:
+            ext_node_path = os.getenv('SCENEGRAPH_EXT_NODES')
+            if os.path.exists(ext_node_path):
+
+                self._node_types.update(**self.scanNodeTypes(ext_node_path))
+        return self._node_types
+
+    def scanNodeTypes(self, path):
+        """
+        Scan the given directory for node types.
+        """
+        nodes = dict()
+        if not os.path.exists(path):
+            print '# WARNING: node path "%s" does not exist.' % path
+            return nodes
+
+        #print '# searching for nodes in: "%s"' % path
+        for fn in os.listdir(path):
+            node_name = os.path.splitext(os.path.basename(fn))[0]
+            node_mod = os.path.join(path, '%s.py' % node_name)
+            node_data = os.path.join(path, '%s.mtd' % node_name)
+            if os.path.exists(node_mod) and os.path.exists(node_data):
+                #print '# loading node type "%s"' % node_name
+                node_attrs = dict()
+                node_attrs['module'] = node_mod
+                node_attrs['metadata'] = node_data
+                nodes[node_name]=node_attrs
+            else:
+                if not os.path.exists(node_mod):
+                    print '# WARNING: cannot find "%s" module %s' % (node_name, node_mod)
+                if not os.path.exists(node_data):
+                    print '# WARNING: cannot find "%s" metadata %s' % (node_name, node_data)
+        return nodes
+
+    def initializeGraph(self, scene=None):
+        """
+        Add default attributes to the networkx graph.
+        """
+        from SceneGraph.options import VERSION_AS_STRING
+        self.network.graph['version'] = VERSION_AS_STRING
+        self.network.graph['scene'] = scene
+        self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
+        self.network.graph['environment'] = 'command_line'
+
+    def updateGraph(self):
+        """
+        Update the networkx graph from the UI.
+
+        TODO: we need to store a weakref dict of dag nodes in the graph
+        """
+        if not self.view:
+            return False
+
+        for node in self.getDagNodes():
+            nid = str(node.UUID)
+            if nid in self.network.nodes():
+                self.network.node[nid].update(node.getNodeAttributes())
+
+    def evaluate(self, verbose=False):
         """
         Evaluate the graph.
         """
-        print '# evaluating graph....'
-        for node in self.network.nodes_iter(data=True):
-            print node
+        import time
+        tstart=time.time()
 
-        for edge in self.network.edges_iter(data=True):
-            print edge
+        dagnodes = self.getDagNodes()
+        dagedges = self.getDagEdges()
+
+        dag_ids = [d.UUID for d in dagnodes]
+        edge_ids = self.getEdgeIDs()
+
+        if self.network.nodes():
+            for node in self.network.nodes_iter(data=True):
+                node_id, node_attrs = node
+                if node_id not in dag_ids:
+                    print '# WARNING: invalid node "%s".' % node_attrs.get('name')
+
+        if self.network.edges():
+            for edge in self.network.edges_iter(data=True):
+                src_id, dest_id, edge_attrs = edge
+
+                edge_id = edge_attrs.get('id')
+                dagedge = self.getDagEdge(edge_id)
+                src_name = self.getDagNode(UUID=src_id)
+                dest_name = self.getDagNode(UUID=dest_id)
+
+                if edge_id not in edge_ids:
+                    print '# WARNING: invalid edge "%s".' % dagedge.name
+
+        # scene nodes/edges
+        if self.view:
+            # remove any invalid edge widgets.
+            invalid_edge_widgets = []
+            edge_widgets = self.scene.sceneEdges.values()
+
+            for edge in edge_widgets:
+                dag_edge = edge.dagnode
+                UUID = edge.UUID
+                if UUID not in edge_ids:
+                    #print '# WARNING: invalid edge widget: "%s" ' % str(edge)
+                    if UUID in self.scene.sceneEdges:
+                        self.scene.sceneEdges.pop(UUID)
+                    self.scene.removeItem(edge)
+
+            # remove any invalid node widgets.
+            invalid_node_widgets = []
+
+            node_widgets = self.scene.sceneNodes.values()
+            for node in node_widgets:
+                dag_node = node.dagnode
+                dag_name = dag_node.name
+                UUID = node.UUID
+                if UUID not in dag_ids:
+                    #print '# WARNING: invalid node widget: "%s" ' % dag_name
+                    self.scene.sceneNodes.pop(UUID)
+                    self.scene.removeItem(node)
+
+        tend=time.time()
+        if verbose:
+            readTime, tstart = tend - tstart, tend
+            print '# Graph evaluated in %1.2f seconds. (%d items)' %  (readTime, len(dagnodes) + len(dagedges))
+
+    def node_types(self):
+        """
+        Returns a list of node types.
+        """
+        return self._node_types.keys()
 
     #-- NetworkX Stuff -----
     def getScene(self):
@@ -210,12 +331,13 @@ class Graph(object):
 
         return self.scene.sceneEdges.values()
 
-    def getSceneEdge(self, name):
+    def getSceneEdge(self, conn=None, UUID=None):
         """
-        Get a scene edge by name.
+        Get a scene edge.
 
         params:
-            name - (str) name of node to query
+            conn - (str) connection string (ie: "node1.output,node2.input")
+            UUID - (str) edge UUID
 
         returns:
             (obj)
@@ -223,11 +345,16 @@ class Graph(object):
         if not self.view:
             return
 
-        nodes = self.getSceneEdges()
-        if nodes:
-            for node in nodes:
-                if node.dagnode.name == name:
-                    return node
+        edges = self.getSceneEdges()
+        if edges:
+            for edge in edges:
+                if conn is not None:
+                    if edge.dagnode.name == conn:
+                        return edge
+
+                if UUID is not None:
+                    if edge.dagnode.UUID == UUID:
+                        return edge
         return
 
     def getDagEdges(self):
@@ -239,23 +366,33 @@ class Graph(object):
         """
         return self.dagedges.values()
 
-    def getDagEdge(self, node):
+    def getEdgeIDs(self):
+        """
+        Returns a list of all edges in the network.
+        """
+        ids = []
+        for edge in self.network.edges(data=True):
+            src_id, dest_id, attrs = edge
+            ids.append(attrs.get('id'))
+        return ids
+
+    def getDagEdge(self, conn):
         """
         Return a dag edge by name.
 
         params:
-            node - (str) name of edge to return
+            conn - (str) connection string (ie: "node1.output,node2.input")
 
         returns:
             (obj)
         """
-        if node in self.dagedges:
-            return self.dagedges.get(node)
+        if conn in self.dagedges:
+            return self.dagedges.get(conn)
         
         if self.dagedges:
             for UUID in self.dagedges:
                 dag = self.dagedges.get(UUID)
-                if dag and dag.name == node:
+                if dag and dag.name == conn:
                     return dag
         return
 
@@ -305,6 +442,31 @@ class Graph(object):
 
         return dag
 
+    def removeNode(self, name, UUID=None):
+        """
+        Removes a node from the graph
+
+        params:
+            node    - (str) node name
+
+        returns:
+            (object)  - removed node
+        """
+        if UUID is None:
+            UUID = self.getNodeID(name)
+        if UUID and UUID in self.dagnodes:
+            from SceneGraph.core import log
+            log.info('Removing node: "%s"' % name)
+            if UUID in self.dagnodes:
+                self.dagnodes.pop(UUID)
+
+            if UUID in self.network.nodes():
+                self.network.remove_node(UUID)
+            self.evaluate()
+            return True
+
+        return False
+
     def addEdge(self, src, dest, **kwargs):
         """
         Add an edge connecting two nodes.
@@ -328,6 +490,7 @@ class Graph(object):
             dest_id = self.getNodeID(dest_name)
 
             edge.ids = (src_id, dest_id)
+            print '# Graph.addEdge: connecting: "%s.%s"' % (src_name, dest_name)
 
             self.network.add_edge(src_id, 
                 dest_id,
@@ -338,6 +501,7 @@ class Graph(object):
                 dest_attr=edge.dest_attr)
 
             self.dagedges[str(edge.UUID)] = edge
+            #print '# Graph.addEdge: new edge ID: %s' % str(edge.UUID)
 
             if self.view:
                 from SceneGraph import ui
@@ -348,7 +512,6 @@ class Graph(object):
                 dest_widget= self.getSceneNode(name=dest_name)
 
                 if src_widget and dest_widget:
-                    # TODO: need a method to return a named input/output widget (for when we have complex nodes)
                     edge_widget = ui.EdgeWidget(src_widget.output_widget, dest_widget.input_widget, edge=edge)
                     self.scene.addItem(edge_widget)
             return edge
@@ -373,13 +536,12 @@ class Graph(object):
         if UUID and UUID in self.dagedges:
             dag = self.dagedges.pop(UUID)
             log.info('Removing edge: "%s"' % dag.name)
-            self.network.remove_edge(*dag.ids)
+            try:
+                self.network.remove_edge(*dag.ids)
+            except:
+                pass
 
-            # remove the widget from the graph
-            if self.view:                
-                if UUID in self.scene.sceneEdges.keys():
-                    widget = self.scene.sceneEdges.pop(UUID)
-                    self.scene.removeItem(widget)
+            self.evaluate()
             return True
         return False
 
@@ -395,7 +557,7 @@ class Graph(object):
             UUID, data = node
             if 'name' in data:
                 if data['name'] == name:
-                    result = UUID
+                    result = str(UUID)
         return result 
 
     def getEdgeID(self, conn):
@@ -418,14 +580,14 @@ class Graph(object):
 
             src_attr = edge_attrs.get('src_attr')
             dest_attr = edge_attrs.get('dest_attr')
-            
+
             src_node = self.getDagNode(UUID=src_id)
             dest_node = self.getDagNode(UUID=dest_id)
 
             if src_node is None or dest_node is None:
                 return result
 
-            edge_id = edge_attrs.get('id')
+            edge_id = str(edge_attrs.get('id'))
             
             conn_str = '%s.%s,%s.%s' % (src_node.name, src_attr, dest_node.name, dest_attr)
             # todo: do some string cleanup here
@@ -433,30 +595,49 @@ class Graph(object):
                 result = edge_id
         return result 
 
-    def removeNode(self, name):
+    def connectedEdges(self, nodes):
         """
-        Removes a node from the graph
+        Returns a list of all connected edges to the given node(s).
 
         params:
-            node    - (str) node name
+            nodes - (str) or (list)
 
         returns:
-            (object)  - removed node
+            (list) - list of connected edges.
         """
-        UUID = self.getNodeID(name)
-        if UUID and UUID in self.dagnodes:
-            from SceneGraph.core import log
-            log.info('Removing node: "%s"' % name)
-            self.dagnodes.pop(UUID)
-            self.network.remove_node(UUID)
+        if type(nodes) not in [list, tuple]:
+            nodes = [nodes,]
+        result = self.network.in_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True)
+        result.extend(self.network.out_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True))
+        return result
 
-            # remove the widget from the graph
-            if self.view:                
-                if UUID in self.scene.sceneNodes.keys():
-                    widget = self.scene.sceneNodes.pop(UUID)
-                    self.scene.removeItem(widget)
-            return True
-        return False
+    def in_edges(self, nodes):
+        """
+        Returns a list of all incoming edges to the given node(s).
+
+        params:
+            nodes - (str) or (list)
+
+        returns:
+            (list
+        """
+        if type(nodes) not in [list, tuple]:
+            nodes = [nodes,]
+        return self.network.in_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True)
+
+    def out_edges(self, nodes):
+        """
+        Returns a list of all outgoing edges to the given node(s).
+
+        params:
+            nodes - (str) or (list)
+
+        returns:
+            (list
+        """
+        if type(nodes) not in [list, tuple]:
+            nodes = [nodes,]
+        return self.network.out_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True)
 
     def renameNode(self, old_name, new_name):
         """
@@ -534,22 +715,6 @@ class Graph(object):
             if not output_conn_node:
                 core.log.error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
 
-
-    # TODO: we need to store a weakref dict of dag nodes in the graph
-    def updateGraph(self):
-        """
-        Update the networkx graph from the UI.
-        """
-        if not self.view:
-            return False
-
-        for node in self.getDagNodes():
-            nid = str(node.UUID)
-            if nid in self.network.nodes():
-                self.network.node[nid].update(node.getNodeAttributes())
-            else:
-                print '# ERROR: node id "%s" not found.' % nid
-
     def reset(self):
         """
         Remove all node & connection data
@@ -572,7 +737,24 @@ class Graph(object):
             nid = node
 
         if nid is not None:
-            return nx.descendants(self.network, nid)
+            #return self.network.successors(nid)
+            return nx.descendants(self.network, nid)            
+        return []
+
+    def upstream(self, node):
+        """
+        Return upstream nodes from the given node.
+        """
+        nid = None
+        if node not in self.network.nodes():
+            if self.getNodeID(node):
+                nid = self.getNodeID(node)
+        else:
+            nid = node
+
+        if nid is not None:
+            #return self.network.predecessors(nid)
+            return nx.ancestors(self.network, nid)  
         return []
 
     def validNodeName(self, name):
@@ -622,7 +804,6 @@ class Graph(object):
         fn = open(filename, 'w')
         json.dump(graph_data, fn, indent=4)
         fn.close()
-
         return self.setScene(filename)
 
     def read(self, filename):

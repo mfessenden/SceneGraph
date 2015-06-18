@@ -66,7 +66,10 @@ class SceneGraphUI(form_class, base_class):
         self.timer            = QtCore.QTimer()
 
         # temp file
-        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')  
+        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json') 
+
+        # stash temp selections here
+        self._selected_nodes  = []
 
         # preferences
         self.settings_file    = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
@@ -122,7 +125,7 @@ class SceneGraphUI(form_class, base_class):
         # build the graph
         self.initializeGraphicsView()
 
-        self.outputPlainTextEdit.setFont(self.fonts.get('output'))
+        self.outputTextBrowser.setFont(self.fonts.get('output'))
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
@@ -201,7 +204,7 @@ class SceneGraphUI(form_class, base_class):
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.button_refresh.clicked.connect(self.updateOutput)
-        self.button_clear.clicked.connect(self.outputPlainTextEdit.clear)
+        self.button_clear.clicked.connect(self.outputTextBrowser.clear)
         self.action_spin.triggered.connect(self.spinAction)
 
         # table view
@@ -359,13 +362,14 @@ class SceneGraphUI(form_class, base_class):
         self.graph.write(temp_scene)
         return temp_scene
 
-    def readGraph(self):
+    def readGraph(self, filename=None):
         """
         Read the current graph from a json file
         """
-        filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
-        if filename == "":
-            return
+        if filename is None:
+            filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
+            if filename == "":
+                return
 
         if not os.path.exists(filename):
             log.error('filename %s does not exist' % filename)
@@ -432,11 +436,54 @@ class SceneGraphUI(form_class, base_class):
 
         elif self.scene.edge_type == 'polygon':
             self.scene.edge_type = 'bezier'
-
-        print '# setting edge type: ', self.scene.edge_type
         self.scene.update()
 
-    def removeDetailWidgets(self):
+    #- ACTIONS ----
+    def nodesSelectedAction(self):
+        """
+        Action that runs whenever a node is selected in the UI
+        """
+        nodes = self.scene.selectedItems()
+
+        # clear the list view
+        self.tableModel.clear()
+        self.tableView.reset()
+        self.tableView.setHidden(True)  
+        if nodes:
+            if len(nodes) == 1:                
+                node = nodes[0]
+
+                if node not in self._selected_nodes:
+                    self._selected_nodes = nodes
+
+
+                    if hasattr(node, 'node_class'):
+                        if node.node_class in ['dagnode']:
+                            self.updateAttributeEditor(node.dagnode)
+                            UUID = node.dagnode.UUID
+                            if UUID:
+                                ds_ids = self.scene.graph.downstream(node.dagnode.name)
+                                dagnodes = []
+                                for nid in ds_ids:
+                                    dagnode = self.scene.graph.getDagNode(UUID=nid)
+                                    if dagnode:
+                                        dagnodes.append(dagnode)
+
+                                dagnodes = [x for x in reversed(dagnodes)]
+                                self.tableModel.addNodes(dagnodes)
+                                self.tableView.setHidden(False)
+                                self.tableView.resizeRowToContents(0)
+                                self.tableView.resizeRowToContents(1)
+            else:
+                self.removeAttributeEditorWidget()
+        else:
+            self._selected_nodes = []
+            self.removeAttributeEditorWidget()
+
+    def getAttributeEditorWidget(self):
+        return self.attrEditorWidget.findChild(QtGui.QWidget, 'AttributeEditor')
+
+    def removeAttributeEditorWidget(self):
         """
         Remove a widget from the detailGroup box.
         """
@@ -444,45 +491,6 @@ class SceneGraphUI(form_class, base_class):
             widget = self.attributeScrollAreaLayout.takeAt(i).widget()
             if widget is not None:
                 widget.deleteLater()
-
-    #- ACTIONS ----
-    def nodesSelectedAction(self):
-        """
-        Action that runs whenever a node is selected in the UI
-        """
-        self.removeDetailWidgets()
-        nodes = self.scene.selectedItems()
-
-        # clear the list view
-        self.tableModel.clear()
-        self.tableView.reset()
-        
-        if nodes:
-            if len(nodes) == 1:
-                node = nodes[0]
-                self.updateAttributeEditor(node.dagnode)
-
-                if hasattr(node, 'node_class'):
-                    if node.node_class in ['dagnode']:
-                        UUID = node.dagnode.UUID
-                        if UUID:
-                            ds_ids = self.scene.graph.downstream(UUID)
-                            dagnodes = []
-                            for nid in ds_ids:
-                                dagnode = self.scene.graph.getDagNode(UUID=nid)
-                                if dagnode:
-                                    dagnodes.append(dagnode)
-
-                            dagnodes = [x for x in reversed(dagnodes)]
-                            self.tableModel.addNodes(dagnodes)
-        else:
-            # clear the attribute editor
-            attr_widget = self.getAttributeEditorWidget()
-            if attr_widget:
-                attr_widget.deleteLater()
-
-    def getAttributeEditorWidget(self):
-        return self.attrEditorWidget.findChild(QtGui.QWidget, 'AttributeEditor')
 
     def updateAttributeEditor(self, nodes, **attrs):
         """
@@ -497,7 +505,7 @@ class SceneGraphUI(form_class, base_class):
                     attr_widget = self.getAttributeEditorWidget()
                     
                     if not attr_widget:
-                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)                    
+                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)                
                         self.attributeScrollAreaLayout.addWidget(attr_widget)
                     attr_widget.setNode(node)
 
@@ -526,8 +534,7 @@ class SceneGraphUI(form_class, base_class):
 
     # TODO: disabling this, causing lag
     def sceneChangedAction(self, event):
-        #self.nodesSelectedAction()
-        self.updateNodes()
+        pass
     
     def createCreateMenuActions(self):
         pass
@@ -554,7 +561,6 @@ class SceneGraphUI(form_class, base_class):
         """
         Build a context menu at the current pointer pos.
         """
-        nodes=['default', 'dot', 'merge', 'model', 'lookdev']
         tab_menu = QtGui.QMenu(parent)
         tab_menu.clear()
         add_menu = QtGui.QMenu('Add node:')
@@ -563,7 +569,7 @@ class SceneGraphUI(form_class, base_class):
         view_pos =  self.view.current_cursor_pos
         scene_pos = self.view.mapToScene(view_pos)
 
-        for node in nodes:
+        for node in self.graph.node_types():
             node_action = add_menu.addAction(node)
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos_x=scene_pos.x(), pos_y=scene_pos.y()))
@@ -664,22 +670,36 @@ class SceneGraphUI(form_class, base_class):
         Update the output text edit.
         """
         import networkx.readwrite.json_graph as nxj
-        import simplejson as json
-        self.updateNodes()
-
+        
         # store the current position in the text box
-        bar = self.outputPlainTextEdit.verticalScrollBar()
+        bar = self.outputTextBrowser.verticalScrollBar()
         posy = bar.value()
 
-        self.outputPlainTextEdit.clear()
+        self.outputTextBrowser.clear()
         #graph_data = nxj.adjacency_data(self.graph.network)
         graph_data = nxj.node_link_data(self.graph.network)
-        self.outputPlainTextEdit.setPlainText(json.dumps(graph_data, indent=5))
-        self.outputPlainTextEdit.setFont(self.fonts.get('output'))
+        html_data = self.formatOutputHtml(graph_data)
+        self.outputTextBrowser.setHtml(html_data)
+        self.outputTextBrowser.setFont(self.fonts.get('output'))
 
-        self.outputPlainTextEdit.scrollContentsBy(0, posy)
-        self.outputPlainTextEdit.setReadOnly(True)
+        self.outputTextBrowser.scrollContentsBy(0, posy)
+        self.outputTextBrowser.setReadOnly(True)
 
+    def formatOutputHtml(self, data):
+        """
+        Fast and dirty html formatting.
+        """
+        import simplejson as json
+        html_result = ""
+        rawdata = json.dumps(data, indent=5)
+        for line in rawdata.split('\n'):
+            if line:
+                ind = "&nbsp;"*line.count(" ")
+                fline = "<br>%s%s</br>" % (ind, line)
+                if '"name":' in line:
+                    fline = '<br><b><font color="#628fab">%s%s</font></b></br>' % (ind, line)
+                html_result += fline
+        return html_result
 
     def updateConsole(self, status):
         """
@@ -717,28 +737,6 @@ class SceneGraphUI(form_class, base_class):
 
         zoom_str = '%s' % status.get('zoom_level')[0]
         self.zoomLevelLineEdit.setText(zoom_str)
-
-    # TODO: this is in Graph.updateGraph
-    def updateNodes(self):
-        """
-        Update the networkx graph with current node values.
-        """
-        if self.scene.sceneNodes:
-            for node in self.scene.sceneNodes.values():
-                try:
-                    self.graph.network.node[str(node.UUID)]['name']=node.dagnode.name
-
-                    # update widget attributes
-                    self.graph.network.node[str(node.UUID)]['pos_x']=node.pos().x()
-                    self.graph.network.node[str(node.UUID)]['pos_y']=node.pos().y()
-                    self.graph.network.node[str(node.UUID)]['width']=node.width
-                    self.graph.network.node[str(node.UUID)]['height']=node.height
-                    self.graph.network.node[str(node.UUID)]['expanded']=node.expanded
-
-                    # update arbitrary attributes
-                    self.graph.network.node[str(node.UUID)].update(**node.dagnode.getNodeAttributes())
-                except:
-                    pass
 
 
 class Settings(QtCore.QSettings):

@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../icn/graph_icon.png</normaloff>../../icn/graph_icon.png</iconset>
+    <normaloff>../../../icn/graph_icon.png</normaloff>../../../icn/graph_icon.png</iconset>
   </property>
   <property name="dockOptions">
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
@@ -50,14 +50,11 @@
        </attribute>
        <layout class="QVBoxLayout" name="outputTabLayout">
         <item>
-         <widget class="QPlainTextEdit" name="outputPlainTextEdit">
+         <widget class="QTextBrowser" name="outputTextBrowser">
           <property name="font">
            <font>
             <family>Monospace</family>
            </font>
-          </property>
-          <property name="plainText">
-           <string/>
           </property>
          </widget>
         </item>
@@ -515,7 +512,7 @@
   <tabstop>button_refresh</tabstop>
   <tabstop>graphicsView</tabstop>
   <tabstop>button_clear</tabstop>
-  <tabstop>outputPlainTextEdit</tabstop>
+  <tabstop>outputTextBrowser</tabstop>
  </tabstops>
  <resources/>
  <connections/>

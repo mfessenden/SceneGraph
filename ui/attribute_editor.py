@@ -13,7 +13,9 @@ class AttributeEditor(QtGui.QWidget):
         
         self._gui           = kwargs.get('gui', None)
         self.manager        = kwargs.get('manager')
-        self._current_node  = None    # the currently selected node
+
+        # stash the current node selection
+        self._current_node  = None
 
         self.gridLayout     = QtGui.QGridLayout(self)
         self.gridLayout.setContentsMargins(9, 2, 9, 9)
@@ -40,63 +42,64 @@ class AttributeEditor(QtGui.QWidget):
         """
         Set the currently focused node.
         """
-        if node_item:
-            if node_item != self._current_node:
-                # removed for testing
-                #node_item.nodeChanged.connect(partial(self.setNode, node_item))
-                self._current_node = node_item
+        if not node_item:
+            return
+
+        if node_item != self._current_node:
+            self._current_node = node_item
+                       
+            # clear the layout
+            self._clearGrid()                  
+            self.__current_row = 0
+           
+            for attr, val in node_item.getNodeAttributes().iteritems():
                 
-                # clear the layout
-                self._clearGrid()                  
-                self.__current_row = 0
-               
-                for attr, val in node_item.getNodeAttributes().iteritems():
-                    editable = True
-                    if attr in node_item.PRIVATE:
-                        if not force:
-                            editable = False
-
-                    # create an attribute label
-                    attr_label = QtGui.QLabel(self)
-                    attr_label.setObjectName('%s_label' % attr)
-                    self.gridLayout.addWidget(attr_label, self.__current_row, 0, 1, 1)
-
-                    # create an attribute editor
-                    if attr != 'color':
-                        val_edit = QtGui.QLineEdit(self)
-                        val_edit.setText(str(val))
-                        val_edit.editingFinished.connect(partial(self.updateNodeAttribute, val_edit, attr))
-
-                    else:
-                        val_edit = ColorPicker(self, color=node_item.color, norm=False)
-                        val_edit.colorChanged.connect(self.updateNodeColor)
-
-                    val_edit.setObjectName('%s_edit' % attr)
-                    self.gridLayout.addWidget(val_edit, self.__current_row, 1, 1, 1)
-                    
-                    attr_label.setText('%s: ' % attr)
-                    attr_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
-                    
-                    val_edit.setEnabled(editable)
-
+                editable = True
+                if attr in node_item.PRIVATE:
                     if not force:
-                        attr_label.setHidden(not editable)
-                        val_edit.setHidden(not editable)
+                        editable = False
 
-                    self.__current_row+=1                    
-                    
-                spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-                self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)
+                # create an attribute label
+                attr_label = QtGui.QLabel(self)
+                attr_label.setObjectName('%s_label' % attr)
+                self.gridLayout.addWidget(attr_label, self.__current_row, 0, 1, 1)
 
-            else:
-                # update existing attribute editors
-                for attr, val in node_item.getNodeAttributes().iteritems():
-                    editor = self.findChild(QtGui.QLineEdit, '%s_edit' % attr)
-                    if editor:
-                        editor.blockSignals(True)
-                        if attr not in ['color']:
-                            editor.setText(str(val))
-                        editor.blockSignals(False)
+                # create an attribute editor
+                if attr != 'color':
+                    val_edit = QtGui.QLineEdit(self)
+                    val_edit.setText(str(val))
+                    val_edit.editingFinished.connect(partial(self.updateNodeAttribute, val_edit, attr))
+
+                else:
+                    val_edit = ColorPicker(self, color=node_item.color, norm=False)
+                    val_edit.colorChanged.connect(self.updateNodeColor)
+
+                val_edit.setObjectName('%s_edit' % attr)
+                #print '# adding editor "%s" at row %d.' % (val_edit.objectName(), self.__current_row)
+                self.gridLayout.addWidget(val_edit, self.__current_row, 1, 1, 1)
+                
+                attr_label.setText('%s: ' % attr)
+                attr_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
+                
+                val_edit.setEnabled(editable)
+
+                if not force:
+                    attr_label.setHidden(not editable)
+                    val_edit.setHidden(not editable)
+                self.__current_row+=1                    
+            
+            spacerItem = QtGui.QSpacerItem(20, 178, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+            self.gridLayout.addItem(spacerItem, self.__current_row, 1, 1, 1)
+
+        else:
+            # update existing attribute editors
+            for attr, val in node_item.getNodeAttributes().iteritems():
+                editor = self.findChild(QtGui.QLineEdit, '%s_edit' % attr)
+                if editor:
+                    editor.blockSignals(True)
+                    if attr not in ['color']:
+                        editor.setText(str(val))
+                    editor.blockSignals(False)
     
     def getColorEditor(self):
         """

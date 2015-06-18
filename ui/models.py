@@ -84,9 +84,12 @@ class GraphTableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent):
         return len(self.headers)
 
-    def insertRows(self, position, rows, parent=QtCore.QModelIndex()):
-        self.beginInsertRows(parent, position, position + rows - 1)
-        self.endInsertRows()        
+    def insertRows(self, position, rows=1, index=QtCore.QModelIndex()):
+        self.beginInsertRows(QtCore.QModelIndex(), position, position + rows - 1)
+        #for row in range(rows):
+        #    self.nodes.insert(position + row, Asset())
+        self.endInsertRows()
+        self.dirty = True
         return True
 
     def removeRows(self, position, rows, parent=QtCore.QModelIndex()):        
@@ -107,12 +110,28 @@ class GraphTableModel(QtCore.QAbstractTableModel):
     def clear(self):
         self.nodes = []
 
+    def setData(self, index, value, role=QtCore.Qt.DisplayRole):
+        node = self.nodes[index.row()]
+        self.emit(QtCore.SIGNAL("dataChanged(QModelIndex, QModelIndex)"), index, index)
+        return 1
+
     def data(self, index, role):
         row = index.row()
         column = index.column()
-
         node=self.nodes[row]
-        
+
+        if role == QtCore.Qt.FontRole:
+            font = QtGui.QFont('Monospace')
+            if not node.enabled:
+                font.setItalic(True)
+            return font
+
+        if role == QtCore.Qt.ForegroundRole:
+            color = QtGui.QColor(150, 150, 150)
+            if not node.enabled:
+                color.setRgb(95, 95, 105)
+            return color
+
         if role == QtCore.Qt.DisplayRole:
             if column == self.NODE_TYPE_ROW:
                 return node.node_type
@@ -137,6 +156,7 @@ class GraphTableModel(QtCore.QAbstractTableModel):
         """
         self.insertRows(0, len(nodes)-1)
         self.nodes=nodes
+        self.layoutChanged.emit()
     
     def addNode(self, node):
         """

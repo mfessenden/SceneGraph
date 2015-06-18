@@ -97,7 +97,7 @@ QMenu::item:disabled {
 
 QStatusBar {
     font-family: Monospace;
-    font-size: 9pt;
+    font-size: 8pt;
 }
 
 QScrollBar:horizontal {

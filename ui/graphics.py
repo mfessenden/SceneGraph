@@ -159,6 +159,14 @@ class GraphicsView(QtGui.QGraphicsView):
         timer = QtCore.QTimer()
         timer.timeout.connect(partial(self.edgeDrop, event))
 
+        selected_nodes = self.scene().selectedNodes()
+
+        # query any edges at the current position
+        event_item = self.itemAt(event.pos())
+        event_edge = None
+        if hasattr(event_item, 'node_class'):
+            if event_item.node_class in ['edge']:
+                event_edge = event_item
         # Panning
         if event.buttons() & QtCore.Qt.MiddleButton:
             delta = event.pos() - self.current_cursor_pos
@@ -177,30 +185,34 @@ class GraphicsView(QtGui.QGraphicsView):
                 event.accept()
                 return
 
-        item = self.itemAt(event.pos())
-        if event.buttons() & QtCore.Qt.LeftButton:
-            
-            if event.modifiers() & QtCore.Qt.AltModifier:            
-                if item:
-                    if hasattr(item, 'node_class'):
-                        if item.node_class in ['dagnode']:
-                            UUID = item.dagnode.UUID
+        if event.buttons() & QtCore.Qt.LeftButton:            
+            if event.modifiers() & QtCore.Qt.AltModifier:
+                if event_item:
+                    if hasattr(event_item, 'node_class'):
+                        if event_item.node_class in ['dagnode']:
+                            UUID = event_item.dagnode.UUID
                             if UUID:
                                 # get downstream nodes 
                                 ds_ids = self.scene().graph.downstream(UUID)
                                 for nid in ds_ids:
                                     node_widget = self.scene().graph.getSceneNode(UUID=nid)
                                     node_widget.setSelected(True)
-            if item:
+
+            if event_item is not None:
+                if selected_nodes:
+                    if len(selected_nodes) == 1:
+                        sel_node = selected_nodes[0]
+                        coll_items = self.scene().collidingItems(sel_node)
+
+
+                        if event_item in coll_items:
+                            print 'edge collision: "%s"' % (sel_node.dagnode.name)
                 timer.start(1)
-
-
 
         self.updateNetworkGraphAttributes()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def edgeDrop(self, event):
-        print 'drop'
         item = self.itemAt(event.pos())
         if item:
             if hasattr(item, 'node_class'):
@@ -263,24 +275,18 @@ class GraphicsView(QtGui.QGraphicsView):
             nodes = graph.pasteNodes()
             log.debug('pasting nodes: %s' % ', '.join(nodes))
 
+        # delete nodes & edges...
         elif event.key() == QtCore.Qt.Key_Delete:
             for item in graphicsScene.selectedItems():
                 if hasattr(item, 'node_class'):
                     if item.node_class in ['dagnode']:
-                        log.info('deleting node "%s"' % item.dagnode.name)                        
-                        graphicsScene.removeItem(item)
-                        graphicsScene.sceneNodes.pop(str(item.dagnode.UUID))
-                        graphicsScene.network.remove_node(str(item.dagnode.UUID))
-                        continue
+                        self.scene().graph.removeNode(item.dagnode.name, UUID=item.UUID)
 
-                    if item.node_class in ['edge']:
+                    elif item.node_class in ['edge']:
+                        self.scene().graph.removeEdge(UUID=item.UUID)
 
-                        # need output node uuid, input node uuid
-                        log.info('deleting connection "%s"' % item)                        
-                        graphicsScene.removeItem(item)
-                        graphicsScene.sceneEdges.pop(str(item.dagnode.UUID))
-                        graphicsScene.network.remove_edge(*item.dagnode.ids)
-                        continue
+                    graphicsScene.removeItem(item)
+                    continue
 
         # disable selected nodes
         elif event.key() == QtCore.Qt.Key_D:
@@ -382,35 +388,23 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if item.node_class in ['edge']:
                 self.sceneEdges[str(item.UUID)] = item
                 self.edgeAdded.emit(item)
-
                 # edges are QGraphicsLineItems, no signals
                 #item.nodeChanged.connect(self.edgeChangedAction)
         QtGui.QGraphicsScene.addItem(self, item)
 
     def removeItem(self, item):
         """
-        item = widget type
-        """        
-        if hasattr(item, 'node_class'):
-            if hasattr(item, 'dagnode'):
-                dagnode = item.dagnode
-                nid = str(dagnode.UUID)
-                if item.node_class in ['dagnode']:
-                    print '# deleting node: "%s"' % dagnode.name 
-                    #item.deleteLater()
-                    item.deleteNode()
-                    if nid in self.graph.dagnodes:
-                        self.graph.dagnodes.pop(nid)
-
-
-                if item.node_class in ['edge']:
-                    print '# deleting edge: "%s"' % dagnode.name 
-                    # update connected nodes
-                    item.deleteEdge()
-                    if nid in self.graph.dagedges:
-                        self.graph.dagedges.pop(nid)
+        Update the graph if a dag node or edge is removed.
+        """
+        # since we don't want to eval the graph every time a node part is removed,
+        # only force an update if we're removing a daganode/edge
+        update_graph = False
+        if hasattr(item, 'dagnode'):
+            update_graph = True
 
         QtGui.QGraphicsScene.removeItem(self, item)
+        if update_graph:
+            self.graph.evaluate()
 
     def nodeChangedAction(self, UUID, attrs):
         # find the node widget
@@ -445,6 +439,17 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         return self.sceneNodes.values()
 
+    def selectedNodes(self):
+        """
+        Returns a list of selected node widgets.
+        """
+        nodes = []
+        selected = self.selectedItems()
+        for item in selected:
+            if hasattr(item, 'node_class'):
+                nodes.append(item)
+        return nodes
+
     def validateConnection(self, source_item, dest_item, force=True):
         """
         When the mouse is released, validate the two connections.
@@ -464,8 +469,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         # check here to see if destination can take another connection
         if hasattr(dest_item, 'is_connectable'):
-            if not dest_item.is_connectable or not force:
-                return False
+            if not dest_item.is_connectable:
+                if not force:
+                    return False
+
+                # remove the connected edge
+                dest_node = dest_item.node
+                edges = dest_node.listConnections().values()
+
+                for edge in edges:
+                    edge_id = str(edge.dagnode.UUID)
+                    self.graph.removeEdge(UUID=edge_id)
+                return True
+
         return True
 
     def keyPressEvent(self, event):
@@ -527,9 +543,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 # these are connection widgets
                 source_conn = source_items[0]
                 dest_conn = dest_items[0]
-
-                print '# source: ', source_conn
-                print '# dest:   ', dest_conn
 
                 if self.validateConnection(source_conn, dest_conn):
                     source_node = source_conn.node

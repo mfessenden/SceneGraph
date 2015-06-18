@@ -30,6 +30,15 @@
 	dagnode.setNodeAttributes(env='maya', version='2014')
 
 
+###### API:
+
+	# create a graph
+	from SceneGraph import core
+	g=core.Graph()
+
+	# add a node
+	node=g.addNode('default')
+
 ##### Dependencies:
 
 - simplejson

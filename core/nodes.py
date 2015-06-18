@@ -67,6 +67,7 @@ class NodeBase(object):
                     height=self.height,
                     expanded=self.expanded,
                     enabled=self.enabled,
+                    id=str(self.UUID),
                     )
         return data
 

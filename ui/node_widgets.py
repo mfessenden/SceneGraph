@@ -97,7 +97,7 @@ class NodeWidget(QtGui.QGraphicsObject):
     @property
     def UUID(self):
         if self.dagnode:
-            return self.dagnode.UUID
+            return str(self.dagnode.UUID)
         return None
 
     @property
@@ -236,6 +236,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         Called before the node is properly deleted; 
         this removes all edges.
         """
+        print '# NodeWidget.deleteNode: deleting invalid edges.'
         connections = self.listConnections()
         if connections:
             for conn_name, edge in connections.iteritems():
@@ -513,7 +514,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
     @property
     def UUID(self):
         if self.dagnode:
-            return self.dagnode.UUID
+            return str(self.dagnode.UUID)
         return None
 
     def type(self):
@@ -650,7 +651,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
     @property
     def UUID(self):
         if self.dagnode:
-            return self.dagnode.UUID
+            return str(self.dagnode.UUID)
         return None
 
     @property
@@ -665,9 +666,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         Returns true if the edge has two connections.
         """
         if self:
-            if self.source_item in self.scene().items():
-                if self.dest_item in self.scene().items():
-                    return True
+            if self.scene():
+                if self.source_item in self.scene().items():
+                    if self.dest_item in self.scene().items():
+                        return True
         return False
 
     def listConnections(self):
@@ -690,6 +692,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         srcconn = self.source_item
         dstconn = self.dest_item
 
+        print '# EdgeWidget.deleteEdge: deleting invalid edges.'
         if self in srcconn.connections.values():
             dest_key = self.dagnode.dest_node
             srcconn.connections.pop(dest_key)
@@ -838,7 +841,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Draw the line and arrow.
         """
-        self.setToolTip(str(self))
+        self.setToolTip(str(self.connection))
         self.show_conn = False
         painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
 
