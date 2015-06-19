@@ -218,7 +218,7 @@ class GraphicsView(QtGui.QGraphicsView):
                         if len(col_nodes):
                             if len(col_nodes) == 1:
                                 edge_widget = col_nodes[0]                                
-                                #self.splitNodeConnection(sel_node, edge_widget)
+                                self.splitNodeConnection(sel_node, edge_widget)
 
                 timer.start(1)
 
@@ -226,9 +226,21 @@ class GraphicsView(QtGui.QGraphicsView):
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def splitNodeConnection(self, node, edge):
-        print '# splitting %s with node %s ' % (edge.dagnode.name, node.dagnode.name)
-        edge_source = edge.source_item
-        edge_dest = edge.dest_item
+        """
+        Splice a node into an existing edge.
+        """
+        src_conn = edge.source_item
+        src_node = edge.source_node()
+
+        dest_conn = edge.dest_item
+        dest_node = edge.dest_node()
+
+        # remove the edge
+        self.scene().graph.removeEdge(edge.connection)
+
+        dag_edge1 = self.scene().graph.addEdge(src_conn.name, node.input_widget.name)
+        dag_edge2 = self.scene().graph.addEdge(node.output_widget.name, dest_conn.name)
+        return (dag_edge1, dag_edge2)
 
     def mousePressEvent(self, event):
         """

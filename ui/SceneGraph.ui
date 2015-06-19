@@ -147,7 +147,6 @@
     <addaction name="action_show_all_attributes"/>
     <addaction name="separator"/>
     <addaction name="action_edge_type"/>
-    <addaction name="action_spin"/>
     <addaction name="separator"/>
     <addaction name="action_draw_graph"/>
    </widget>

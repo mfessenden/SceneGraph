@@ -224,7 +224,6 @@ class SceneGraphUI(form_class, base_class):
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputTextBrowser.clear)
-        self.action_spin.triggered.connect(self.spinAction)
         self.button_update_draw.clicked.connect(self.updateDrawTab)
 
         # table view

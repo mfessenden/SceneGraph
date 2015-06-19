@@ -684,6 +684,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         return self.source_item.node
 
+    def dest_node(self):
+        """
+        Returns the destination node widget.
+        """
+        return self.dest_item.node
+
     def deleteEdge(self):
         """
         Called before the edge is properly deleted; 
