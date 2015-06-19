@@ -24,7 +24,7 @@ class Graph(object):
         self.mode           = 'standalone'
 
         # grid/spacing attributes
-        self.grid           = Grid(100, 100)
+        self.grid           = Grid(5, 5)
 
         # attribute for dynamically loaded nodes
         self._node_types    = dict()
@@ -853,13 +853,25 @@ class Graph(object):
             return self.setScene(filename)
         return 
 
-    #- CONNECTIONS ----
-    def connect(self, source, dest):
+    #- Virtual ----
+    def is_connected(self, nodes):
         """
-        Connect two nodes
+        Returns true if two nodes are connected.
         """
-        source_node, source_conn = source.split('.')
-        dest_node, dest_conn = dest.split('.')
+        return False
+
+    def outputs(self, node):
+        """
+        Returns a list of connections/connectable attributes.
+        """
+        return []
+
+    def inputs(self, node):
+        """
+        Returns a list of connections/connectable attributes.
+        """
+        return []
+
 
 
 class Array(object):
@@ -911,7 +923,12 @@ class Grid(object):
     Represents a two-dimensional grid.
     """
     def __init__(self, rows, columns, fillValue=None):
-        self._data = Array(rows)
+
+        self._data      = Array(rows)
+        self._row       = 0
+        self._col       = 0
+        self._current   = None
+
         for row in range(rows):
             self._data[row] = Array(columns, fillValue)
 
@@ -928,6 +945,91 @@ class Grid(object):
                 result += str(self._data[row][col]) + " "
             result += "\n"
         return result
+
+    def __iter__(self):
+        for r in range(self.height):
+            for c in range(self.width):
+                yield self.get(r, c)
+
+    def __len__(self):
+        return ( self.height * self.width )
+
+    def items(self):
+        return [x for x in self]
+
+    def next(self):
+        """
+        Returns the next value in the grid.
+        """
+        val = self.get(self._row, self._col)
+        if self._col < self.width-1:            
+            self._col += 1
+        else:
+            if self._row < self.height-1:
+                self._col = 0
+                self._row+=1
+        return val
+
+    def find(self, val):
+        """
+        Get the graph coordinates of a specific value.
+
+        params:
+            val - (any) value to search for
+
+        returns:
+            (tuple) - coordiates of val in the grid.
+        """
+        result = ()
+        for r in range(self.height):
+            for c in range(self.width):
+                if self.get(r, c) == val:
+                    result = result + ((r, c),)
+        return result
+
+    def count(self, val):
+        """
+        Return the number of times the given value
+        exists in the current graph.
+
+        params:
+            val - (any) value to search for
+
+        returns:
+            (int) - number of times this value exists.
+        """
+        return len(self.find(val))
+
+    def fill(self):
+        """
+        Fill the grid with r:c values.
+         (for debugging/testing)
+        """
+        for r in range(self.height):
+            for c in range(self.width):
+                val = '%d:%d' % (r,c)
+                self.set(r, c, int(str(r) + str(c)))
+
+    def reset(self):
+        """
+        Reset the grid coordinates.
+
+        returns:
+            (tuple) - current row-column coordinates
+        """
+        self._row = 0
+        self._col = 0
+        return self.pos
+
+    @property
+    def pos(self):
+        """
+        Return the current position in the grid.
+
+        returns:
+            (tuple) - current row-column coordinates
+        """
+        return (self._row, self._col)
 
     @property
     def height(self):
