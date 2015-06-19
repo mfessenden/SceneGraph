@@ -90,9 +90,16 @@
        </attribute>
        <layout class="QVBoxLayout" name="drawTabLayout">
         <item>
-         <widget class="QGraphicsView" name="graphicsView">
+         <widget class="QGraphicsView" name="draw_view">
           <property name="styleSheet">
            <string notr="true"/>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="button_update_draw">
+          <property name="text">
+           <string>Generate</string>
           </property>
          </widget>
         </item>
@@ -141,6 +148,8 @@
     <addaction name="separator"/>
     <addaction name="action_edge_type"/>
     <addaction name="action_spin"/>
+    <addaction name="separator"/>
+    <addaction name="action_draw_graph"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
     <property name="title">
@@ -512,6 +521,11 @@
     <string>Ctrl+Y</string>
    </property>
   </action>
+  <action name="action_draw_graph">
+   <property name="text">
+    <string>Draw graph...</string>
+   </property>
+  </action>
  </widget>
  <tabstops>
   <tabstop>tabWidget</tabstop>
@@ -526,7 +540,7 @@
   <tabstop>sceneCursorXLineEdit</tabstop>
   <tabstop>sceneCursorYLineEdit</tabstop>
   <tabstop>button_refresh</tabstop>
-  <tabstop>graphicsView</tabstop>
+  <tabstop>draw_view</tabstop>
   <tabstop>button_clear</tabstop>
   <tabstop>outputTextBrowser</tabstop>
  </tabstops>

@@ -3,39 +3,10 @@ import logging
 import sys
 import os
 import datetime
-from PySide import QtCore
 
 
 LOGGERS = {}
 LOGGER_LEVEL = logging.INFO
-
-
-class QStream(QtCore.QObject):
-    """
-    Custom QObject for receiving signals from the logger.
-    """   
-    messageWritten = QtCore.Signal(str)
-
-    def fileno(self):
-        return -1
-    
-    def write(self, msg):
-        if (not self.signalsBlocked()):
-            self.messageWritten.emit(unicode(msg))
-
-
-class QtHandler(logging.Handler):
-    """
-    Custom handler for sending messages to the ui
-    """
-    def __init__(self):
-        logging.Handler.__init__(self)
-        self.qstream = QStream()
-
-    def emit(self, record):
-        record = self.format(record)
-        if record: 
-            self.qstream.write('%s\n'%record)
 
 
 def myLogger():
@@ -45,13 +16,12 @@ def myLogger():
         return LOGGERS.get(options.PACKAGE)
     else:
         logger=logging.getLogger(options.PACKAGE)
-        #logger.setLevel(logging.DEBUG)
         logger.setLevel(LOGGER_LEVEL)
         
         console_handler = logging.StreamHandler()
         file_handler = logging.FileHandler(getLogFile())        
 
-        formatter_console = logging.Formatter('%(levelname)s: %(message)s')
+        formatter_console = logging.Formatter('[%(name)s]: %(levelname)s: %(message)s')
         formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
         # set handler formatters

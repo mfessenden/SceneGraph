@@ -36,10 +36,25 @@
 	from SceneGraph import core
 	g=core.Graph()
 
-	# add a node
-	node=g.addNode('default')
+	# add some default nodes
+	n1 = g.addNode('default', name='node1')
+	n2 = g.addNode('default', name='node2')
+
+	# connect the nodes
+	g.addEdge('node1.output', 'node2.input')
+
+	# write the graph
+	g.write('~/my_graph.json')
+
+	# query all nodes in the graph
+	print g.getDagNodes()
+
+	# query all node names
+	print g.getDagNodeNames()
+
 
 ##### Dependencies:
 
 - simplejson
 - NetworkX 1.9.1
+- matplotlib

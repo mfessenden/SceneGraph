@@ -10,12 +10,12 @@ from SceneGraph import options
 from SceneGraph import core
 from SceneGraph import ui
 
+
 reload(options)
 reload(ui)
 
 
 log = core.log
-
 global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
 SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', '0')
@@ -46,7 +46,6 @@ def loadUiType(uiFile):
 
 #If you put the .ui file for this example elsewhere, just change this path.
 form_class, base_class = loadUiType(SCENEGRAPH_UI)
-
 
 
 class SceneGraphUI(form_class, base_class):
@@ -102,6 +101,11 @@ class SceneGraphUI(form_class, base_class):
 
         self.resetStatus()
         #QtGui.QApplication.instance().installEventFilter(self)
+        self.draw_scene = QtGui.QGraphicsScene()
+        self.draw_view.setScene(self.draw_scene)
+
+        #QStream.stdout().messageWritten.connect(self.consoleOutput)
+        #QStream.stderr().messageWritten.connect(self.consoleOutput)
 
     def eventFilter(self, obj, event):
         """
@@ -134,7 +138,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetStatus()
 
         # remove the Draw tab
-        self.tabWidget.removeTab(2)
+        #self.tabWidget.removeTab(2)
 
         # setup undo/redo
         undo_action = self.undo_stack.createUndoAction(self, "&Undo")
@@ -203,6 +207,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
+        self.action_draw_graph.triggered.connect(self.drawGraph)
         self.action_evaluate.triggered.connect(self.graph.evaluate)
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
@@ -220,6 +225,7 @@ class SceneGraphUI(form_class, base_class):
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputTextBrowser.clear)
         self.action_spin.triggered.connect(self.spinAction)
+        self.button_update_draw.clicked.connect(self.updateDrawTab)
 
         # table view
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
@@ -292,8 +298,10 @@ class SceneGraphUI(form_class, base_class):
     def sizeHint(self):
         return QtCore.QSize(800, 675)
 
-    #- STATUS MESSAGING ------
-    # TODO: this is temp, find a better way to redirect output
+    #- Status & Messaging ------
+    def consoleOutput(self, msg):
+        print 'message: ', msg
+
     def updateStatus(self, val, level='info'):
         """
         Send output to logger/statusbar
@@ -406,7 +414,7 @@ class SceneGraphUI(form_class, base_class):
         if filename != self.temp_scene:
             self.graph.setScene(filename)
             self.qtsettings.addRecentFile(filename)
-            print '# DEBUG: adding recent file: %s' % filename
+            log.debug('adding recent file: "%s"' % filename)
         self.buildWindowTitle()
         self.scene.clearSelection()
 
@@ -551,7 +559,12 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
-        self.updateAttributeEditor(node.dagnode)
+        selected_nodes = self.scene.selectedNodes()
+        if selected_nodes:
+            # only update the attribute editor if
+            # one node is selected
+            if len(selected_nodes) == 1:
+                self.updateAttributeEditor(node.dagnode)
         self.updateOutput()
         self.saveTempFile()
 
@@ -708,6 +721,16 @@ class SceneGraphUI(form_class, base_class):
         self.outputTextBrowser.scrollContentsBy(0, posy)
         self.outputTextBrowser.setReadOnly(True)
 
+    def updateDrawTab(self, filename=None):
+        """
+        Generate an image of the current graph and update the scene.
+        """
+        # draw tab
+        draw_file = self.drawGraph(filename)
+        self.draw_scene.clear()
+        pxmap = QtGui.QPixmap(draw_file)
+        self.draw_scene.addPixmap(pxmap)
+
     def formatOutputHtml(self, data):
         """
         Fast and dirty html formatting.
@@ -760,6 +783,51 @@ class SceneGraphUI(form_class, base_class):
 
         zoom_str = '%s' % status.get('zoom_level')[0]
         self.zoomLevelLineEdit.setText(zoom_str)
+
+    def drawGraph(self, filename=None):
+        """
+        Output the network as a png image.
+
+        See: http://networkx.github.io/documentation/latest/reference/generated/networkx.drawing.nx_pylab.draw_networkx_nodes.html
+        """
+        if filename is None:
+            filename = os.path.join(os.getenv('TMPDIR'), 'my_graph.png')
+
+        import networkx as nx
+        import matplotlib.pyplot as plt
+        
+        # spring_layout
+        pos=nx.spring_layout(self.network, iterations=20)
+
+        node_labels = dict()
+        for node in self.network.nodes(data=True):
+            nid, node_attrs = node
+            node_labels[nid]=node_attrs.get('name')
+
+        node_color = '#b4b4b4'
+
+        nx.draw_networkx_edges(self.network,pos, alpha=0.3,width=1, edge_color='black')
+        nx.draw_networkx_nodes(self.network,pos, node_size=600, node_color=node_color,alpha=1.0, node_shape='s')
+        nx.draw_networkx_edges(self.network,pos, alpha=0.4,node_size=0,width=1,edge_color='k')
+        nx.draw_networkx_labels(self.network,pos, node_labels, fontsize=10)
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+        plt.savefig(filename)
+        log.info('saving graph image "%s"' % filename)
+        return filename
+
+    #- Dialogs -----
+    def confirmDialog(self, msg):
+        """
+        Returns true if dialog 'yes' button is pressed.
+        """
+        result = QtGui.QMessageBox.question(self, "Comfirm", msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
+        if (result == QtGui.QMessageBox.Yes):
+            return True
+        return False
+
 
 
 class Settings(QtCore.QSettings):

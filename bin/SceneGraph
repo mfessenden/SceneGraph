@@ -18,6 +18,5 @@ if __name__ == "__main__":
     sgui.show()
 
     if options.filename:
-        print '# [SceneGraph]: reading file: %s' % options.filename
         sgui.readGraph(options.filename)
     sys.exit(app.exec_())

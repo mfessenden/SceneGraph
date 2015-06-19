@@ -16,10 +16,15 @@ class Graph(object):
     """
     def __init__(self, viewport=None):
 
-        self.network        = nx.DiGraph()
+        # multigraph allows for mutliple edges between nodes
+        #self.network        = nx.DiGraph()
+        self.network        = nx.MultiDiGraph()
         self.view           = None
-        self.scene          = None      
+        self.scene          = None       
         self.mode           = 'standalone'
+
+        # grid/spacing attributes
+        self.grid           = Grid(100, 100)
 
         # attribute for dynamically loaded nodes
         self._node_types    = dict()
@@ -52,7 +57,7 @@ class Graph(object):
             view - (object) QtGui.QGraphicsView
         """
         if view is not None:
-            log.info('setting up GraphicsView...')
+            log.debug('setting up GraphicsView...')
             self.view = view
             self.scene = view.scene()
 
@@ -283,6 +288,15 @@ class Graph(object):
         """
         return self.dagnodes.values()
 
+    def getDagNodeNames(self):
+        """
+        Returns a list of all dag node names.
+
+        returns:
+            (list)
+        """
+        return [n.name for n in self.getDagNodes()]
+
     def getDagNode(self, name=None, UUID=None):
         """
         Return a dag node by name.
@@ -293,7 +307,6 @@ class Graph(object):
         returns:
             (obj)
         """
-
         if self.dagnodes:
             for NUUID in self.dagnodes:
                 dag = self.dagnodes.get(NUUID)
@@ -689,27 +702,14 @@ class Graph(object):
         """
         Connect two nodes via a "Node.attribute" string
         """
-        from PySide import QtCore
-        from SceneGraph import core
-
         input_name, input_conn = input.split('.')
         output_name, output_conn = output.split('.')
-        input_node = self.getNode(input_name)
-        output_node = self.getNode(output_name)
 
-        input_conn_node  = input_node.getInputConnection(input_conn)
-        output_conn_node = output_node.getOutputConnection(output_conn)
+        input_node = self.getDagNode(name=input_name)
+        output_node = self.getDagNode(name=output_name)
 
-        if input_conn_node and output_conn_node:
-            connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
-            self.view.scene().addItem(connectionLine)
-            connectionLine.updatePosition()
-        else:
-            if not input_conn_node:
-                core.log.error('cannot find an input connection "%s" for node "%s"' % (input_conn, input_node ))
+        return self.addEdge(output, output)
 
-            if not output_conn_node:
-                core.log.error('cannot find an output connection "%s" for node "%s"' % (output_conn, output_node))
 
     def reset(self):
         """
@@ -862,3 +862,96 @@ class Graph(object):
         dest_node, dest_conn = dest.split('.')
 
 
+class Array(object):
+    """
+    Represents an array.
+    """
+    def __init__(self, capacity, fillValue=None):
+        """
+        :param capacity: static size of the array
+        :type capacity: int
+
+        :param fillValue: value to hold each position
+        :type fillValue: n/a
+        """
+        self._items = list()
+        for count in range(capacity):
+            self._items.append(fillValue)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __add__(self, x):
+        tmp = Array(len(self)+x)
+        for i in range(len(self)):
+            tmp[i]=self[i]
+        return tmp
+
+    def __sub__(self, x):
+        tmp = Array(len(self)-x)
+        for i in range(len(self)-x):
+            tmp[i]=self[i]
+        return tmp
+
+    def __str__(self):
+        return str(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __getitem__(self, index):
+        return self._items[index]
+
+    def __setitem__(self, index, item):
+        self._items[index] = item
+
+
+class Grid(object):
+    """
+    Represents a two-dimensional grid.
+    """
+    def __init__(self, rows, columns, fillValue=None):
+        self._data = Array(rows)
+        for row in range(rows):
+            self._data[row] = Array(columns, fillValue)
+
+    def __repr__(self):
+        return "\n"+self.__str__()
+
+    def __str__(self):
+        """
+        returns a string representation of the grid.
+        """
+        result = """"""
+        for row in range(self.height):
+            for col in range(self.width):
+                result += str(self._data[row][col]) + " "
+            result += "\n"
+        return result
+
+    @property
+    def height(self):
+        """
+        returns the number of rows
+        """
+        return len(self._data)
+
+    @property
+    def width(self):
+        """
+        returns the number of columns
+        """
+        return len(self._data[0])
+
+    def __getitem__(self, index):
+        """
+        supports two-dimensional indexing
+        with [row][column].
+        """
+        return self._data[index]
+
+    def get(self, row, column):
+        return self._data[row][column]
+
+    def set(self, row, column, item):
+        self._data[row][column] = item

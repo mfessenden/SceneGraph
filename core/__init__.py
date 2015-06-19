@@ -33,4 +33,4 @@ FloatAttribute      = attributes.FloatAttribute
 
 # undo commands
 NodeDataCommand     = commands.NodeDataCommand
-CommandMove         = commands.CommandMove          
+CommandMove         = commands.CommandMove

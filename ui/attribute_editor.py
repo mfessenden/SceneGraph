@@ -129,6 +129,9 @@ class AttributeEditor(QtGui.QWidget):
         Update the node from an attribute
         """
         new_value = str(lineEdit.text())
+        if attribute == 'name':
+            new_value = self._gui.graph._nodeNamer(new_value)
+
         try:
             new_value = eval(new_value)
         except:
@@ -138,7 +141,7 @@ class AttributeEditor(QtGui.QWidget):
     
     def updateNodeColor(self, color):
         """
-        Update the node olor value.
+        Update the node color value.
         """
         rgb = (color.red(), color.green(), color.blue())
         self._current_node.color = rgb

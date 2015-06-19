@@ -22,6 +22,7 @@ class GraphicsView(QtGui.QGraphicsView):
     def __init__(self, parent=None, ui=None, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
 
+        self.log                 = log
         self.parent              = ui
         scene                    = GraphicsScene(self)
         self.setScene(scene)
@@ -33,8 +34,8 @@ class GraphicsView(QtGui.QGraphicsView):
         # Mouse Interaction
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
-        #self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        #self.setResizeAnchor(QtGui.QGraphicsView.AnchorViewCenter)
+        self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
@@ -58,6 +59,8 @@ class GraphicsView(QtGui.QGraphicsView):
     def updateNetworkGraphAttributes(self):
         """
         Update networkx graph attributes from the current UI.
+
+        TODO: check speed hit on this one
         """
         self.scene().network.graph['scale']=self.getScaleFactor()
         self.scene().network.graph['xform']=self.getTranslation()
@@ -158,7 +161,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
         # set up timer for node drops
         timer = QtCore.QTimer()
-        timer.timeout.connect(partial(self.edgeDrop, event))
+        timer.timeout.connect(self.splitNodeConnection)
 
         selected_nodes = self.scene().selectedNodes()
 
@@ -204,31 +207,28 @@ class GraphicsView(QtGui.QGraphicsView):
                     if len(selected_nodes) == 1:
                         sel_node = selected_nodes[0]
                         coll_items = self.scene().collidingItems(sel_node)
+                        ext_coll = []
+                        for c in coll_items:
+                            if hasattr(c, 'dagnode'):
+                                if c.dagnode.name != sel_node.dagnode.name:
+                                    if c not in ext_coll:
+                                        ext_coll.append(c)
+                        col_nodes = [x for x in ext_coll if hasattr(x, 'node_class')]
 
+                        if len(col_nodes):
+                            if len(col_nodes) == 1:
+                                edge_widget = col_nodes[0]                                
+                                #self.splitNodeConnection(sel_node, edge_widget)
 
-                        if event_item in coll_items:
-                            print 'edge collision: "%s"' % (sel_node.dagnode.name)
                 timer.start(1)
 
         self.updateNetworkGraphAttributes()
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
-    def edgeDrop(self, event):
-        item = self.itemAt(event.pos())
-        if item:
-            if hasattr(item, 'node_class'):
-                collisions = self.scene().collidingItems(item)
-                edges = []
-                if collisions:
-                    for c in collisions:
-                        if hasattr(c, 'node_class'):
-                            if c.node_class == 'edge':
-                                edges.append(c)
-                if edges:
-                    edge = edges[0]
-                    source_item = edge.source_item
-                    dest_item = edge.source_item
-                    print 'dropping node: ', item
+    def splitNodeConnection(self, node, edge):
+        print '# splitting %s with node %s ' % (edge.dagnode.name, node.dagnode.name)
+        edge_source = edge.source_item
+        edge_dest = edge.dest_item
 
     def mousePressEvent(self, event):
         """
@@ -262,7 +262,9 @@ class GraphicsView(QtGui.QGraphicsView):
             #self.setSceneRect(boundsRect) # this resizes the scene rect to the bounds rect, not desirable
 
         if event.key() == QtCore.Qt.Key_F:
-            self.fitInView(graphicsScene.sceneRect(), QtCore.Qt.KeepAspectRatio)
+            nodes = self.scene().selectedNodes()
+            bRect = self.scene().selectionArea().boundingRect()
+            self.fitInView(bRect, QtCore.Qt.KeepAspectRatio)
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
             nodes = self.scene().graph.selectedNodes()
@@ -369,6 +371,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.graph      = val
         self.network    = val.network
 
+    def drawBackground(self, painter, rect):
+        print '# drawing background'
+        QtGui.QGraphicsScene.drawBackground(self, painter, rect)
+
     def update(self, *args):
         """
         Update certain node/edge attributes on update.
@@ -398,8 +404,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if item.node_class in ['edge']:
                 self.sceneEdges[str(item.UUID)] = item
                 self.edgeAdded.emit(item)
-                # edges are QGraphicsLineItems, no signals
-                #item.nodeChanged.connect(self.edgeChangedAction)
         QtGui.QGraphicsScene.addItem(self, item)
 
     def removeItem(self, item):
@@ -513,7 +517,20 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
                         self.addItem(self.line)
                         self.update(self.itemsBoundingRect())
-            
+
+                    # disconnect the edge if this is an input
+                    if item.isInputConnection():
+                        # query the edge
+                        edges = item.connections.values()
+                        if edges and len(edges) == 1:
+                            connected_edge = edges[0]
+                            self.graph.removeEdge(UUID=connected_edge.UUID)
+                            edge_line = connected_edge.getLine()
+                            p1 = edge_line.p1()
+
+                            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
+                            self.addItem(self.line)
+                            self.update(self.itemsBoundingRect())
 
         if event.button() == QtCore.Qt.RightButton:
             pass
