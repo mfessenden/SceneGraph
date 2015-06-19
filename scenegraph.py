@@ -11,11 +11,11 @@ from SceneGraph import core
 from SceneGraph import ui
 
 reload(options)
-reload(core)
 reload(ui)
 
 
 log = core.log
+
 global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
 SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', '0')
@@ -70,6 +70,9 @@ class SceneGraphUI(form_class, base_class):
 
         # stash temp selections here
         self._selected_nodes  = []
+
+        # undo stack
+        self.undo_stack       = QtGui.QUndoStack(self)
 
         # preferences
         self.settings_file    = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
@@ -129,8 +132,20 @@ class SceneGraphUI(form_class, base_class):
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
+
         # remove the Draw tab
         self.tabWidget.removeTab(2)
+
+        # setup undo/redo
+        undo_action = self.undo_stack.createUndoAction(self, "&Undo")
+        undo_action.setShortcuts(QtGui.QKeySequence.Undo)
+        redo_action = self.undo_stack.createRedoAction(self, "&Redo")
+        redo_action.setShortcuts(QtGui.QKeySequence.Redo)
+
+        self.menu_edit.addAction(undo_action)
+        self.menu_edit.addAction(redo_action)
+
+        self.initializeNodesMenu()
 
     def setupFonts(self, font='SansSerif', size=9):
         """
@@ -157,7 +172,7 @@ class SceneGraphUI(form_class, base_class):
         self.network = self.graph.network
         self.network.graph['environment'] = self.environment
 
-        self.scene.setNodeManager(self.graph)
+        self.scene.setGraph(self.graph)
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
         # graphics View
@@ -199,7 +214,6 @@ class SceneGraphUI(form_class, base_class):
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
         pos_y = current_pos.y()
-        self.action_add_default.triggered.connect(partial(self.graph.addNode, 'default', pos_x=QtGui.QCursor().pos().x(), pos_y=QtGui.QCursor().pos().y()))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -229,6 +243,15 @@ class SceneGraphUI(form_class, base_class):
         if self.scene.edge_type == 'bezier':
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
+
+    def initializeNodesMenu(self):
+        """
+        Build a context menu at the current pointer pos.
+        """
+        for node in self.graph.node_types():
+            node_action = self.menu_add_node.addAction(node)
+            # add the node at the scene pos
+            node_action.triggered.connect(partial(self.graph.addNode, node_type=node))
 
     def initializeUIMenu(self):
         """

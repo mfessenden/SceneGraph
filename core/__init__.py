@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 from . import logger
+
+log = logger.myLogger()
+
 from . import graph
 from . import nodes
 from . import connections
 from . import attributes
+from . import commands
 
-reload(logger)
+
 reload(graph)
 reload(nodes)
 reload(connections)
 reload(attributes)
+reload(commands)
 
-
-# logger
-logger.disableDebugging()
-log = logger.myLogger()
 
 
 # graph class
@@ -28,3 +29,8 @@ EdgeBase            = nodes.EdgeBase
 StringAttribute     = attributes.StringAttribute
 IntegerAttribute    = attributes.IntegerAttribute
 FloatAttribute      = attributes.FloatAttribute
+
+
+# undo commands
+NodeDataCommand     = commands.NodeDataCommand
+CommandMove         = commands.CommandMove          

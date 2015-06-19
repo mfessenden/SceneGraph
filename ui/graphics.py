@@ -5,12 +5,13 @@ from PySide import QtCore, QtGui, QtSvg
 from functools import partial
 
 from SceneGraph import core
+# logger
+log = core.log
+
 from . import node_widgets
 reload(core)
 reload(node_widgets)
 
-# logger
-log = core.log
 
 
 class GraphicsView(QtGui.QGraphicsView):
@@ -252,12 +253,9 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Fit the viewport if the 'A' key is pressed
         """
-        graphicsScene = self.scene()
-        graph = graphicsScene.graph
-
         if event.key() == QtCore.Qt.Key_A:
             # get the bounding rect of the graphics scene
-            boundsRect = graphicsScene.itemsBoundingRect()            
+            boundsRect = self.scene().itemsBoundingRect()            
             
             # resize
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
@@ -267,30 +265,30 @@ class GraphicsView(QtGui.QGraphicsView):
             self.fitInView(graphicsScene.sceneRect(), QtCore.Qt.KeepAspectRatio)
 
         elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
-            nodes = graph.selectedNodes()
-            graph.copyNodes(nodes)
+            nodes = self.scene().graph.selectedNodes()
+            self.scene().graph.copyNodes(nodes)
             log.debug('copying nodes: %s' % ', '.join(nodes))
 
         elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
-            nodes = graph.pasteNodes()
+            nodes = self.scene().graph.pasteNodes()
             log.debug('pasting nodes: %s' % ', '.join(nodes))
 
         # delete nodes & edges...
         elif event.key() == QtCore.Qt.Key_Delete:
-            for item in graphicsScene.selectedItems():
+            for item in self.scene().selectedItems():
                 if hasattr(item, 'node_class'):
                     if item.node_class in ['dagnode']:
                         self.scene().graph.removeNode(item.dagnode.name, UUID=item.UUID)
 
                     elif item.node_class in ['edge']:
                         self.scene().graph.removeEdge(UUID=item.UUID)
-
-                    graphicsScene.removeItem(item)
+                    # TODO: scene different error
+                    self.scene().removeItem(item)
                     continue
 
         # disable selected nodes
         elif event.key() == QtCore.Qt.Key_D:
-            items = graphicsScene.selectedItems()
+            items = self.scene().selectedItems()
             for item in items:
                 dag = item.dagnode
                 if hasattr(dag, 'enabled'):
@@ -301,7 +299,7 @@ class GraphicsView(QtGui.QGraphicsView):
                         pass
 
         self.updateNetworkGraphAttributes()
-        graphicsScene.update()
+        self.scene().update()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def get_scroll_state(self):
@@ -331,6 +329,16 @@ class GraphicsView(QtGui.QGraphicsView):
             menu.addAction(action)
         menu.exec_(self.mapToGlobal(pos))
 
+    def restoreNodes(self, data):
+        """
+        Undo command.
+        """
+        selected_nodes = self.selected_nodes()
+        self.blockSignals(True)
+        for node in selected_nodes:
+            node.dagnode.update(**data)
+        self.blockSignals(False)
+
 
 class GraphicsScene(QtGui.QGraphicsScene):
     """
@@ -354,10 +362,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.graph       = None
         self.network     = None
 
-    # TODO: do we need this anymore?
-    def setNodeManager(self, val):
-        self.graph = val
-        self.network = val.network
+    def setGraph(self, val):
+        """
+        Add references to the graph and network objects.
+        """
+        self.graph      = val
+        self.network    = val.network
 
     def update(self, *args):
         """

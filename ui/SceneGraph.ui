@@ -150,7 +150,6 @@
      <property name="title">
       <string>Add node...</string>
      </property>
-     <addaction name="action_add_default"/>
     </widget>
     <addaction name="menu_add_node"/>
    </widget>
@@ -174,7 +173,13 @@
      <string>Help</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menu_edit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
    <addaction name="menu_file"/>
+   <addaction name="menu_edit"/>
    <addaction name="menu_graph"/>
    <addaction name="menu_nodes"/>
    <addaction name="menu_ui"/>
@@ -445,11 +450,6 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="action_add_default">
-   <property name="text">
-    <string>default</string>
-   </property>
-  </action>
   <action name="action_clear_graph">
    <property name="text">
     <string>Clear graph</string>
@@ -494,6 +494,22 @@
   <action name="action_show_all_attributes">
    <property name="text">
     <string>Show all attributes</string>
+   </property>
+  </action>
+  <action name="action_undo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="action_redo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
    </property>
   </action>
  </widget>

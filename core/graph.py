@@ -6,9 +6,7 @@ import simplejson as json
 import networkx as nx
 from functools import partial
 from PySide import QtCore, QtGui
-from . import logger
-
-log = logger.myLogger()
+from SceneGraph.core import log
 
 
 class Graph(object):
@@ -53,7 +51,6 @@ class Graph(object):
         params:
             view - (object) QtGui.QGraphicsView
         """
-        from SceneGraph.core import log
         if view is not None:
             log.info('setting up GraphicsView...')
             self.view = view
@@ -159,29 +156,30 @@ class Graph(object):
         if self.view:
             # remove any invalid edge widgets.
             invalid_edge_widgets = []
-            edge_widgets = self.scene.sceneEdges.values()
+            edge_widgets = self.view.scene().sceneEdges.values()
 
             for edge in edge_widgets:
                 dag_edge = edge.dagnode
                 UUID = edge.UUID
                 if UUID not in edge_ids:
                     #print '# WARNING: invalid edge widget: "%s" ' % str(edge)
-                    if UUID in self.scene.sceneEdges:
-                        self.scene.sceneEdges.pop(UUID)
-                    self.scene.removeItem(edge)
+                    if UUID in self.view.scene().sceneEdges:
+                        self.view.scene().sceneEdges.pop(UUID)
+
+                    # TODO: scene different error here
+                    self.view.scene().removeItem(edge)
 
             # remove any invalid node widgets.
             invalid_node_widgets = []
 
-            node_widgets = self.scene.sceneNodes.values()
+            node_widgets = self.view.scene().sceneNodes.values()
             for node in node_widgets:
                 dag_node = node.dagnode
                 dag_name = dag_node.name
                 UUID = node.UUID
                 if UUID not in dag_ids:
-                    #print '# WARNING: invalid node widget: "%s" ' % dag_name
-                    self.scene.sceneNodes.pop(UUID)
-                    self.scene.removeItem(node)
+                    self.view.scene().sceneNodes.pop(UUID)
+                    self.view.scene().removeItem(node)
 
         tend=time.time()
         if verbose:
@@ -254,7 +252,7 @@ class Graph(object):
         if not self.view:
             return []
 
-        return self.scene.sceneNodes.values()
+        return self.view.scene().sceneNodes.values()
 
     def getSceneNode(self, name=None, UUID=None):
         """
@@ -329,7 +327,7 @@ class Graph(object):
         if not self.view:
             return []
 
-        return self.scene.sceneEdges.values()
+        return self.view.scene().sceneEdges.values()
 
     def getSceneEdge(self, conn=None, UUID=None):
         """
@@ -423,9 +421,9 @@ class Graph(object):
             reload(ui)
             #node = ui.NodeWidget(dag, pos_x=pos_x, pos_y=pos_y, width=width, height=height, expanded=expanded)
             node = ui.NodeWidget(dag)
-            log.info('adding scene graph node "%s"' % name)
+            log.debug('adding scene graph node "%s"' % name)
         else:
-            log.info('adding node "%s"' % name)
+            log.debug('adding node "%s"' % name)
         
         # add the node to the networkx graph
         self.network.add_node(str(dag.UUID))
@@ -435,7 +433,7 @@ class Graph(object):
         nn['node_type'] = node_type
 
         if self.view:
-            self.scene.addItem(node)
+            self.view.scene().addItem(node)
             node.setPos(dag.pos_x, dag.pos_y)
             node.setSelected(True)
             self.view.parent.updateAttributeEditor(node.dagnode)
@@ -455,7 +453,6 @@ class Graph(object):
         if UUID is None:
             UUID = self.getNodeID(name)
         if UUID and UUID in self.dagnodes:
-            from SceneGraph.core import log
             log.info('Removing node: "%s"' % name)
             if UUID in self.dagnodes:
                 self.dagnodes.pop(UUID)
@@ -490,7 +487,7 @@ class Graph(object):
             dest_id = self.getNodeID(dest_name)
 
             edge.ids = (src_id, dest_id)
-            print '# Graph.addEdge: connecting: "%s.%s"' % (src_name, dest_name)
+            log.debug('connecting: "%s.%s"' % (src_name, dest_name))
 
             self.network.add_edge(src_id, 
                 dest_id,
@@ -513,7 +510,7 @@ class Graph(object):
 
                 if src_widget and dest_widget:
                     edge_widget = ui.EdgeWidget(src_widget.output_widget, dest_widget.input_widget, edge=edge)
-                    self.scene.addItem(edge_widget)
+                    self.view.scene().addItem(edge_widget)
             return edge
 
     def removeEdge(self, conn=None, UUID=None): 
@@ -535,7 +532,7 @@ class Graph(object):
 
         if UUID and UUID in self.dagedges:
             dag = self.dagedges.pop(UUID)
-            log.info('Removing edge: "%s"' % dag.name)
+            log.debug('Removing edge: "%s"' % dag.name)
             try:
                 self.network.remove_edge(*dag.ids)
             except:
@@ -650,14 +647,13 @@ class Graph(object):
         returns:
             (object)  - renamed node
         """
-        from SceneGraph.core import log
         if not self.validNodeName(new_name):
             log.error('"%s" is not unique' % new_name)
             return
 
         UUID = self.getNodeID(old_name)
         self.network.node[UUID]['name'] = new_name
-        for node in self.scene.sceneNodes.values():
+        for node in self.view.scene().sceneNodes.values():
             if node.dagnode.name == old_name:
                 node.dagnode.name = new_name
                 return node
@@ -706,7 +702,7 @@ class Graph(object):
 
         if input_conn_node and output_conn_node:
             connectionLine = core.nodes.LineClass(output_conn_node, input_conn_node, QtCore.QLineF(output_conn_node.scenePos(), input_conn_node.scenePos()))
-            self.scene.addItem(connectionLine)
+            self.view.scene().addItem(connectionLine)
             connectionLine.updatePosition()
         else:
             if not input_conn_node:
@@ -721,7 +717,7 @@ class Graph(object):
         """
         # clear the Graph
         self.network.clear()
-        self.scene.clear()
+        self.view.scene().clear()
         self.dagnodes = dict()
         self.dagedges = dict()
 
@@ -814,7 +810,6 @@ class Graph(object):
             filename - (str) file to read
         """
         import os
-        from SceneGraph.core import log
 
         if os.path.exists(filename):
             raw_data = open(filename).read()
@@ -836,7 +831,7 @@ class Graph(object):
 
                 # add the dag node/widget
                 dag_node = self.addNode(node_type, **node_attrs)
-                log.info('building node "%s"' % node_attrs.get('name'))
+                log.debug('building node "%s"' % node_attrs.get('name'))
 
             for edge_attrs in edges:
                 edge_id = edge_attrs.get('id')
@@ -852,7 +847,7 @@ class Graph(object):
                 src_string = '%s.%s' % (src_dag_node.name, src_attr)
                 dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
 
-                log.info('building edge: %s > %s' % (src_id, dest_id))
+                log.debug('building edge: %s > %s' % (src_id, dest_id))
                 self.addEdge(src=src_string, dest=dest_string, id=edge_id)
 
             return self.setScene(filename)
