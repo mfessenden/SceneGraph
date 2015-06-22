@@ -5,14 +5,12 @@ log = logger.myLogger()
 
 from . import graph
 from . import nodes
-from . import connections
 from . import attributes
 from . import commands
 
 
 reload(graph)
 reload(nodes)
-reload(connections)
 reload(attributes)
 reload(commands)
 

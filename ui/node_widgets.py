@@ -12,7 +12,7 @@ reload(options)
 
 class NodeWidget(QtGui.QGraphicsObject):
     
-    Type                    = QtGui.QGraphicsObject.UserType + 3
+    Type                    = QtGui.QGraphicsObject.UserType + 2
     clickedSignal           = QtCore.Signal(QtCore.QObject)
     nodeCreatedInScene      = QtCore.Signal()
     nodeChanged             = QtCore.Signal(str, dict)    
@@ -243,6 +243,7 @@ class NodeWidget(QtGui.QGraphicsObject):
                 print '# checking connection "%s"' % conn_name
                 if self in edge.listConnections():
                     print '# removing invalid edge: "%s"' % edge.dagnode.name
+                    print '# DEBUG: NodeWidget: deleteNode'
                     self.scene().graph.removeEdge(UUID=edge.UUID)
 
     @QtCore.Slot()
@@ -408,7 +409,8 @@ class NodeWidget(QtGui.QGraphicsObject):
             painter.drawLine(label_line)
 
         if self.expand_widget:
-            self.expand_widget.scene().removeItem(self.expand_widget)
+            self.expand_widget.hide()
+
 
         if self.expanded:
             self.expand_widget = self.getExpandedIcon()
@@ -438,7 +440,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
 class ConnectionWidget(QtGui.QGraphicsObject):
     
-    Type                = QtGui.QGraphicsObject.UserType + 4
+    Type                = QtGui.QGraphicsObject.UserType + 3
     clickedSignal       = QtCore.Signal(QtCore.QObject)
     nodeChanged         = QtCore.Signal(str, dict)
     PRIVATE             = []
@@ -521,7 +523,7 @@ class ConnectionWidget(QtGui.QGraphicsObject):
         """
         Assistance for the QT windowing toolkit.
         """
-        return NodeWidget.Type
+        return ConnectionWidget.Type
 
     def boundingRect(self):
         return self.bounds.mapRectToParent(self.bounds.boundingRect())
@@ -587,8 +589,9 @@ class ConnectionWidget(QtGui.QGraphicsObject):
 
 # edge class for connecting nodes
 class EdgeWidget(QtGui.QGraphicsObject):
-
-    adjustment           = 5
+    
+    Type                = QtGui.QGraphicsObject.UserType + 4
+    adjustment          = 5
 
     def __init__(self, source_item, dest_item, edge, *args, **kwargs):
         QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
@@ -645,6 +648,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
     def node_class(self):
         return 'edge' 
 
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return EdgeWidget.Type
+
     def __repr__(self):
         return '< Edge: %s >' % self.connection
 
@@ -666,10 +675,11 @@ class EdgeWidget(QtGui.QGraphicsObject):
         Returns true if the edge has two connections.
         """
         if self:
-            if self.scene():
-                if self.source_item in self.scene().items():
-                    if self.dest_item in self.scene().items():
-                        return True
+            #print '# DEBUG: EdgeWidget: is_valid'
+            #if self.scene():
+                #if self.source_item in self.scene().items():
+                    #if self.dest_item in self.scene().items():
+            return True
         return False
 
     def listConnections(self):
@@ -982,8 +992,8 @@ class ControlPoint(QtGui.QGraphicsObject):
     """
     Bezier control point widget.
     """
-
-    clicked     = QtCore.Signal(bool)
+    Type                    = QtGui.QGraphicsObject.UserType + 5
+    clicked                 = QtCore.Signal(bool)
 
     def __init__(self, center, parent=None, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
@@ -1005,6 +1015,12 @@ class ControlPoint(QtGui.QGraphicsObject):
     @property
     def node_class(self):
         return 'control_point' 
+
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return ControlPoint.Type
 
     def boundingRect(self):
         return QtCore.QRectF(-self.radius/2  - self.radius,  -self.radius/2 - self.radius,
@@ -1048,8 +1064,9 @@ class ControlPoint(QtGui.QGraphicsObject):
 
 
 class NodeLabel(QtGui.QGraphicsObject):
-
-    labelChanged = QtCore.Signal(str)
+    
+    Type                    = QtGui.QGraphicsObject.UserType + 6
+    labelChanged            = QtCore.Signal(str)
 
     def __init__(self, parent):
         QtGui.QGraphicsObject.__init__(self, parent)
@@ -1077,7 +1094,17 @@ class NodeLabel(QtGui.QGraphicsObject):
         self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
         self.rect_item.stackBefore(self.label)
         #self.setZValue(2)
-  
+
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return NodeLabel.Type 
+
+    @property
+    def node_class(self):
+        return 'label'   
+
     def boundingRect(self):
         return self.label.boundingRect()
   

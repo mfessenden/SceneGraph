@@ -52,6 +52,9 @@
 	# query all node names
 	print g.getDagNodeNames()
 
+	# query all connections
+	print g.allConnections()
+
 
 ##### Dependencies:
 

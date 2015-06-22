@@ -95,6 +95,14 @@ class SceneGraphUI(form_class, base_class):
         self.tableView.setModel(self.tableModel)
         self.tableSelectionModel = self.tableView.selectionModel()
 
+        self.nodesModel = ui.NodesListModel()
+        self.nodeStatsList.setModel(self.nodesModel)
+        self.nodeListSelModel = self.nodeStatsList.selectionModel()
+
+        self.edgesModel = ui.EdgesListModel()
+        self.edgeStatsList.setModel(self.edgesModel)
+        self.edgeListSelModel = self.edgeStatsList.selectionModel()
+
         self.initializeUI()
         self.readSettings()       
         self.connectSignals()
@@ -125,7 +133,7 @@ class SceneGraphUI(form_class, base_class):
         """
         # add our custom GraphicsView object
         self.view = ui.GraphicsView(self.gview, ui=self)
-        self.scene = self.view.scene()
+        self.scene = self.view.scene
         self.gviewLayout.addWidget(self.view)
         self.setupFonts()        
         
@@ -150,6 +158,12 @@ class SceneGraphUI(form_class, base_class):
         self.menu_edit.addAction(redo_action)
 
         self.initializeNodesMenu()
+
+        # validators for console widget
+        self.scene_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posx))
+        self.scene_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posy))
+        self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
+        self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
 
     def setupFonts(self, font='SansSerif', size=9):
         """
@@ -206,8 +220,9 @@ class SceneGraphUI(form_class, base_class):
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
+        self.action_revert.triggered.connect(self.revertGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
-        self.action_draw_graph.triggered.connect(self.drawGraph)
+        self.action_draw_graph.triggered.connect(self.refreshGraph)
         self.action_evaluate.triggered.connect(self.graph.evaluate)
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
@@ -225,9 +240,12 @@ class SceneGraphUI(form_class, base_class):
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputTextBrowser.clear)
         self.button_update_draw.clicked.connect(self.updateDrawTab)
+        self.consoleTabWidget.currentChanged.connect(self.updateStats)
 
         # table view
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
+        self.nodeListSelModel.selectionChanged.connect(self.nodesModelChangedAction)
+        self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)
 
     def initializeFileMenu(self):
         """
@@ -236,6 +254,7 @@ class SceneGraphUI(form_class, base_class):
         current_scene = self.graph.getScene()
         if not current_scene:
             self.action_save_graph.setEnabled(False)
+            self.action_revert.setEnabled(False)
 
         # create the recent files menu
         self.initializeRecentFilesMenu()
@@ -272,17 +291,19 @@ class SceneGraphUI(form_class, base_class):
         """
         Build a menu of recently opened scenes.
         """
-        recent_files = dict()
         recent_files = self.qtsettings.getRecentFiles()
         self.menu_recent_files.clear()
         self.menu_recent_files.setEnabled(False)
         if recent_files:
+            i = 0
             # Recent files menu
             for filename in reversed(recent_files):
                 if filename:
-                    file_action = QtGui.QAction(filename, self.menu_recent_files)
-                    file_action.triggered.connect(partial(self.readRecentGraph, filename))
-                    self.menu_recent_files.addAction(file_action)
+                    if i < self.qtsettings._max_files:
+                        file_action = QtGui.QAction(filename, self.menu_recent_files)
+                        file_action.triggered.connect(partial(self.readRecentGraph, filename))
+                        self.menu_recent_files.addAction(file_action)
+                        i+=1
             self.menu_recent_files.setEnabled(True)
 
     def buildWindowTitle(self):
@@ -359,6 +380,7 @@ class SceneGraphUI(form_class, base_class):
 
         self.graph.write(filename)
         self.action_save_graph.setEnabled(True)
+        self.action_revert.setEnabled(True)
         self.buildWindowTitle()
 
         self.graph.setScene(filename)
@@ -432,11 +454,21 @@ class SceneGraphUI(form_class, base_class):
         self.buildWindowTitle()
         self.scene.clearSelection()
 
+    def revertGraph(self):
+        """
+        Revert the current graph file.
+        """
+        filename=self.graph.getScene()
+        if filename:
+            self.resetGraph()
+            self.readGraph(filename)
+            log.info('reverting graph: %s' % filename)
+
     def resetGraph(self):
         """
         Reset the current graph
         """
-        self.view.scene().clear()
+        self.scene.clear()
         self.graph.reset()
         self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
@@ -547,6 +579,21 @@ class SceneGraphUI(form_class, base_class):
             idx = self.tableSelectionModel.selectedRows()[0]
             dagnode = self.tableModel.nodes[idx.row()]
             self.updateAttributeEditor(dagnode)
+
+    def nodesModelChangedAction(self):
+        self.scene.clearSelection()
+        if self.nodeListSelModel.selectedRows():
+            idx = self.nodeListSelModel.selectedRows()[0]
+            node = self.nodesModel.nodes[idx.row()]
+            node.setSelected(True)
+
+    def edgesModelChangedAction(self):
+        self.scene.clearSelection()
+        if self.edgeListSelModel.selectedRows():
+            idx = self.edgeListSelModel.selectedRows()[0]
+
+            edge = self.edgesModel.edges[idx.row()]
+            edge.setSelected(True)
 
     def nodeAddedAction(self, node):
         """
@@ -751,37 +798,63 @@ class SceneGraphUI(form_class, base_class):
         Update the console data.
 
         params:
-            data - (dict) data from GraphicsView mouseMoveEvent
+            status - (dict) data from GraphicsView mouseMoveEvent
 
         """        
         self.sceneRectLineEdit.clear()
         self.viewRectLineEdit.clear()
         self.zoomLevelLineEdit.clear()
 
-        if status.get('cursor_x'):
-            self.cursorXLineEdit.clear()
-            self.cursorXLineEdit.setText(str(status.get('cursor_x')))
+        if status.get('view_cursor'):
+            vx, vy = status.get('view_cursor', (0.0,0.0))
+            self.view_posx.clear()
+            self.view_posy.clear()
+            self.view_posx.setText('%.2f' % vx)
+            self.view_posy.setText('%.2f' % vy)
 
-        if status.get('cursor_y'):
-            self.cursorYLineEdit.clear()
-            self.cursorYLineEdit.setText(str(status.get('cursor_y')))
+        if status.get('scene_cursor'):
+            sx, sy = status.get('scene_cursor', (0.0,0.0))
+            self.scene_posx.clear()
+            self.scene_posy.clear()
+            self.scene_posx.setText('%.2f' % sx)
+            self.scene_posy.setText('%.2f' % sy)
 
-        if status.get('cursor_sx'):
-            self.sceneCursorXLineEdit.clear()
-            self.sceneCursorXLineEdit.setText(str(status.get('cursor_sx')))
+        if status.get('scene_pos'):
+            spx, spy = status.get('scene_pos', (0.0,0.0))
+            self.scene_posx1.clear()
+            self.scene_posy1.clear()
+            self.scene_posx1.setText('%.2f' % spx)
+            self.scene_posy1.setText('%.2f' % spy)
 
-        if status.get('cursor_sy'):
-            self.sceneCursorYLineEdit.clear()
-            self.sceneCursorYLineEdit.setText(str(status.get('cursor_sy')))
-
-        scene_str = '%s, %s' % (status.get('scene_rect')[0], status.get('scene_rect')[1])
+        scene_str = '%s, %s' % (status.get('scene_size')[0], status.get('scene_size')[1])
         self.sceneRectLineEdit.setText(scene_str)
 
         view_str = '%s, %s' % (status.get('view_size')[0], status.get('view_size')[1])
         self.viewRectLineEdit.setText(view_str)
 
-        zoom_str = '%s' % status.get('zoom_level')[0]
+        zoom_str = '%.3f' % status.get('zoom_level')[0]
         self.zoomLevelLineEdit.setText(zoom_str)
+
+    def updateStats(self):
+        """
+        Update the console stats lists.
+        """
+        self.nodesModel.clear()
+        self.edgesModel.clear()
+
+        nodes = self.graph.getSceneNodes()
+        edges = self.graph.getSceneEdges()
+
+        self.nodesModel.addNodes(nodes)
+        self.edgesModel.addEdges(edges)
+
+        self.nodeStatsLabel.setText('Nodes: (%d)' % len(nodes))
+        self.edgeStatsLabel.setText('Edges: (%d)' % len(edges))
+
+
+    def refreshGraph(self):
+        self.graph.evaluate()
+        self.scene.update()
 
     def drawGraph(self, filename=None):
         """
@@ -854,6 +927,8 @@ class Settings(QtCore.QSettings):
     def save(self, key='default'):
         """
         Save, with optional category.
+
+         * unused
         """
         self.beginGroup("Mainwindow/%s" % key)
         self.setValue("size", QtCore.QSize(self._parent.width(), self._parent.height()))
@@ -865,8 +940,22 @@ class Settings(QtCore.QSettings):
         pass
 
     def deleteFile(self):
-        print '# deleting settings: ', self.fileName()
+        log.info('deleting settings: "%s"' % self.fileName())
         return os.remove(self.fileName())
+
+    @property
+    def recent_files(self):
+        """
+        Returns a tuple of recent files, no larger than the max 
+        and reversed (for usage in menus).
+
+         * unused
+        """
+        files = self.getRecentFiles()
+        tmp = []
+        for f in reversed(files):
+            tmp.append(f)
+        return tuple(tmp[:self._max_files])
 
     def getRecentFiles(self):
         """
@@ -896,3 +985,5 @@ class Settings(QtCore.QSettings):
             self.setValue('file', recent_files[i])
         self.endArray()
 
+    def clearRecentFiles(self):
+        self.remove('RecentFiles')
