@@ -164,3 +164,8 @@ ColorSwatch {
     border: 1px solid #2a2a2a;
     border-radius: 4px;
 }
+
+QLabel.ListHeader{
+    font-weight: bold;
+    font-size: 8pt;
+}

@@ -108,7 +108,11 @@ class GraphTableModel(QtCore.QAbstractTableModel):
         return True
 
     def clear(self):
-        self.nodes = []
+        if len(self.nodes) == 1:
+            self.removeRows(0, 1)
+        else:
+            self.removeRows(0, len(self.nodes)-1)
+        self.nodes=[]
 
     def setData(self, index, value, role=QtCore.Qt.DisplayRole):
         node = self.nodes[index.row()]
@@ -177,3 +181,118 @@ class GraphTableModel(QtCore.QAbstractTableModel):
         if order == QtCore.Qt.DescendingOrder:
             self.nodes.reverse()
         self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+
+class NodesListModel(QtCore.QAbstractListModel):
+    def __init__(self, parent=None, nodes=[],):
+        QtCore.QAbstractListModel.__init__(self, parent)
+
+        self.nodes = nodes
+
+    def addNodes(self, nodes):
+        """
+        adds a list of tuples to the assets value
+        """
+        self.insertRows(0, len(nodes), values=nodes)
+
+    def getNodes(self):
+        return self.nodes
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.nodes)
+
+    def data(self, index, role):
+        row = index.row()
+        column = index.column()
+        node = self.nodes[row]
+
+        if role == QtCore.Qt.DisplayRole:
+            return node.dagnode.name
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    def clear(self):
+        if len(self.nodes) == 1:
+            self.removeRows(0, 1)
+        else:
+            self.removeRows(0, len(self.nodes)-1)
+        self.nodes=[]
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        if role == QtCore.Qt.EditRole:
+            row = index.row()
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def insertRows(self, position, rows, parent=QtCore.QModelIndex(), values=[]):
+        self.beginInsertRows(parent, position, position + rows - 1)
+        for row in range(rows):
+            self.nodes.insert(position + row, values[row])
+        self.endInsertRows()
+        return True
+
+    def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
+        self.beginRemoveRows(parent, position, position + rows - 1)
+        self.nodes = (self.nodes[:position] + self.nodes[position + rows:])
+        self.endRemoveRows()
+        return True
+
+
+class EdgesListModel(QtCore.QAbstractListModel):
+    def __init__(self, parent=None, edges=[],):
+        QtCore.QAbstractListModel.__init__(self, parent)
+
+        self.edges = edges
+
+    def addEdges(self, edges):
+        """
+        adds a list of tuples to the assets value
+        """
+        #print 'adding edges: ', len(edges)
+        self.insertRows(0, len(edges), values=edges)
+
+    def getEdges(self):
+        return self.edges
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.edges)
+
+    def data(self, index, role):
+        row = index.row()
+        column = index.column()
+        edge = self.edges[row]
+
+        if role == QtCore.Qt.DisplayRole:
+            return edge.dagnode.name
+
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    def clear(self):
+        if len(self.edges) == 1:
+            self.removeRows(0, 1)
+        else:
+            self.removeRows(0, len(self.edges)-1)
+        self.edges=[]
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        if role == QtCore.Qt.EditRole:
+            row = index.row()
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def insertRows(self, position, rows, parent=QtCore.QModelIndex(), values=[]):
+        self.beginInsertRows(parent, position, position + rows - 1)
+        for row in range(rows):
+            self.edges.insert(position + row, values[row])
+        self.endInsertRows()
+        return True
+
+    def removeRows(self, position, rows, parent=QtCore.QModelIndex()):
+        self.beginRemoveRows(parent, position, position + rows - 1)
+        self.edges = (self.edges[:position] + self.edges[position + rows:])
+        self.endRemoveRows()
+        return True

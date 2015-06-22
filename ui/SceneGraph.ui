@@ -131,6 +131,7 @@
     <addaction name="action_save_graph_as"/>
     <addaction name="separator"/>
     <addaction name="action_read_graph"/>
+    <addaction name="action_revert"/>
     <addaction name="separator"/>
     <addaction name="menu_recent_files"/>
     <addaction name="separator"/>
@@ -141,6 +142,7 @@
      <string>Graph</string>
     </property>
     <addaction name="action_clear_graph"/>
+    <addaction name="action_draw_graph"/>
     <addaction name="separator"/>
     <addaction name="action_evaluate"/>
     <addaction name="separator"/>
@@ -148,7 +150,6 @@
     <addaction name="separator"/>
     <addaction name="action_edge_type"/>
     <addaction name="separator"/>
-    <addaction name="action_draw_graph"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
     <property name="title">
@@ -229,7 +230,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>256</width>
+          <width>367</width>
           <height>107</height>
          </rect>
         </property>
@@ -268,7 +269,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>256</width>
+          <width>367</width>
           <height>108</height>
          </rect>
         </property>
@@ -299,7 +300,7 @@
    <property name="minimumSize">
     <size>
      <width>250</width>
-     <height>151</height>
+     <height>170</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -309,97 +310,222 @@
     <number>2</number>
    </attribute>
    <widget class="QWidget" name="consoleWidgetContents">
-    <layout class="QVBoxLayout" name="verticalLayout">
+    <layout class="QVBoxLayout" name="consoleWidgetLayout">
+     <property name="margin">
+      <number>1</number>
+     </property>
      <item>
-      <widget class="QScrollArea" name="consoleScrollArea">
-       <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
+      <widget class="QTabWidget" name="consoleTabWidget">
+       <property name="currentIndex">
+        <number>0</number>
        </property>
-       <property name="widgetResizable">
-        <bool>true</bool>
-       </property>
-       <widget class="QWidget" name="consoleScrollAreaContents">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>256</width>
-          <height>272</height>
-         </rect>
-        </property>
-        <layout class="QFormLayout" name="consoleScrollAreaLayout">
-         <property name="fieldGrowthPolicy">
-          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
-         </property>
-         <item row="0" column="0">
-          <widget class="QLabel" name="viewRectLabel">
-           <property name="text">
-            <string>View Size:</string>
+       <widget class="QWidget" name="tab_scene">
+        <attribute name="title">
+         <string>Scene Stats</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabSceneLayout">
+         <item>
+          <widget class="QScrollArea" name="consoleScrollArea">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
            </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="consoleScrollAreaContents">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>361</width>
+              <height>235</height>
+             </rect>
+            </property>
+            <layout class="QFormLayout" name="consoleScrollAreaLayout">
+             <property name="fieldGrowthPolicy">
+              <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+             </property>
+             <property name="horizontalSpacing">
+              <number>4</number>
+             </property>
+             <property name="verticalSpacing">
+              <number>4</number>
+             </property>
+             <property name="margin">
+              <number>1</number>
+             </property>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="viewRectLineEdit"/>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLineEdit" name="zoomLevelLineEdit"/>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="cursorXLabel">
+               <property name="text">
+                <string>Cursor (view):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QWidget" name="cursorViewWidget" native="true">
+               <layout class="QHBoxLayout" name="mainLayout">
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="view_posx"/>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="view_posy">
+                  <property name="inputMask">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="sceneCursorXLabel">
+               <property name="text">
+                <string>Cursor (scene):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QWidget" name="cursorSceneWidget" native="true">
+               <layout class="QHBoxLayout" name="mainLayout_2">
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="scene_posx"/>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="scene_posy">
+                  <property name="inputMask">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="scenePosLabel">
+               <property name="text">
+                <string>Scene Pos:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QWidget" name="widget" native="true">
+               <layout class="QHBoxLayout" name="mainLayout_3">
+                <property name="margin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="scene_posx1"/>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="scene_posy1">
+                  <property name="inputMask">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="sceneRectLabel">
+               <property name="text">
+                <string>Scene Rect:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="viewRectLabel">
+               <property name="text">
+                <string>View Size:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="zoomLevelLabel">
+               <property name="text">
+                <string>Zoom Level:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="sceneRectLineEdit"/>
+             </item>
+            </layout>
+           </widget>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="viewRectLineEdit"/>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="sceneRectLabel">
-           <property name="text">
-            <string>Scene Rect:</string>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_nodes">
+        <attribute name="title">
+         <string>Node Stats</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabNodesLayout">
+         <item>
+          <widget class="QScrollArea" name="nodesScrollArea">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
            </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="sceneRectLineEdit"/>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="zoomLevelLabel">
-           <property name="text">
-            <string>Zoom Level:</string>
+           <property name="widgetResizable">
+            <bool>true</bool>
            </property>
+           <widget class="QWidget" name="nodesScrollAreaWidgetContents">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>361</width>
+              <height>235</height>
+             </rect>
+            </property>
+            <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0,1,0,1">
+             <property name="spacing">
+              <number>4</number>
+             </property>
+             <property name="margin">
+              <number>1</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="nodeStatsLabel">
+               <property name="text">
+                <string>Nodes:</string>
+               </property>
+               <property name="class" stdset="0">
+                <string>ListHeader</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QListView" name="nodeStatsList"/>
+             </item>
+             <item>
+              <widget class="QLabel" name="edgeStatsLabel">
+               <property name="text">
+                <string>Edges:</string>
+               </property>
+               <property name="class" stdset="0">
+                <string>ListHeader</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QListView" name="edgeStatsList"/>
+             </item>
+            </layout>
+           </widget>
           </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="zoomLevelLineEdit"/>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="cursorXLabel">
-           <property name="text">
-            <string>Cursor X:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QLineEdit" name="cursorXLineEdit"/>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="cursorYLabel">
-           <property name="text">
-            <string>Cursor Y:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QLineEdit" name="cursorYLineEdit"/>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="sceneCursorXLabel">
-           <property name="text">
-            <string>Cursor X (scene):</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
-          <widget class="QLineEdit" name="sceneCursorXLineEdit"/>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="sceneCursorYLabel">
-           <property name="text">
-            <string>Cursor Y (scene):</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1">
-          <widget class="QLineEdit" name="sceneCursorYLineEdit"/>
          </item>
         </layout>
        </widget>
@@ -522,7 +648,15 @@
   </action>
   <action name="action_draw_graph">
    <property name="text">
-    <string>Draw graph...</string>
+    <string>Refresh graph</string>
+   </property>
+  </action>
+  <action name="action_revert">
+   <property name="text">
+    <string>Revert</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>
@@ -530,14 +664,6 @@
   <tabstop>tabWidget</tabstop>
   <tabstop>attributeScrollArea</tabstop>
   <tabstop>sceneScrollArea</tabstop>
-  <tabstop>viewRectLineEdit</tabstop>
-  <tabstop>consoleScrollArea</tabstop>
-  <tabstop>sceneRectLineEdit</tabstop>
-  <tabstop>zoomLevelLineEdit</tabstop>
-  <tabstop>cursorXLineEdit</tabstop>
-  <tabstop>cursorYLineEdit</tabstop>
-  <tabstop>sceneCursorXLineEdit</tabstop>
-  <tabstop>sceneCursorYLineEdit</tabstop>
   <tabstop>button_refresh</tabstop>
   <tabstop>draw_view</tabstop>
   <tabstop>button_clear</tabstop>
