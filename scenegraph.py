@@ -146,7 +146,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetStatus()
 
         # remove the Draw tab
-        #self.tabWidget.removeTab(2)
+        self.tabWidget.removeTab(2)
 
         # setup undo/redo
         undo_action = self.undo_stack.createUndoAction(self, "&Undo")
@@ -169,6 +169,10 @@ class SceneGraphUI(form_class, base_class):
         """
         Initializes the fonts attribute
         """
+        if options.PLATFORM == 'MacOSX':
+            size = 11
+            font = 'Menlo'
+
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
         self.fonts["ui"].setPointSize(size)
@@ -215,7 +219,7 @@ class SceneGraphUI(form_class, base_class):
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
-        self.menu_ui.aboutToShow.connect(self.initializeUIMenu)
+        self.menu_window.aboutToShow.connect(self.initializeUIMenu)
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -586,6 +590,7 @@ class SceneGraphUI(form_class, base_class):
             idx = self.nodeListSelModel.selectedRows()[0]
             node = self.nodesModel.nodes[idx.row()]
             node.setSelected(True)
+            self.updateAttributeEditor(node.dagnode)
 
     def edgesModelChangedAction(self):
         self.scene.clearSelection()

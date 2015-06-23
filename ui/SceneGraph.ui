@@ -51,10 +51,8 @@
        <layout class="QVBoxLayout" name="outputTabLayout">
         <item>
          <widget class="QTextBrowser" name="outputTextBrowser">
-          <property name="font">
-           <font>
-            <family>Monospace</family>
-           </font>
+          <property name="class" stdset="0">
+           <string>Output</string>
           </property>
          </widget>
         </item>
@@ -115,7 +113,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -162,9 +160,9 @@
     </widget>
     <addaction name="menu_add_node"/>
    </widget>
-   <widget class="QMenu" name="menu_ui">
+   <widget class="QMenu" name="menu_window">
     <property name="title">
-     <string>UI</string>
+     <string>Window</string>
     </property>
     <widget class="QMenu" name="menu_view">
      <property name="title">
@@ -191,17 +189,10 @@
    <addaction name="menu_edit"/>
    <addaction name="menu_graph"/>
    <addaction name="menu_nodes"/>
-   <addaction name="menu_ui"/>
+   <addaction name="menu_window"/>
    <addaction name="menu_help"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar">
-   <property name="font">
-    <font>
-     <family>Monospace</family>
-     <pointsize>9</pointsize>
-    </font>
-   </property>
-  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="attrEditorWidget">
    <property name="minimumSize">
     <size>
@@ -230,8 +221,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>367</width>
-          <height>107</height>
+          <width>382</width>
+          <height>100</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout"/>
@@ -269,8 +260,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>367</width>
-          <height>108</height>
+          <width>382</width>
+          <height>100</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -337,8 +328,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>361</width>
-              <height>235</height>
+              <width>358</width>
+              <height>243</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -486,8 +477,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>361</width>
-              <height>235</height>
+              <width>98</width>
+              <height>196</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0,1,0,1">

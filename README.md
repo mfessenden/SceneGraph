@@ -18,10 +18,10 @@
 	nodes = graph.getSceneNodes()
 
 	# get all of the nodes (dag nodes)
-	dags = graph.getDagNodes()
+	dags = graph.getNodes()
 
 	# return a named dag node
-	dagnode = graph.getDagNode('node1')
+	dagnode = graph.getNode('node1')
 
 	# get node attributes
 	dagnode.getNodeAttributes()

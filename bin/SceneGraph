@@ -12,7 +12,13 @@ if __name__ == "__main__":
     from SceneGraph import scenegraph
     app = QtGui.QApplication(sys.argv)
 
-    app.setStyle("oxygen")
+    if sys.platform == 'darwin':
+        #app.setStyle('plastique')
+        app.setStyle('cleanlooks')
+
+    if 'linux' in sys.platform:
+        app.setStyle("oxygen")
+
     #app.setStyle("gtk") # gtk is default
     sgui = scenegraph.SceneGraphUI()
     sgui.show()

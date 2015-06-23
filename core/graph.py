@@ -129,7 +129,7 @@ class Graph(object):
         if not self.view:
             return False
 
-        for node in self.getDagNodes():
+        for node in self.getNodes():
             nid = str(node.UUID)
             if nid in self.network.nodes():
                 self.network.node[nid].update(node.getNodeAttributes())
@@ -141,8 +141,8 @@ class Graph(object):
         import time
         tstart=time.time()
 
-        dagnodes = self.getDagNodes()
-        dagedges = self.getDagEdges()
+        dagnodes = self.getNodes()
+        dagedges = self.getEdges()
 
         dag_ids = [str(d.UUID) for d in dagnodes]
         edge_ids = self.getEdgeIDs()
@@ -158,9 +158,9 @@ class Graph(object):
                 src_id, dest_id, edge_attrs = edge
 
                 edge_id = edge_attrs.get('id')
-                dagedge = self.getDagEdge(edge_id)
-                src_name = self.getDagNode(UUID=src_id)
-                dest_name = self.getDagNode(UUID=dest_id)
+                dagedge = self.getEdge(edge_id)
+                src_name = self.getNode(UUID=src_id)
+                dest_name = self.getNode(UUID=dest_id)
 
                 if edge_id not in edge_ids:
                     log.warning('invalid edge "%s".' % dagedge.name)
@@ -288,7 +288,7 @@ class Graph(object):
                     return node
         return
 
-    def getDagNodes(self):
+    def getNodes(self):
         """
         Returns a list of all dag nodes.
 
@@ -297,7 +297,7 @@ class Graph(object):
         """
         return self.dagnodes.values()
 
-    def getDagNodeNames(self):
+    def getNodeNames(self):
         """
         Returns a list of all dag node names.
 
@@ -306,7 +306,7 @@ class Graph(object):
         """
         return [n.name for n in self.getDagNodes()]
 
-    def getDagNode(self, name=None, UUID=None):
+    def getNode(self, *args):
         """
         Return a dag node by name.
 
@@ -316,12 +316,17 @@ class Graph(object):
         returns:
             (obj)
         """
+        nodes=[]
+        for arg in args:
+            if arg in self.dagnodes:
+                nodes.append(self.dagnodes.get(arg))
+
         if self.dagnodes:
-            for NUUID in self.dagnodes:
-                dag = self.dagnodes.get(NUUID)
+            for UUID in self.dagnodes:
+                dag = self.dagnodes.get(UUID)
                 if dag and dag.name == name or dag.UUID == UUID:
                     return dag
-        return
+        return nodes
 
     def getSceneEdges(self):
         """
@@ -361,7 +366,7 @@ class Graph(object):
                         return edge
         return
 
-    def getDagEdges(self):
+    def getEdges(self):
         """
         Returns a list of all dag edges.
 
@@ -377,7 +382,7 @@ class Graph(object):
         returns:
             (list)
         """
-        return [edge.name for edge in self.getDagEdges()]
+        return [edge.name for edge in self.getEdges()]
 
     def getEdgeIDs(self):
         """
@@ -389,7 +394,7 @@ class Graph(object):
             ids.append(attrs.get('id'))
         return ids
 
-    def getDagEdge(self, conn):
+    def getEdge(self, conn):
         """
         Return a dag edge by name.
 
@@ -447,6 +452,7 @@ class Graph(object):
         nn['name'] = name
         nn['node_type'] = node_type
 
+        # TODO: Graph signal here
         if self.view:
             self.view.scene.addItem(node)
             node.setPos(dag.pos_x, dag.pos_y)
@@ -529,6 +535,7 @@ class Graph(object):
             self.dagedges[str(edge.UUID)] = edge
             #print '# Graph.addEdge: new edge ID: %s' % str(edge.UUID)
 
+            # TODO: Graph signal here
             if self.view:
                 from SceneGraph import ui
                 reload(ui)
@@ -617,8 +624,8 @@ class Graph(object):
             src_attr = edge_attrs.get('src_attr')
             dest_attr = edge_attrs.get('dest_attr')
 
-            src_node = self.getDagNode(UUID=src_id)
-            dest_node = self.getDagNode(UUID=dest_id)
+            src_node = self.getNode(UUID=src_id)
+            dest_node = self.getNode(UUID=dest_id)
 
             if src_node is None or dest_node is None:
                 return result
@@ -731,8 +738,8 @@ class Graph(object):
         input_name, input_conn = input.split('.')
         output_name, output_conn = output.split('.')
 
-        input_node = self.getDagNode(name=input_name)
-        output_node = self.getDagNode(name=output_name)
+        input_node = self.getNode(name=input_name)
+        output_node = self.getNode(name=output_name)
 
         return self.addEdge(output, output)
 
@@ -865,8 +872,8 @@ class Graph(object):
                 src_attr = edge_attrs.get('src_attr')
                 dest_attr = edge_attrs.get('dest_attr')
 
-                src_dag_node = self.getDagNode(UUID=src_id)
-                dest_dag_node = self.getDagNode(UUID=dest_id)
+                src_dag_node = self.getNode(UUID=src_id)
+                dest_dag_node = self.getNode(UUID=dest_id)
 
                 src_string = '%s.%s' % (src_dag_node.name, src_attr)
                 dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
@@ -915,8 +922,8 @@ class Graph(object):
         dag_names = [node1.name, node2.name]
         for edge in self.network.edges(data=True):
             src_id, dest_id, attrs = edge
-            dagnode1 = self.getDagNode(UUID=src_id)
-            dagnode2 = self.getDagNode(UUID=dest_id)
+            dagnode1 = self.getNode(UUID=src_id)
+            dagnode2 = self.getNode(UUID=dest_id)
 
             if dagnode1.name in dag_names and dagnode2.name in dag_names:
                 return True
