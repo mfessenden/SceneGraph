@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 import os
-import math
 import uuid
 import simplejson as json
-from collections import MutableMapping
-from collections import OrderedDict as dict
 
 from .. import options
 reload(options)
@@ -14,54 +11,293 @@ reload(options)
 Goals:
  - hold basic attributes
  - easily add new attributes
-
+ - query connections easily
 """
 
-class DagNode(MutableMapping):
-    
-    def __init__(self, *args, **kwargs):
-        self.store = dict()
-        self.update(dict(*args, **kwargs))  # use the free update to set keys
+class DagNode(dict):
 
-    def __getitem__(self, key):
-        return self.store[self.__keytransform__(key)]
+    CLASS_KEY     = "dagnode"  
+    NAME_KEY      = "name"
+    UUID_KEY      = "UUID"
+    COLOR_KEY     = "color"
+    WIDTH_KEY     = "width"
+    HEIGHT_KEY    = "height"
+    EXPANDED_KEY  = "height"
+    POS_KEY       = "pos"
+    TYPE_KEY      = "node_type"
+    OUTPUTS_KEY   = "outputs"
+    INPUTS_KEY    = "inputs"
 
-    def __setitem__(self, key, value):
-        self.store[self.__keytransform__(key)] = value
+    def __init__(self, nodetype, **kwargs):        
 
-    def __delitem__(self, key):
-        del self.store[self.__keytransform__(key)]
+        self.node_type          = nodetype
+        self.name               = kwargs.pop('name', 'node1')
+        self.color              = kwargs.pop('color', [180, 180, 180])
+        self.expanded           = kwargs.pop('expanded', False)
+        self.height_collapsed   = kwargs.pop('height_collapsed', 15)
+        self.height_expanded    = kwargs.pop('height_expanded', 175)
 
-    def __iter__(self):
-        return iter(self.store)
+        # connections
+        self.inputs             = [Connection(self),]
+        self.outputs            = [Connection(self, name='output', type='output'),]
+        
+        # node unique ID
+        UUID = kwargs.pop('id', None)
+        self.UUID = UUID if UUID else str(uuid.uuid4())
+        self.update(**kwargs)
+        return
 
-    def __len__(self):
-        return len(self.store)
+    def __str__(self):
+        return json.dumps(self, indent=4)
 
-    def __keytransform__(self, key):
-        return key
+    @property
+    def node_class(self):
+        return self[self.CLASS_KEY]
+
+    @property
+    def name(self):
+        return self[self.NAME_KEY]
+
+    @name.setter
+    def name(self, value):
+        self[self.NAME_KEY] = value
+        return
+
+    @property
+    def UUID(self):
+        return str(self[self.UUID_KEY])
+
+    @UUID.setter
+    def UUID(self, value):
+        self[self.UUID_KEY] = value
+
+    @property
+    def color(self):
+        return self[self.COLOR_KEY]
+
+    @color.setter
+    def color(self, value):
+        self[self.COLOR_KEY] = value
+        return
+
+    @property
+    def width(self):
+        return self[self.WIDTH_KEY]
+
+    @width.setter
+    def width(self, value):
+        self[self.WIDTH_KEY] = value
+        return
+
+    @property
+    def height(self):
+        return self[self.HEIGHT_KEY]
+
+    @height.setter
+    def height(self, value):
+        self[self.HEIGHT_KEY] = value
+        return
+
+    @property
+    def expanded(self):
+        return self[self.EXPANDED_KEY]
+
+    @expanded.setter
+    def expanded(self, value):
+        self[self.EXPANDED_KEY] = value
+        return
+
+    @property
+    def pos(self):
+        return self[self.POS_KEY]
+
+    @pos.setter
+    def pos(self, value):
+        self[self.POS_KEY] = value
+        return
+
+    @property
+    def node_type(self):
+        return self[self.TYPE_KEY]
+
+    @node_type.setter
+    def node_type(self, value):
+        self[self.TYPE_KEY] = value
+        return
+
+    @property
+    def inputs(self):
+        return self[self.INPUTS_KEY]
+
+    @inputs.setter
+    def inputs(self, value):
+        self[self.INPUTS_KEY] = value
+        return
+
+    @property
+    def outputs(self):
+        return self[self.OUTPUTS_KEY]
+
+    @outputs.setter
+    def outputs(self, value):
+        self[self.OUTPUTS_KEY] = value
+        return
 
 
-class DagEdge(MutableMapping):
-    
-    def __init__(self, *args, **kwargs):
-        self.store = dict()
-        self.update(dict(*args, **kwargs))  # use the free update to set keys
+class Connection(dict):
 
-    def __getitem__(self, key):
-        return self.store[self.__keytransform__(key)]
+    CLASS_KEY     = "connection"
+    NAME_KEY      = "name"  
+    NODE_KEY      = "node"
+    TYPE_KEY      = "type"
 
-    def __setitem__(self, key, value):
-        self.store[self.__keytransform__(key)] = value
+    def __init__(self, node, **kwargs):        
 
-    def __delitem__(self, key):
-        del self.store[self.__keytransform__(key)]
+        self.node       = node.name
+        self.name       = kwargs.pop('name', 'input')
+        self.type       = kwargs.pop('type', 'input')
 
-    def __iter__(self):
-        return iter(self.store)
+        self.update(**kwargs)
+        return
 
-    def __len__(self):
-        return len(self.store)
+    def __str__(self):
+        return self.value
 
-    def __keytransform__(self, key):
-        return key
+    @property
+    def node_class(self):
+        return self[self.CLASS_KEY]
+
+    @property
+    def name(self):
+        return self[self.NAME_KEY]
+
+    @name.setter
+    def name(self, value):
+        self[self.NAME_KEY] = value
+        return
+
+    @property
+    def node(self):
+        return self[self.NAME_KEY]
+
+    @node.setter
+    def node(self, value):
+        self[self.NODE_KEY] = value
+        return
+
+    @property
+    def type(self):
+        return self[self.TYPE_KEY]
+
+    @type.setter
+    def type(self, value):
+        self[self.TYPE_KEY] = value
+        return
+
+    @property
+    def value(self):
+        return '%s.%s' % (self.node, self.name)
+
+    @property
+    def UUID(self):
+        if self.node:
+            return self.node.UUID
+        return None
+
+    @property
+    def node_type(self):
+        return self[self.CLASS_KEY]
+
+
+
+class DagEdge(dict):
+
+    CLASS_KEY     = "edge"
+    SRC_ID_KEY    = "src_id"
+    DEST_ID_KEY   = "dest"
+    SRC_ATTR_KEY  = "src_attr"
+    DEST_ATTR_KEY = "dest_attr"
+    UUID_KEY      = "UUID"
+    TYPE_KEY      = "node_type"    
+
+    def __init__(self, source, dest, **kwargs):        
+
+        self.src_id    = source
+        self.dest_id   = dest
+
+        # node unique ID
+        UUID = kwargs.pop('id', None)
+        self.UUID = UUID if UUID else str(uuid.uuid4())
+        self.update(**kwargs)
+        return
+
+    def __str__(self):
+        return json.dumps(self, indent=4)
+
+    @property
+    def node_class(self):
+        return self[self.CLASS_KEY]
+
+    @property
+    def name(self):
+        return '%s,%s' % (self.source, self.dest)
+
+    @property
+    def UUID(self):
+        return str(self[self.UUID_KEY])
+
+    @UUID.setter
+    def UUID(self, value):
+        self[self.UUID_KEY] = value
+
+    @property
+    def src_id(self):
+        return self[self.SRC_ID_KEY]
+
+    @src_id.setter
+    def src_id(self, value):
+        if isinstance(value, Connection):
+            self[self.SRC_ID_KEY] = value.name
+
+        if isinstance(value, DagNode):
+            self[self.SRC_ID_KEY] = value.UUID
+            self.src_attr = value.outputs.keys()[0]
+            return
+
+        self[self.SRC_ID_KEY] = value
+        return
+
+    @property
+    def src_attr(self):
+        return self[self.SRC_ATTR_KEY]
+
+    @src_attr.setter
+    def src_attr(self, value):
+        self[self.SRC_ATTR_KEY] = value
+        return
+
+    @property
+    def dest_id(self):
+        return self[self.DEST_ID_KEY]
+
+    @dest_id.setter
+    def dest_id(self, value):
+        if isinstance(value, DagNode):
+            self[self.DEST_ID_KEY] = value.UUID
+            return
+
+        self[self.DEST_ID_KEY] = value
+        return
+
+    @property
+    def dest_attr(self):
+        return self[self.DEST_ATTR_KEY]
+
+    @dest_attr.setter
+    def dest_attr(self, value):
+        self[self.DEST_ATTR_KEY] = value
+        return
+
+    @property
+    def node_type(self):
+        return self[self.CLASS_KEY]
