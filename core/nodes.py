@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import uuid
+from copy import deepcopy
 import simplejson as json
 
 from .. import options
@@ -37,14 +38,14 @@ class DagNode(dict):
         self.height_collapsed   = kwargs.pop('height_collapsed', 15)
         self.height_expanded    = kwargs.pop('height_expanded', 175)
 
-        # connections
-        self.inputs             = [Connection(self),]
-        self.outputs            = [Connection(self, name='output', type='output'),]
-        
         # node unique ID
         UUID = kwargs.pop('id', None)
         self.UUID = UUID if UUID else str(uuid.uuid4())
         self.update(**kwargs)
+
+        # connections
+        self.inputs             = [Connection(self),]
+        self.outputs            = [Connection(self, name='output', type='output'),]
         return
 
     def __str__(self):
@@ -52,7 +53,7 @@ class DagNode(dict):
 
     @property
     def node_class(self):
-        return self[self.CLASS_KEY]
+        return self.CLASS_KEY
 
     @property
     def name(self):
@@ -64,8 +65,12 @@ class DagNode(dict):
         return
 
     @property
+    def id(self):
+        return self[self.UUID_KEY]
+
+    @property
     def UUID(self):
-        return str(self[self.UUID_KEY])
+        return self[self.UUID_KEY]
 
     @UUID.setter
     def UUID(self, value):
@@ -145,27 +150,28 @@ class DagNode(dict):
 
 
 class Connection(dict):
-
+    """
+    This needs to exlude the node reference (or stash the Node.UUID)
+    """
     CLASS_KEY     = "connection"
     NAME_KEY      = "name"  
     NODE_KEY      = "node"
     TYPE_KEY      = "type"
+    parent        = None  
 
-    def __init__(self, node, **kwargs):        
+    def __init__(self, node, **kwargs):     
 
-        self.node       = node.name
+        self.parent     = node
+        self.node       = node.UUID
         self.name       = kwargs.pop('name', 'input')
         self.type       = kwargs.pop('type', 'input')
 
         self.update(**kwargs)
         return
 
-    def __str__(self):
-        return self.value
-
     @property
     def node_class(self):
-        return self[self.CLASS_KEY]
+        return self.CLASS_KEY
 
     @property
     def name(self):
@@ -178,7 +184,7 @@ class Connection(dict):
 
     @property
     def node(self):
-        return self[self.NAME_KEY]
+        return self[self.NODE_KEY]
 
     @node.setter
     def node(self, value):
@@ -195,18 +201,8 @@ class Connection(dict):
         return
 
     @property
-    def value(self):
-        return '%s.%s' % (self.node, self.name)
-
-    @property
-    def UUID(self):
-        if self.node:
-            return self.node.UUID
-        return None
-
-    @property
     def node_type(self):
-        return self[self.CLASS_KEY]
+        return self.CLASS_KEY
 
 
 
@@ -214,7 +210,7 @@ class DagEdge(dict):
 
     CLASS_KEY     = "edge"
     SRC_ID_KEY    = "src_id"
-    DEST_ID_KEY   = "dest"
+    DEST_ID_KEY   = "dest_id"
     SRC_ATTR_KEY  = "src_attr"
     DEST_ATTR_KEY = "dest_attr"
     UUID_KEY      = "UUID"
@@ -236,11 +232,15 @@ class DagEdge(dict):
 
     @property
     def node_class(self):
-        return self[self.CLASS_KEY]
+        return self.CLASS_KEY
 
     @property
     def name(self):
         return '%s,%s' % (self.source, self.dest)
+
+    @property
+    def id(self):
+        return self[self.UUID_KEY]
 
     @property
     def UUID(self):
@@ -256,15 +256,14 @@ class DagEdge(dict):
 
     @src_id.setter
     def src_id(self, value):
-        if isinstance(value, Connection):
-            self[self.SRC_ID_KEY] = value.name
-
+        # get the default output
         if isinstance(value, DagNode):
             self[self.SRC_ID_KEY] = value.UUID
-            self.src_attr = value.outputs.keys()[0]
-            return
+            self[self.SRC_ATTR_KEY] = value.outputs[0].name
 
-        self[self.SRC_ID_KEY] = value
+        if isinstance(value, Connection):
+            self[self.SRC_ID_KEY] = value.node
+            self[self.SRC_ATTR_KEY] = value.name
         return
 
     @property
@@ -282,11 +281,15 @@ class DagEdge(dict):
 
     @dest_id.setter
     def dest_id(self, value):
+        # get the default input
         if isinstance(value, DagNode):
             self[self.DEST_ID_KEY] = value.UUID
+            self[self.DEST_ATTR_KEY] = value.inputs[0].name
             return
 
-        self[self.DEST_ID_KEY] = value
+        if isinstance(value, Connection):
+            self[self.DEST_ID_KEY] = value.node
+            self[self.DEST_ATTR_KEY] = value.name
         return
 
     @property
@@ -300,4 +303,4 @@ class DagEdge(dict):
 
     @property
     def node_type(self):
-        return self[self.CLASS_KEY]
+        return self.CLASS_KEY

@@ -10,7 +10,7 @@ from . import commands
 
 
 reload(graph)
-reload(nodes)
+#reload(nodes)
 reload(attributes)
 reload(commands)
 

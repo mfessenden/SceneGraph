@@ -349,16 +349,10 @@ class Graph(object):
             name = self._nodeNamer(name)
 
         dag = core.DagNode(node_type, name=name, **kwargs)
-        self.dagnodes[str(dag.UUID)] = dag
+        self.dagnodes[dag.UUID] = dag
         
         # add the node to the networkx graph
-        self.network.add_node(str(dag.UUID))
-        nn = self.network.node[str(dag.UUID)]
-
-        nn['name'] = name
-        nn['node_type'] = node_type
-
-        # TODO: Graph signal here
+        self.network.add_node(dag.UUID, **dag)
         return dag
 
     def removeNode(self, name, UUID=None):
@@ -400,39 +394,21 @@ class Graph(object):
             from SceneGraph import core
             reload(core)
 
-            src_node, src_attr = src.split('.')
-            dest_node, dest_attr = dest.split('.')
-
             # don't connect the same node
-            if src_node == dest_node:
-                log.debug('invalid connection: "%s", "%s"' % (src, dest))
+            if src == dest:
+                log.debug('invalid connection: "%s", "%s"' % (src.name, dest.name))
                 return
 
-
+            """
             conn_str = '%s,%s' % (src, dest)
             if conn_str in self.allConnections():
                 log.debug('invalid connection: "%s"' % conn_str)
                 return
+            """
 
-            edge = core.DagEdge(src, dest, id=UUID)
-
-            src_name = edge.src_name
-            src_id = self.getNodeID(src_name)
-            dest_name = edge.dest_name
-            dest_id = self.getNodeID(dest_name)
-
-            edge.ids = (src_id, dest_id)
-            log.info('connecting: "%s" > "%s"' % (src_name, dest_name))
-
-            self.network.add_edge(src_id, 
-                dest_id,
-                id=str(edge.UUID),
-                src_id=src_id,
-                dest_id=dest_id,
-                src_attr=edge.src_attr, 
-                dest_attr=edge.dest_attr)
-
-            self.dagnodes[str(edge.UUID)] = edge
+            edge = core.DagEdge(src, dest, id=UUID)            
+            self.network.add_edge(src.UUID, dest.UUID, **edge)
+            self.dagnodes[edge.UUID] = edge
 
             # TODO: Graph signal here
             return edge
@@ -609,14 +585,7 @@ class Graph(object):
         """
         Connect two nodes via a "Node.attribute" string
         """
-        input_name, input_conn = input.split('.')
-        output_name, output_conn = output.split('.')
-
-        input_node = self.getNode(name=input_name)
-        output_node = self.getNode(name=output_name)
-
         return self.addEdge(output, output)
-
 
     def reset(self):
         """
@@ -749,7 +718,9 @@ class Graph(object):
                 src_string = '%s.%s' % (src_dag_node.name, src_attr)
                 dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
 
+                # TODO: need to get connection node here
                 log.debug('building edge: %s > %s' % (src_id, dest_id))
+                
                 self.addEdge(src=src_string, dest=dest_string, id=edge_id)
 
             """
