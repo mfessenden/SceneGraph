@@ -2,12 +2,14 @@ from . import ui_widgets
 from . import graphics
 from . import node_widgets
 from . import models
+from . import manager
 
 
 reload(ui_widgets)
 reload(graphics)
 reload(node_widgets)
 reload(models)
+reload(manager)
 
 
 AttributeEditor     = ui_widgets.AttributeEditor
@@ -20,3 +22,4 @@ GraphTableModel	    = models.GraphTableModel
 TableView			= models.TableView
 NodesListModel      = models.NodesListModel
 EdgesListModel 		= models.EdgesListModel
+WindowManager 		= manager.WindowManager

@@ -20,8 +20,8 @@ reload(commands)
 Graph               = graph.Graph
 
 # nodes
-NodeBase            = nodes.NodeBase
-EdgeBase            = nodes.EdgeBase
+DagNode             = nodes.DagNode
+DagEdge             = nodes.DagEdge
 
 # attributes
 StringAttribute     = attributes.StringAttribute

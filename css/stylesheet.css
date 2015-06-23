@@ -172,8 +172,7 @@ QLabel.ListHeader{
 
 QTextBrowser.Output{
     font: "Monospace";
-    font-size: 16pt;
-    /*font-size: large;*/
+    font-size: medium;
 }
 
 QTabWidget::pane { /* The tab widget frame */
@@ -211,4 +210,8 @@ QTabBar::tab:selected {
 
 QTabBar::tab:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
+}
+
+QGroupBox{
+    font-weight: bold
 }

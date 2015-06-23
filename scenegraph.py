@@ -60,6 +60,7 @@ class SceneGraphUI(form_class, base_class):
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+        self.view             = None  
         self.environment      = kwargs.get('env', 'standalone')  
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
@@ -81,14 +82,7 @@ class SceneGraphUI(form_class, base_class):
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
 
-        # stylesheet
-        self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
-        ssf = QtCore.QFile(self.stylesheet)
-        ssf.open(QtCore.QFile.ReadOnly)
-        self.setStyleSheet(str(ssf.readAll()))
-        ssf.close()
-
-        # item view/model
+        # item views/models
         self.tableView = ui.TableView(self.sceneWidgetContents)
         self.sceneScrollAreaLayout.addWidget(self.tableView)
         self.tableModel = ui.GraphTableModel(headers=['Node Type', 'Node'])
@@ -107,13 +101,11 @@ class SceneGraphUI(form_class, base_class):
         self.readSettings()       
         self.connectSignals()
 
-        self.resetStatus()
-        #QtGui.QApplication.instance().installEventFilter(self)
+        self.resetStatus()        
         self.draw_scene = QtGui.QGraphicsScene()
         self.draw_view.setScene(self.draw_scene)
-
-        #QStream.stdout().messageWritten.connect(self.consoleOutput)
-        #QStream.stderr().messageWritten.connect(self.consoleOutput)
+        self.initializeStylesheet()
+        #QtGui.QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
         """
@@ -130,13 +122,7 @@ class SceneGraphUI(form_class, base_class):
     def initializeUI(self):
         """
         Set up the main UI
-        """
-        # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self)
-        self.scene = self.view.scene
-        self.gviewLayout.addWidget(self.view)
-        self.setupFonts()        
-        
+        """        
         # build the graph
         self.initializeGraphicsView()
 
@@ -165,6 +151,16 @@ class SceneGraphUI(form_class, base_class):
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
 
+    def initializeStylesheet(self):
+        """
+        Setup the stylehsheet.
+        """
+        self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        self.setStyleSheet(str(ssf.readAll()))
+        ssf.close()
+
     def setupFonts(self, font='SansSerif', size=9):
         """
         Initializes the fonts attribute
@@ -184,17 +180,21 @@ class SceneGraphUI(form_class, base_class):
         """
         Initialize the graphics view/scen and graph objects.
         """
-        # scene view signals
-        self.scene.nodeAdded.connect(self.nodeAddedAction)
-        self.scene.nodeChanged.connect(self.nodeChangedAction)
-        self.scene.changed.connect(self.sceneChangedAction)
-
         # initialize the Graph
-        self.graph = core.Graph(viewport=self.view)
+        self.graph = core.Graph()
         self.network = self.graph.network
         self.network.graph['environment'] = self.environment
 
-        self.scene.setGraph(self.graph)
+        # add our custom GraphicsView object
+        self.view = ui.GraphicsView(self.gview, ui=self)
+        self.gviewLayout.addWidget(self.view) 
+
+        # debugging signals
+        #self.view.scene().nodeAdded.connect(self.nodeAddedAction)
+        #self.view.scene().nodeChanged.connect(self.nodeChangedAction)
+        #self.view.scene().changed.connect(self.sceneChangedAction)
+
+        self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
         # graphics View
@@ -206,7 +206,7 @@ class SceneGraphUI(form_class, base_class):
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
         # TESTING: disable
-        self.scene.selectionChanged.connect(self.nodesSelectedAction)
+        self.view.scene().selectionChanged.connect(self.nodesSelectedAction)
 
     def connectSignals(self):
         """
@@ -268,7 +268,7 @@ class SceneGraphUI(form_class, base_class):
         Setup the graph menu before it is drawn.
         """
         edge_type = 'bezier'
-        if self.scene.edge_type == 'bezier':
+        if self.view.scene().edge_type == 'bezier':
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
 
@@ -441,7 +441,7 @@ class SceneGraphUI(form_class, base_class):
             self.qtsettings.addRecentFile(filename)
             log.debug('adding recent file: "%s"' % filename)
         self.buildWindowTitle()
-        self.scene.clearSelection()
+        self.view.scene().clearSelection()
 
     # TODO: combine this with readGraph
     def readRecentGraph(self, filename):
@@ -456,7 +456,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.setScene(filename)
         self.qtsettings.addRecentFile(filename)
         self.buildWindowTitle()
-        self.scene.clearSelection()
+        self.view.scene().clearSelection()
 
     def revertGraph(self):
         """
@@ -472,7 +472,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Reset the current graph
         """
-        self.scene.clear()
+        self.view.scene().clear()
         self.graph.reset()
         self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
@@ -491,25 +491,25 @@ class SceneGraphUI(form_class, base_class):
             val = '1'
         os.environ["SCENEGRAPH_DEBUG"] = val
         SCENEGRAPH_DEBUG = val
-        self.scene.update()      
+        self.view.scene().update()      
 
     def toggleEdgeTypes(self):
         """
         Toggle the edge types.
         """
-        if self.scene.edge_type == 'bezier':
-            self.scene.edge_type = 'polygon'
+        if self.view.scene().edge_type == 'bezier':
+            self.view.scene().edge_type = 'polygon'
 
-        elif self.scene.edge_type == 'polygon':
-            self.scene.edge_type = 'bezier'
-        self.scene.update()
+        elif self.view.scene().edge_type == 'polygon':
+            self.view.scene().edge_type = 'bezier'
+        self.view.scene().update()
 
     #- ACTIONS ----
     def nodesSelectedAction(self):
         """
         Action that runs whenever a node is selected in the UI
         """
-        nodes = self.scene.selectedItems()
+        nodes = self.view.scene().selectedItems()
 
         # clear the list view
         self.tableModel.clear()
@@ -528,10 +528,10 @@ class SceneGraphUI(form_class, base_class):
                             self.updateAttributeEditor(node.dagnode)
                             UUID = node.dagnode.UUID
                             if UUID:
-                                ds_ids = self.scene.graph.downstream(node.dagnode.name)
+                                ds_ids = self.graph.downstream(node.dagnode.name)
                                 dagnodes = []
                                 for nid in ds_ids:
-                                    dagnode = self.scene.graph.getDagNode(UUID=nid)
+                                    dagnode = self.graph.getDagNode(UUID=nid)
                                     if dagnode:
                                         dagnodes.append(dagnode)
 
@@ -571,7 +571,7 @@ class SceneGraphUI(form_class, base_class):
                     attr_widget = self.getAttributeEditorWidget()
                     
                     if not attr_widget:
-                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.scene.graph, gui=self)                
+                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.graph, gui=self)                
                         self.attributeScrollAreaLayout.addWidget(attr_widget)
                     attr_widget.setNode(node)
 
@@ -847,8 +847,8 @@ class SceneGraphUI(form_class, base_class):
         self.nodesModel.clear()
         self.edgesModel.clear()
 
-        nodes = self.graph.getSceneNodes()
-        edges = self.graph.getSceneEdges()
+        nodes = self.view.getNodes()
+        edges = self.view.getEdges()
 
         self.nodesModel.addNodes(nodes)
         self.edgesModel.addEdges(edges)
