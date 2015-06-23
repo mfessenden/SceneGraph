@@ -137,7 +137,7 @@ class Graph(object):
         dagnodes = self.getDagNodes()
         dagedges = self.getDagEdges()
 
-        dag_ids = [d.UUID for d in dagnodes]
+        dag_ids = [str(d.UUID) for d in dagnodes]
         edge_ids = self.getEdgeIDs()
 
         if self.network.nodes():

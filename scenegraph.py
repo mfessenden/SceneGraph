@@ -215,7 +215,7 @@ class SceneGraphUI(form_class, base_class):
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
-        self.menu_ui.aboutToShow.connect(self.initializeUIMenu)
+        self.menu_window.aboutToShow.connect(self.initializeUIMenu)
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -586,6 +586,7 @@ class SceneGraphUI(form_class, base_class):
             idx = self.nodeListSelModel.selectedRows()[0]
             node = self.nodesModel.nodes[idx.row()]
             node.setSelected(True)
+            self.updateAttributeEditor(node.dagnode)
 
     def edgesModelChangedAction(self):
         self.scene.clearSelection()
