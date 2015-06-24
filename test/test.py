@@ -5,7 +5,7 @@ import os
 import pysideuic
 import xml.etree.ElementTree as xml
 from cStringIO import StringIO
-
+from SceneGraph.core import log
 from SceneGraph import options
 reload(options)
 
@@ -42,18 +42,20 @@ form_class, base_class = loadUiType(SCENEGRAPH_TEST_UI)
 
 
 class TestGraph(form_class, base_class):
-    def __init__(self, parent=None, opengl=False, **kwargs):
+    def __init__(self, parent=None, opengl=False, debug=False, **kwargs):
         super(TestGraph, self).__init__(parent)
 
         self.use_gl      = opengl
+        self._debug      = debug
         self.environment = 'standalone'
         self.setupUi(self)
         
         # allow docks to be nested
         self.setDockNestingEnabled(True)
-
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+        self.setWindowTitle("Node Test Graph")
 
         self.initializeGraphicsView()
         self.initializeStylesheet()
@@ -79,7 +81,7 @@ class TestGraph(form_class, base_class):
         self.network.graph['environment'] = self.environment
 
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl)
+        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, debug=self._debug)
         self.gviewLayout.addWidget(self.view) 
 
     def connectSignals(self):
@@ -87,17 +89,15 @@ class TestGraph(form_class, base_class):
         self.button_remove.clicked.connect(self.removeAction)
         self.button_refresh.clicked.connect(self.refreshAction)
 
-    def addAction(self):
-        from SceneGraph.test import nodes
-        from SceneGraph.core import DagNode
-        reload(nodes)
-        dag=DagNode('default', name='node1')
-        node=nodes.Node(dag)
-        self.view.scene().addNodes(node)
-
-        node.height=75
-        node.is_expanded=True
-        return True
+    def addAction(self, nodetype='default'):
+        dag=self.graph.addNode(nodetype)
+        node = self.view.scene().getNode(dag.name)
+        if node:
+            node.height=75
+            node.is_expanded=True
+            return True
+        log.warning('cannot find a node widget for "%s"' % dag.name)
+        return False
 
     def removeAction(self):
         print '# removing...'

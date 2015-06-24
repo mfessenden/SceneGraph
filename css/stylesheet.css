@@ -1,3 +1,35 @@
+/*
+Grey Values:
+
+10%:
+1a1a1a;
+
+20%:
+333333;
+
+30%:
+4d4d4d;
+
+40%:
+666666;
+
+50%:
+808080;
+
+60%:
+999999;
+
+70%:
+b5b5b5;
+
+80%:
+cccccc;
+
+90%:
+e6e6e6;
+
+*/
+
 QMainWindow{
     background-color: #323232;
 }
@@ -28,9 +60,11 @@ QPushButton.Console{
     border-color: #454545;
     border-style: outset;
     border-width: 1px;
-    border-radius: 10px;
+    border-radius: 6px;
     font-weight: bold;
     background-color: #383838;
+    min-width: 88px;
+    min-height: 20px;
 }
 
 QLineEdit{
@@ -129,11 +163,39 @@ QScrollBar::handle:vertical {
 
 /* background of the scrollbar */
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
-    background-color: none;
+    background: none;
 }
 
 /* background of the scrollbar */
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* arrow & background */
+QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal{     
+    /* arrow box border */
+    border: 1px solid #585858; 
+    background: none;
+    color: none;
+}
+
+QScrollBar::up-arrow, QScrollBar::down-arrow{
+    /* green */
+    border: 1px solid #585858; 
+    background: none;
+    color: none;
+}
+/* arrow button outer */
+QScrollBar::add-line:horizontal {
+    /* pink */
+    border: 1px solid #737373; 
+    background: none;
+}
+
+/* arrow button outer */
+QScrollBar::sub-line:horizontal {
+    /* pink ff31cc */
+    border: 1px solid #737373; 
     background: none;
 }
 

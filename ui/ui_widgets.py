@@ -130,7 +130,7 @@ class AttributeEditor(QtGui.QWidget):
         """
         new_value = str(lineEdit.text())
         if attribute == 'name':
-            new_value = self._gui.graph._nodeNamer(new_value)
+            new_value = self._gui.graph.getValidNodeName(new_value)
 
         try:
             new_value = eval(new_value)

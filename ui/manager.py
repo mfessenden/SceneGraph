@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from PySide import QtCore
+from SceneGraph.core import log
 
 
 class WindowManager(QtCore.QObject):
@@ -22,11 +23,23 @@ class WindowManager(QtCore.QObject):
         self.graph = None
 
         if parent is not None:
-            self.connectGraph(parent)
+            if self.connectGraph(parent):
+                log.info('connecting Graph...')
+                self.connectSignals()
     
+    def connectSignals(self):
+        """
+        Setup widget signals.
+        """
+        log.info('connecting WindowManager to Scene.') 
+        self.nodesAdded.connect(self.scene.addNodes)
+
     def connectGraph(self, scene):
         """
         Connect the parent scenes' Graph object.
+
+        params:
+            scene (QGraphicsScene)
         """
         if hasattr(scene, 'graph'):
             graph = scene.graph
@@ -37,10 +50,12 @@ class WindowManager(QtCore.QObject):
                 return True
         return False
     
+    #- Graph to Scene ----    
     def addNodes(self, dagnodes):
         """
         Signal Graph -> GraphicsScene.
         """
+        log.info('WindowManager: sending %d nodes to scene...' % len(dagnodes))
         self.nodesAdded.emit(dagnodes)
 
     def removeNodes(self, dagnodes):
@@ -54,3 +69,5 @@ class WindowManager(QtCore.QObject):
         Signal Graph -> GraphicsScene.
         """
         self.nodesUpdated.emit(dagnodes)
+
+    #- Scene to Graph ----    

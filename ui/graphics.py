@@ -20,16 +20,16 @@ class GraphicsView(QtGui.QGraphicsView):
     tabPressed    = QtCore.Signal()
     statusEvent   = QtCore.Signal(dict)
 
-    def __init__(self, parent=None, ui=None, opengl=False, **kwargs):
+    def __init__(self, parent=None, ui=None, opengl=False, debug=False, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
 
         self.log                 = log
         self._parent             = ui
-                
+        
         self._scale              = 1
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
 
-        self.initializeSceneGraph(ui.graph, opengl=opengl)
+        self.initializeSceneGraph(ui.graph, opengl=opengl, debug=debug)
         self.setUpdateMode(False)
 
         # Mouse Interaction
@@ -53,7 +53,7 @@ class GraphicsView(QtGui.QGraphicsView):
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.connectSignals()
 
-    def initializeSceneGraph(self, graph, opengl=False):
+    def initializeSceneGraph(self, graph, opengl=False, debug=False):
         """
         Setup the GraphicsScene
         """
@@ -61,7 +61,7 @@ class GraphicsView(QtGui.QGraphicsView):
             from PySide import QtOpenGL
             self.setViewport(QtOpenGL.QGLWidget())
             log.info('initializing OpenGL renderer.')
-        scene = GraphicsScene(self, graph=graph)
+        scene = GraphicsScene(self, graph=graph, debug=debug)
         scene.setSceneRect(-5000, -5000, 10000, 10000)
         self.setScene(scene)
 
@@ -159,104 +159,18 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def wheelEvent(self, event):
         """
-        Scale the viewport with the middle-mouse wheel
+        Wheel event to implement a smoother scaling.
         """
-        QtGui.QGraphicsView.wheelEvent(self, event)
-        factor = 1.2
-        if event.delta() < 0:
-            factor = 1.0 / factor
+        factor = 1.41 ** ((event.delta()*.5) / 240.0)
         self.scale(factor, factor)
         self._scale = factor
         self.updateGraphViewAttributes()
-
-    def mouseMoveEvent(self, event):
-        """
-        Panning the viewport around and CTRL+mouse drag behavior.
-        """        
-        self.current_cursor_pos = event.pos()
-        self.updateStatus(event)
-
-        # set up timer for node drops
-        timer = QtCore.QTimer()
-        #timer.timeout.connect(self.splitNodeConnection)
-
-        selected_nodes = self.scene().selectedNodes()
-
-        # query any edges at the current position
-        event_item = self.itemAt(event.pos())
-        event_edge = None
-        if hasattr(event_item, 'node_class'):
-            if event_item.node_class in ['edge']:
-                event_edge = event_item
-        # Panning
-        if event.buttons() & QtCore.Qt.MiddleButton:
-            delta = event.pos() - self.current_cursor_pos
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
-            self.current_cursor_pos = event.pos()
-        else:
-            self.current_cursor_pos = event.pos()
-
-
-        # translate the view when left mouse/control are active
-        if event.buttons() & QtCore.Qt.LeftButton and event.modifiers() & QtCore.Qt.ControlModifier:
-            if self.boxing:
-                self.modifierBox.setGeometry(QtCore.QRect(self.modifierBoxOrigin, event.pos()).normalized())
-                self.modifierBox.show()
-                event.accept()
-                return
-
-        if event.buttons() & QtCore.Qt.LeftButton:            
-            if event.modifiers() & QtCore.Qt.AltModifier:
-                if event_item:
-                    if hasattr(event_item, 'node_class'):
-                        if event_item.node_class in ['dagnode']:
-                            UUID = event_item.dagnode.UUID
-                            if UUID:
-                                # get downstream nodes 
-                                ds_ids = self.scene().graph.downstream(UUID)
-                                for nid in ds_ids:
-                                    node_widget = self.view.getNode(nid)
-                                    node_widget.setSelected(True)
-
-            if event.modifiers() & QtCore.Qt.ShiftModifier:             
-                if selected_nodes:
-                    if len(selected_nodes) == 1:
-                        sel_node = selected_nodes[0]
-                        sel_node_conn = sel_node.listConnections()
-
-                        if sel_node_conn:
-                            # TODO: add connetion check here
-                            self.popNode(sel_node)
-
-
-            if event.modifiers() & QtCore.Qt.MetaModifier: 
-                if event_item is not None:
-                    if selected_nodes:
-                        if len(selected_nodes) == 1:
-                            sel_node = selected_nodes[0]
-                            coll_items = self.scene().collidingItems(sel_node)
-                            ext_coll = []
-                            for c in coll_items:
-                                if hasattr(c, 'dagnode'):
-                                    if c.dagnode.name != sel_node.dagnode.name:
-                                        if c not in ext_coll:
-                                            ext_coll.append(c)
-                            col_nodes = [x for x in ext_coll if hasattr(x, 'node_class')]
-
-                            if len(col_nodes):
-                                if len(col_nodes) == 1:
-                                    edge_widget = col_nodes[0]
-                                    if sel_node.node_class in ['dagnode']:                                
-                                        self.splitNodeConnection(sel_node, edge_widget)
-
-        self.updateGraphViewAttributes()
-        QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event):
         """
         Pan the viewport if the control key is pressed
         """
+        self.current_cursor_pos = event.pos()
         if event.modifiers() & QtCore.Qt.ControlModifier:
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
         else:
@@ -386,29 +300,42 @@ class GraphicsScene(QtGui.QGraphicsScene):
     self.itemsBoundingRect() - returns the maximum boundingbox for all nodes
 
     """
-    def __init__(self, parent=None, graph=None):
+    def __init__(self, parent=None, graph=None, debug=False):
         QtGui.QGraphicsScene.__init__(self, parent)
 
         self.graph       = graph
         self.network     = graph.network
+        self.debug       = debug
 
         self.line        = None    # temp line
         self.edge_type   = 'bezier'
         self.manager     = manager.WindowManager(self)
         self.scenenodes  = dict()
 
-    def addNodes(self, nodes):
+    def addNodes(self, dagnodes):
         """
-        Add nodes to the current scene.
+        Add dag nodes to the current scene.
         """
-        if type(nodes) not in [list, tuple]:
-            nodes = [nodes,]
+        from SceneGraph.test import nodes
+        reload(nodes)
+        if type(dagnodes) not in [list, tuple]:
+            dagnodes = [dagnodes,]
 
-        for node in nodes:
-            if node.Type > 65536:
-                if node.dagnode.UUID not in self.scenenodes:
-                    self.scenenodes[node.dagnode.UUID]=node
-                    self.addItem(node)
+        widgets = []
+        for dag in dagnodes:
+            if isinstance(dag, core.DagNode):              
+                if dag.UUID not in self.scenenodes:
+                    widget = nodes.Node(dag)
+
+                    # set the debug mode
+                    widget.setDebug(self.debug)
+                    self.scenenodes[dag.UUID]=widget
+                    self.addItem(widget)
+                    widgets.append(widget)
+
+            else:
+                log.warning('unknown node type: "%s"' % dag.__class__.__name__)
+        return widgets
 
     def getNodes(self):
         """

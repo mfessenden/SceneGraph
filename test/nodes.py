@@ -6,10 +6,10 @@ from PySide import QtCore, QtGui
 """
 pyqtgraph:
 
-	- Node = QObject
-		Node.graphicsItem = QGraphicsObject
+    - Node = QObject
+        Node.graphicsItem = QGraphicsObject
 
-	def close(self):
+    def close(self):
         self.disconnectAll()
         self.clearTerminals()
         item = self.graphicsItem()
@@ -26,6 +26,9 @@ My Node:
     Requirements:
         - needs to send signals from label
         - needs to have connections
+
+Node.setHandlesChildEvents(False)
+
 """
 
 class Node(QtGui.QGraphicsObject):
@@ -50,18 +53,16 @@ class Node(QtGui.QGraphicsObject):
 
         # globals
         self._debug          = False
+        self.is_enabled      = True                   # node is enabled (will eval)  
         self.orientation     = 'horizontal'           # connect on sides/top    
         self.is_expanded     = False                  # node is expanded 
         self.is_selected     = False                  # indicates that the node is selected
         self.is_hover        = False                  # indicates that the node is under the cursor
         self._render_effects = True                   # enable fx
 
-        self._label_coord    = [0,0]
-
-        # layers
-        self.background = NodeBackground(self)
-        self.label = NodeLabel(self)        
-
+        self._label_coord    = [0,0]                  # default coordiates of label
+        
+        self.setHandlesChildEvents(False)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, True)
@@ -70,6 +71,18 @@ class Node(QtGui.QGraphicsObject):
         self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
         self.setAcceptsHoverEvents(True)
 
+        # layers
+        self.background = NodeBackground(self)
+        self.label = NodeLabel(self)   
+
+        # signals/slots
+        self.label.doubleClicked.connect(self.labelDoubleClickedEvent)
+        
+    #- TESTING ---
+    def labelDoubleClickedEvent(self):
+        val = self.label.is_editable
+        self.label.setTextEditable(not val)
+
     def boundingRect(self):
         w = self.width
         h = self.height
@@ -77,18 +90,23 @@ class Node(QtGui.QGraphicsObject):
         by = self.bufferY
         return QtCore.QRectF(-w/2 -bx, -h/2 - by, w + bx*2, h + by*2)
 
+    @property
+    def label_rect(self):
+        return self.label.boundingRect()
+
     def shape(self):
         """
         Create the shape for collisions.
         """
-        w = self.width
-        h = self.height
+        w = self.width + 4
+        h = self.height + 4
         bx = self.bufferX
         by = self.bufferY
         path = QtGui.QPainterPath()
         path.addRoundedRect(QtCore.QRectF(-w/2, -h/2, w, h), 7, 7)
         return path
 
+    #- Global Properties ----
     @property
     def bg_color(self):
         if self.is_selected:
@@ -116,6 +134,10 @@ class Node(QtGui.QGraphicsObject):
         if self.is_selected:
             return QtGui.QColor(*[104, 56, 0, 60])
         return QtGui.QColor(*self._s_color)
+
+    #- Events ----
+    def mouseDoubleClickEvent(self, event):
+        QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
 
     def paint(self, painter, option, widget):
         """
@@ -148,21 +170,26 @@ class Node(QtGui.QGraphicsObject):
             self.lblshd.setOffset(4,4)
             self.label.setGraphicsEffect(self.lblshd)
 
-
-    def db(self):
-        print 'debugging'
+    def setDebug(self, val):
+        if val != self._debug:
+            self._debug = val
+            self.label._debug = val
+            self.background._debug = val
 
 
 class NodeLabel(QtGui.QGraphicsObject):
     
-    labelChanged = QtCore.Signal()
+    doubleClicked     = QtCore.Signal()
+    labelChanged      = QtCore.Signal()
+    clicked           = QtCore.Signal()
 
     def __init__(self, parent):
         QtGui.QGraphicsObject.__init__(self, parent)
         
         self.dagnode        = parent.dagnode
 
-        self.font           = 'Monospace'
+        self._debug         = False
+        self._font          = 'Monospace'
         self._font_size     = 8
         self._font_bold     = False
         self._font_italic   = False
@@ -171,15 +198,61 @@ class NodeLabel(QtGui.QGraphicsObject):
         self._document = self.label.document()
 
         # flags/signals
-        '''
-        self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
+
         self._document.setMaximumBlockCount(1)
         self._document.contentsChanged.connect(self.nodeNameChanged)
-        
-        self.rect_item = QtGui.QGraphicsRectItem(self.label.boundingRect(), self)
-        self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+
+        # bounding shape
+        self.rect_item = QtGui.QGraphicsRectItem(self.boundingRect(), self)
+        #self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        self.rect_item.setPen(QtGui.QPen(QtGui.QColor(125,125,125)))        
+        self.rect_item.pen().setStyle(QtCore.Qt.DashLine)
         self.rect_item.stackBefore(self.label)
-        '''
+        self.setHandlesChildEvents(False)
+
+    def initDocument(self):
+        cursor = self.label.textCursor()
+        cursor.setPosition(0, QtGui.QTextCursor.KeepAnchor)
+        cursor.select(QtGui.QTextCursor.Document)
+        self.label.setTextCursor(cursor)
+
+    @QtCore.Slot()
+    def nodeNameChanged(self):
+        """
+        Runs when the node name is changed.
+        """      
+        new_name = self.text
+        if new_name != self.dagnode.name:
+            self.dagnode.name = new_name
+            
+        # re-center the label
+        bounds = self.boundingRect()
+        self.label.setPos(bounds.width()/2. - self.label.boundingRect().width()/2, 0)
+
+    @property
+    def is_editable(self):
+        return self.label.textInteractionFlags() == QtCore.Qt.TextEditorInteraction
+
+    def mouseDoubleClickEvent(self, event):
+        if self.label.textInteractionFlags() == QtCore.Qt.NoTextInteraction:
+            self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
+            self.initDocument()
+        else:
+            if self.label.textCursor():
+                c = self.label.textCursor()
+                c.clearSelection()
+                self.label.setTextCursor(c)
+            self.label.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
+        QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
+
+    def keyPressEvent(self, event):
+        print '# NodeLabel: keyPressEvent'
+        if event.key() == QtCore.Qt.Key_Enter or event.key() == QtCore.Qt.Key_Return:
+            self.nodeNameChanged()
+        else:
+            QtGui.QGraphicsObject.keyPressEvent(self, event)
 
     @property
     def node(self):
@@ -197,6 +270,15 @@ class NodeLabel(QtGui.QGraphicsObject):
         self._document.setPlainText(text)
         return self.text
 
+    def shape(self):
+        """
+        Aids in selection.
+        """
+        path = QtGui.QPainterPath()
+        polyon = QtGui.QPolygonF(self.boundingRect())
+        path.addPolygon(polyon)
+        return path
+
     def paint(self, painter, option, widget):
         """
         Draw the label.
@@ -205,7 +287,7 @@ class NodeLabel(QtGui.QGraphicsObject):
         label_italic = self._font_italic
 
         #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
-        qfont = QtGui.QFont(self.font)
+        qfont = QtGui.QFont(self._font)
         qfont.setPointSize(self._font_size)
         qfont.setBold(self._font_bold)
         qfont.setItalic(label_italic)
@@ -213,13 +295,22 @@ class NodeLabel(QtGui.QGraphicsObject):
 
         self.label.setDefaultTextColor(label_color)
         self.text = self.node.dagnode.name
-    
+
+        # debug
+        if self._debug:
+            qpen = QtGui.QPen(QtGui.QColor(125,125,125))
+            qpen.setWidthF(0.5)
+            qpen.setStyle(QtCore.Qt.DashLine)
+            painter.setPen(qpen)
+            painter.drawPolygon(self.boundingRect())
+
 
 class NodeBackground(QtGui.QGraphicsItem):
     def __init__(self, parent=None, scene=None):
         super(NodeBackground, self).__init__(parent, scene)
 
-        self.dagnode=parent.dagnode
+        self.dagnode = parent.dagnode
+        self._debug  = False
 
     @property
     def node(self):

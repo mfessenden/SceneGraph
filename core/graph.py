@@ -346,13 +346,17 @@ class Graph(object):
         name   = kwargs.pop('name', 'node1')
 
         if not self.validNodeName(name):
-            name = self._nodeNamer(name)
+            name = self.getValidNodeName(name)
 
         dag = core.DagNode(node_type, name=name, **kwargs)
         self.dagnodes[dag.UUID] = dag
         
         # add the node to the networkx graph
         self.network.add_node(dag.UUID, **dag)
+
+        # update the scene
+        if self.manager:
+            self.manager.addNodes([dag,])
         return dag
 
     def removeNode(self, name, UUID=None):
@@ -633,7 +637,7 @@ class Graph(object):
         """
         return name not in self.listNodeNames()
 
-    def _nodeNamer(self, name):
+    def getValidNodeName(self, name):
         """
         Returns a legal node name
 

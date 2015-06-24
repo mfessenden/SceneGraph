@@ -198,12 +198,9 @@ class SceneGraphUI(form_class, base_class):
         self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
-        # graphics View
-        self.view.wheelEvent = self.graphicsView_wheelEvent
-        self.view.resizeEvent = self.graphicsView_resizeEvent
 
         # maya online
-        self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
+        #self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
         # TESTING: disable
@@ -636,13 +633,6 @@ class SceneGraphUI(form_class, base_class):
         QtGui.QApplication.instance().removeEventFilter(self)
         return super(SceneGraphUI, self).closeEvent(event)
 
-    def graphicsView_wheelEvent(self, event):
-        factor = 1.41 ** ((event.delta()*.5) / 240.0)
-        self.view.scale(factor, factor)
-
-    def graphicsView_resizeEvent(self, event):
-        #self.scene.setSceneRect(0, 0, self.view.width(), self.view.height())
-        pass
 
     #- Menus -----
     def createTabMenu(self, parent):
