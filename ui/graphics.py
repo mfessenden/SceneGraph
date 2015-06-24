@@ -2,13 +2,13 @@
 import os
 from PySide import QtCore, QtGui
 from functools import partial
-from SceneGraph import core
-from . import manager
-# test nodes
 from SceneGraph.test import nodes
-
+from SceneGraph import core
 # logger
 log = core.log
+
+from . import manager
+
 
 
 class GraphicsView(QtGui.QGraphicsView):
