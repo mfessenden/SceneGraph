@@ -3,12 +3,13 @@ import os
 from PySide import QtCore, QtGui
 from functools import partial
 from SceneGraph import core
-from . import manager
-# test nodes
-from SceneGraph.test import nodes
-
 # logger
 log = core.log
+
+from . import manager
+
+# test nodes
+from SceneGraph.test.nodes import Node, Edge
 
 
 class GraphicsView(QtGui.QGraphicsView):
@@ -312,7 +313,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         for dag in dagnodes:
             if isinstance(dag, core.DagNode):              
                 if dag.UUID not in self.scenenodes:
-                    widget = nodes.Node(dag)
+                    widget = Node(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
@@ -322,7 +323,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
             elif isinstance(dag, core.DagEdge):              
                 if dag.UUID not in self.scenenodes:
-                    widget = nodes.Edge(dag)
+                    widget = Edge(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
