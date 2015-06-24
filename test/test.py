@@ -7,7 +7,7 @@ import xml.etree.ElementTree as xml
 from cStringIO import StringIO
 from SceneGraph.core import log
 from SceneGraph import options
-reload(options)
+
 
 
 SCENEGRAPH_TEST_PATH = options.SCENEGRAPH_TEST_PATH

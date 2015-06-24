@@ -6,7 +6,7 @@ import simplejson as json
 import networkx as nx
 from functools import partial
 
-from SceneGraph.core import log
+from SceneGraph.core import log, DagNode, DagEdge
 
 
 class Graph(object):
@@ -363,9 +363,7 @@ class Graph(object):
                           - dag in standalone mode
                           - node widget in ui mode
         """
-        from SceneGraph import core
-        reload(core)
-        name   = kwargs.pop('name', 'node1')
+        name  = kwargs.pop('name', 'node1')
 
         # check to see if node type is valid
         if node_type not in self.node_types():
@@ -375,7 +373,7 @@ class Graph(object):
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
 
-        dag = core.DagNode(node_type, name=name, **kwargs)
+        dag = DagNode(node_type, name=name, **kwargs)
         self.dagnodes[dag.UUID] = dag
         
         # add the node to the networkx graph
@@ -437,11 +435,8 @@ class Graph(object):
             log.warning('invalid connection: "%s", "%s"' % (src.name, dest.name))
             return
 
-        from SceneGraph import core
-        reload(core)
-
         # create an edge
-        edge = core.DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
+        edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
         conn_str = self.parseEdgeName(edge)
         log.debug('parsing edge: "%s"' % conn_str)
 
@@ -455,10 +450,9 @@ class Graph(object):
         # update the scene
         if self.manager is not None:
             self.manager.addNodes([edge,])
-
         return edge
 
-    def removeEdge(self, conn=None, UUID=None): 
+    def removeEdge(self, *args): 
         """
         Removes an edge from the graph
 
@@ -469,33 +463,43 @@ class Graph(object):
         returns:
             (object)  - removed edge
         """
-        if UUID is None:
-            if conn is None:
-                log.error('please enter a valid edge connection string or UUID')
+        edges = []
+        for arg in args:
+            # arg is a DagEdge instance
+            if isinstance(arg, DagEdge):
+                edges.append(arg)
+                continue
+
+            # arg is a UUID str
+            if arg in self.dagnodes:
+                dag = self.dagnodes.pop(arg)
+                edges.append(dag)
+                continue
+
+            # arg is a connection str
+            if arg in self.allConnections():
+                UUID = self.getEdgeID(arg)
+                if not UUID:
+                    continue
+                dag = self.getEdge(UUID)
+                if not dag:
+                    continue
+                edges.append(dag[0])
+
+                continue
+
+        if not edges:
+            log.error('no valid edges specified.')
+            return False
+
+        for edge in edges:
+            try:
+                self.network.remove_edge(edge.src_id, edge.dest_id)
+                log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
+            except Exception, err:
+                log.error(err)
                 return False
-            UUID = self.getEdgeID(conn)
-
-        if UUID: 
-            if UUID in self.dagnodes:
-                dag = self.dagnodes.pop(UUID)
-                
-                try:
-                    self.network.remove_edge(*dag.ids)
-                    log.info('Removing edge: "%s"' % dag.name)
-                except Exception, err:
-                    log.error(err)
-                    return False
-
-                # TODO: edge doesn't disappear from the graph, but is
-                # gone after save/reload
-                self.evaluate()
-                return True
-            else:
-                log.warning('UUID %s not in edge dictionary' % UUID)
-        else:
-            log.warning('No UUID')
-
-        return False
+        return True
 
     def getNodeID(self, name):
         """
@@ -520,6 +524,10 @@ class Graph(object):
 
         params:
             name - (str) edge ID
+
+
+        returns:
+            (str) - edge UUID
         """
         result = None
         for data in self.network.edges(data=True):
@@ -533,16 +541,17 @@ class Graph(object):
             src_attr = edge_attrs.get('src_attr')
             dest_attr = edge_attrs.get('dest_attr')
 
-            src_node = self.getNode(src_id)
-            dest_node = self.getNode(dest_id)
+            src_nodes = self.getNode(src_id)
+            dest_nodes = self.getNode(dest_id)
 
-            if src_node is None or dest_node is None:
+            if not src_nodes or not dest_nodes:
                 return result
 
-            edge_id = str(edge_attrs.get('id'))
-            
+            src_node = src_nodes[0]
+            dest_node = dest_nodes[0]
+
+            edge_id = str(edge_attrs.get('UUID'))
             conn_str = '%s.%s,%s.%s' % (src_node.name, src_attr, dest_node.name, dest_attr)
-            # todo: do some string cleanup here
             if conn_str == conn:
                 result = edge_id
         return result 
