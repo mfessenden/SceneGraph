@@ -53,42 +53,6 @@ class Graph(object):
         self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
         self.network.graph['environment'] = 'command_line'
 
-    def addNodesToScene(self, dagnodes):
-        """
-        Add dagnodes to the scene via the WindowManager.
-
-        params:
-            dagnodes (list) - list of DagNode objects.
-        """
-        if self.manager is not None:
-            self.manager.addNodes(dagnodes)
-            return True
-        return False
-
-    def removeSceneNodes(self, dagnodes):
-        """
-        Remove scene nodes via the WindowManager.
-
-        params:
-            dagnodes (list) - list of DagNode objects.
-        """
-        if self.manager is not None:
-            self.manager.removeNodes(dagnodes)
-            return True
-        return False
-
-    def updateSceneNodes(self, dagnodes):
-        """
-        Update scene nodes via the WindowManager.
-
-        params:
-            dagnodes (list) - list of DagNode objects.
-        """
-        if self.manager is not None:
-            self.manager.updateNodes(dagnodes)
-            return True
-        return False
-
     def initializeNodeTypes(self):
         """
         Scan the dag nodes directory for node types.
@@ -226,7 +190,7 @@ class Graph(object):
         Returns a list of all dag nodes.
 
         returns:
-            (list) - list of NodeBase objects.
+            (list) - list of DagNode objects.
         """
         nodes = []
         for node in  self.network.nodes(data=True):
@@ -262,7 +226,7 @@ class Graph(object):
         if self.dagnodes:
             for UUID in self.dagnodes:
                 node = self.dagnodes.get(UUID)
-                if node and dag.name in args or str(dag.UUID) in args:
+                if node and node.name in args or str(node.UUID) in args:
                     nodes.append(node)
         return nodes
 
@@ -271,12 +235,12 @@ class Graph(object):
         Returns a list of all dag edges.
 
         returns:
-            (list) - list of EdgeBase objects.
+            (list) - list of DagEdge objects.
         """
         edges = []
         for edge in  self.network.edges(data=True):
             src_id, dest_id, attrs = edge
-            UUID = attrs.get('id')
+            UUID = attrs.get('UUID')
             if UUID in self.dagnodes:
                 edges.append(self.dagnodes.get(UUID))
         return edges
@@ -292,12 +256,53 @@ class Graph(object):
 
     def allConnections(self):
         """
-        Returns a list of all dag connection strings.
+        Returns a list of human-readable edge
+        connections.
 
         returns:
-            (list)
+            (list) - list of connection strings. 
         """
-        return [edge.name for edge in self.getEdges()]
+        connections = []
+        for edge in self.getEdges():
+
+            src_attr = edge.get('src_attr')
+            dest_attr = edge.get('dest_attr')
+
+            src_nodes = self.getNode(edge.get('src_id'))
+            dest_nodes = self.getNode(edge.get('dest_id'))
+
+            # query node names
+            if src_nodes and dest_nodes:
+                src_node = src_nodes[0]
+                dest_node = dest_nodes[0]
+                connections.append('%s.%s,%s.%s' % (src_node.name, src_attr, 
+                                                    dest_node.name, dest_attr))
+        return connections
+
+    def parseEdgeName(self, edge):
+        """
+        Parse an edge name string into human-readable format.
+        Since we don't store node names in edges (because UUIDs are immutable),
+        we need to parse the UUID into a node name.
+
+        params:
+            edge - (DagEdge) edge instance
+
+        returns:
+            (str) - edge connection string.
+        """
+        src_nodes = self.getNode(edge.src_id)
+        dest_nodes = self.getNode(edge.dest_id)
+
+        if not src_nodes or not dest_nodes:
+            log.error('invalid node ids in edge "%s"' % edge.name)
+            return 
+
+        src_name = src_nodes[0].name
+        src_str = '%s.%s' % (src_name, edge.src_attr)
+        dest_name = dest_nodes[0].name
+        dest_str = '%s.%s' % (dest_name, edge.dest_attr)
+        return '%s,%s' % (src_str, dest_str)
 
     def getEdgeIDs(self):
         """
@@ -309,25 +314,42 @@ class Graph(object):
             ids.append(attrs.get('id'))
         return ids
 
-    def getEdge(self, conn):
+    def getEdge(self, *args):
         """
-        Return a dag edge by name.
+        Return a dag edge.
 
-        params:
-            conn - (str) connection string (ie: "node1.output,node2.input")
+        Pass 
 
         returns:
             (obj)
         """
-        if conn in self.dagnodes:
-            return self.dagnodes.get(conn)
-        
-        if self.dagnodes:
-            for UUID in self.dagnodes:
-                dag = self.dagnodes.get(UUID)
-                if dag and dag.name == conn:
-                    return dag
-        return
+        edges=[]
+        for arg in args:
+            # if UUID is passed
+            if arg in self.dagnodes:
+                edges.append(self.dagnodes.get(arg))
+
+        for edge in self.network.edges(data=True):
+            src_id, dest_id, attrs = edge
+            edge_id = attrs.get('UUID')
+            src_attr = attrs.get('src_attr', None)
+            dest_attr = attrs.get('dest_attr', None)
+
+            src_nodes = self.getNode(src_id)
+            dest_nodes = self.getNode(dest_id)
+
+            if not src_nodes and dest_nodes:
+                continue
+
+            if not src_attr and dest_attr:
+                continue
+
+            src_name = src_nodes[0].name
+            dest_name = dest_nodes[0].name
+            conn_str = '%s.%s,%s.%s' % (src_name, src_attr, dest_name, dest_attr)
+            if conn_str in args:
+                edges.append(self.dagnodes.get(edge_id))
+        return edges
 
     def addNode(self, node_type, **kwargs):
         """
@@ -345,6 +367,11 @@ class Graph(object):
         reload(core)
         name   = kwargs.pop('name', 'node1')
 
+        # check to see if node type is valid
+        if node_type not in self.node_types():
+            log.error('invalid node type: "%s"' % node_type)
+            return
+
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
 
@@ -355,7 +382,7 @@ class Graph(object):
         self.network.add_node(dag.UUID, **dag)
 
         # update the scene
-        if self.manager:
+        if self.manager is not None:
             self.manager.addNodes([dag,])
         return dag
 
@@ -387,35 +414,49 @@ class Graph(object):
         """
         Add an edge connecting two nodes.
 
-          src = source node string, ie "node1.output"
-          dest = source node string, ie "node1.output"
+        params:
+            src  - (DagNode) source node
+            dest - (DagNode) destination node
+
+        returns:
+            (DagEdge) - edge object
+
         """
         UUID = kwargs.pop('id', None)
+        src_attr = kwargs.pop('src_attr', 'output')
+        dest_attr = kwargs.pop('dest_attr', 'input')
+
         if src is None or dest is None:
             return False
 
-        if src and dest:
-            from SceneGraph import core
-            reload(core)
+        if not src or not dest:
+            return False
 
-            # don't connect the same node
-            if src == dest:
-                log.debug('invalid connection: "%s", "%s"' % (src.name, dest.name))
-                return
+        # don't connect the same node
+        if src == dest:
+            log.warning('invalid connection: "%s", "%s"' % (src.name, dest.name))
+            return
 
-            """
-            conn_str = '%s,%s' % (src, dest)
-            if conn_str in self.allConnections():
-                log.debug('invalid connection: "%s"' % conn_str)
-                return
-            """
+        from SceneGraph import core
+        reload(core)
 
-            edge = core.DagEdge(src, dest, id=UUID)            
-            self.network.add_edge(src.UUID, dest.UUID, **edge)
-            self.dagnodes[edge.UUID] = edge
+        # create an edge
+        edge = core.DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
+        conn_str = self.parseEdgeName(edge)
+        log.debug('parsing edge: "%s"' % conn_str)
 
-            # TODO: Graph signal here
-            return edge
+        if conn_str in self.allConnections():
+            log.warning('connection alread exists: %s' % conn_str)
+            return 
+
+        self.network.add_edge(src.UUID, dest.UUID, **edge)
+        self.dagnodes[edge.UUID] = edge
+
+        # update the scene
+        if self.manager is not None:
+            self.manager.addNodes([edge,])
+
+        return edge
 
     def removeEdge(self, conn=None, UUID=None): 
         """
@@ -585,11 +626,46 @@ class Graph(object):
         pasted_nodes = []
         return pasted_nodes
 
-    def connectNodes(self, output, input):
+    def connectNodes(self, source, dest):
         """
         Connect two nodes via a "Node.attribute" string
         """
-        return self.addEdge(output, output)
+        if not '.' in source or not '.' in dest:
+            return False
+
+        s = source.rpartition('.')
+        d = dest.rpartition('.')
+
+        if len(s) == 3 and len(d) == 3:
+            src_name = s[0]
+            src_attr = s[2]
+
+            dest_name = d[0]
+            dest_attr = d[2]
+
+            src_nodes = self.getNode(src_name)
+            dest_nodes = self.getNode(dest_name)
+
+            src_node = None
+            dest_node = None
+
+            if src_nodes:
+                src_node = src_nodes[0]
+            
+            if dest_nodes:
+                dest_node = dest_nodes[0]
+
+            if not src_node or not dest_node:
+                if not src_node:
+                    log.error('invalid source node: "%s"' % src_name)
+
+                if not dest_node:
+                    log.error('invalid destination node: "%s"' % dest_name)
+                return False
+
+            # add the edge
+            return self.addEdge(src_node, dest_node, src_attr=src_attr, dest_attr=dest_attr)
+        return False
 
     def reset(self):
         """

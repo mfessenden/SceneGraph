@@ -40,8 +40,11 @@
 	n1 = g.addNode('default', name='node1')
 	n2 = g.addNode('default', name='node2')
 
-	# connect the nodes
-	g.addEdge('node1.output', 'node2.input')
+	# connect the nodes (default output/inputs assumed)
+	e1 = g.addEdge(n1, n2)
+
+	# connect with a connection string
+	e1 = g.connectNodes('node1.output', 'node2.input')
 
 	# write the graph
 	g.write('~/my_graph.json')
@@ -50,7 +53,7 @@
 	print g.getDagNodes()
 
 	# query all node names
-	print g.getDagNodeNames()
+	print g.allNodes()
 
 	# query all connections
 	print g.allConnections()

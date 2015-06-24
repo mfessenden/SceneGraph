@@ -13,6 +13,7 @@ Goals:
  - hold basic attributes
  - easily add new attributes
  - query connections easily
+ - can be cleanly mapped to and from json
 """
 
 class DagNode(dict):
@@ -51,6 +52,11 @@ class DagNode(dict):
 
     def __str__(self):
         return json.dumps(self, indent=4)
+
+    @classmethod
+    def node_from_meta(nodetype, data):
+        self = DagNode(nodetype, **data)
+        return self
 
     @property
     def node_class(self):
@@ -221,6 +227,8 @@ class DagEdge(dict):
 
         self.src_id    = source
         self.dest_id   = dest
+        self.src_attr  = kwargs.pop('src_attr', 'output')
+        self.dest_attr = kwargs.pop('dest_attr', 'input')
 
         # node unique ID
         UUID = kwargs.pop('id', None)
@@ -231,13 +239,19 @@ class DagEdge(dict):
     def __str__(self):
         return json.dumps(self, indent=4)
 
+
+    @classmethod
+    def edge_from_meta(data):
+        self = DagEdge(**data)
+        return self
+
     @property
     def node_class(self):
         return self.CLASS_KEY
 
     @property
     def name(self):
-        return '%s,%s' % (self.source, self.dest)
+        return '%s.%s,%s.%s' % (self.src_id, self.src_attr,self.dest_id,self.dest_attr)
 
     @property
     def id(self):

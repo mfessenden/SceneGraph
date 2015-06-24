@@ -2,14 +2,10 @@
 import os
 from PySide import QtCore, QtGui
 from functools import partial
-
 from SceneGraph import core
-from . import node_widgets
 from . import manager
-
-reload(core)
-reload(node_widgets)
-reload(manager)
+# test nodes
+from SceneGraph.test import nodes
 
 # logger
 log = core.log
@@ -166,6 +162,10 @@ class GraphicsView(QtGui.QGraphicsView):
         self._scale = factor
         self.updateGraphViewAttributes()
 
+    def mouseMoveEvent(self, event):
+
+        QtGui.QGraphicsView.mouseMoveEvent(self, event)
+
     def mousePressEvent(self, event):
         """
         Pan the viewport if the control key is pressed
@@ -198,20 +198,9 @@ class GraphicsView(QtGui.QGraphicsView):
             #self.setSceneRect(boundsRect) # this resizes the scene rect to the bounds rect, not desirable
 
         if event.key() == QtCore.Qt.Key_F:
-            nodes = self.scene().selectedNodes()
+            snodes = self.scene().selectedNodes()
             bRect = self.scene().selectionArea().boundingRect()
             self.fitInView(bRect, QtCore.Qt.KeepAspectRatio)
-
-        elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
-            nodes = graph.selectedNodes()
-
-            if graph.copyNodes(nodes):
-                log.info('copying nodes: %s' % ', '.join(nodes))
-
-        elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
-            nodes = graph.pasteNodes()
-            if nodes:
-                log.info('pasting nodes: %s' % ', '.join(nodes))
 
         # delete nodes & edges...
         elif event.key() == QtCore.Qt.Key_Delete:
@@ -316,8 +305,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Add dag nodes to the current scene.
         """
-        from SceneGraph.test import nodes
-        reload(nodes)
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
 
@@ -326,6 +313,16 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if isinstance(dag, core.DagNode):              
                 if dag.UUID not in self.scenenodes:
                     widget = nodes.Node(dag)
+
+                    # set the debug mode
+                    widget.setDebug(self.debug)
+                    self.scenenodes[dag.UUID]=widget
+                    self.addItem(widget)
+                    widgets.append(widget)
+
+            elif isinstance(dag, core.DagEdge):              
+                if dag.UUID not in self.scenenodes:
+                    widget = nodes.Edge(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
@@ -355,6 +352,38 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if node_name == val:
                 return node
 
+    def selectedNodes(self):
+        """
+        Returns a list of selected node widgets.
+        """
+        dagnodes = []
+        selected = self.selectedItems()
+        for item in selected:
+            if isinstance(item, core.DagNode):
+                dagnodes.append(item)
+        return dagnodes
+
+    def selectedEdges(self):
+        """
+        Returns a list of selected edge widgets.
+        """
+        edges = []
+        selected = self.selectedItems()
+        for item in selected:
+            if hasattr(item, 'node_class'):
+                if item.node_class in ['edge']:
+                    edges.append(item)
+        return edges
+
+    def getEdges(self):
+        """
+        Returns a list of edge widgets.
+        """
+        return self.scenenodes.values()
+
+    def getEdge(self, edge):
+        return
+
     def popNode(self, node):
         """
         'Pop' a node from it's current connections.
@@ -375,36 +404,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item.dagnode.pos_y = pos[1]
         # manager: update Graph nodss
         #self.nodeChanged.emit(item)
-
-    def selectedNodes(self):
-        """
-        Returns a list of selected node widgets.
-        """
-        nodes = []
-        selected = self.selectedItems()
-        for item in selected:
-            if hasattr(item, 'node_class'):
-                if item.node_class in ['dagnode']:
-                    nodes.append(item)
-        return nodes
-
-    def getEdges(self):
-        """
-        Returns a list of edge widgets.
-        """
-        return self.scenenodes.values()
-
-    def selectedEdges(self):
-        """
-        Returns a list of selected edge widgets.
-        """
-        edges = []
-        selected = self.selectedItems()
-        for item in selected:
-            if hasattr(item, 'node_class'):
-                if item.node_class in ['edge']:
-                    edges.append(item)
-        return edges
 
     def validateConnection(self, source_item, dest_item, force=True):
         """

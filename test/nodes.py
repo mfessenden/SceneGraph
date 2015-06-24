@@ -61,7 +61,7 @@ class Node(QtGui.QGraphicsObject):
         self._render_effects = True                   # enable fx
 
         self._label_coord    = [0,0]                  # default coordiates of label
-        
+
         self.setHandlesChildEvents(False)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
@@ -343,7 +343,7 @@ class NodeBackground(QtGui.QGraphicsItem):
         """
         # setup colors
         bg_clr1 = self.node.bg_color
-        bg_clr2 = bg_clr1.darker(125)
+        bg_clr2 = bg_clr1.darker(150)
 
         # background gradient
         gradient = QtGui.QLinearGradient(0, -self.node.height/2, 0, self.node.height/2)
@@ -372,3 +372,85 @@ class NodeBackground(QtGui.QGraphicsItem):
             label_line = self.labelLine()
             painter.drawLine(label_line)
 
+
+
+class Egde(QtGui.QGraphicsObject):
+    
+    Type        = QtGui.QGraphicsObject.UserType + 2
+    adjustment  = 5
+
+    def __init__(self, dagnode, *args, **kwargs):
+        QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
+
+        self.dagnode         = dagnode
+
+        # globals
+        self._l_color        = [224, 224, 224]        # line color
+        self._p_color        = [10, 10, 10, 255]      # pen color (outer rim)
+        self._h_color        = [90, 245, 60]          # highlight color
+        self._s_color        = [0, 0, 0, 60]          # shadow color
+        
+        self.visible         = True
+        self._debug          = False
+        self.is_enabled      = True                   # node is enabled (will eval)  
+        self.is_selected     = False                  # indicates that the node is selected
+        self.is_hover        = False                  # indicates that the node is under the cursor
+        self._render_effects = True                   # enable fx
+
+        self.arrow_size      = 8 
+        self.show_conn       = False                  # show connection string
+        self.multi_conn      = False                  # multiple connections (future)
+        self.edge_type       = 'bezier'
+
+        # connections
+        self.source_item     = None
+        self.dest_item       = None
+
+        # points
+        self.source_point    = QtCore.QPointF(0,0)
+        self.dest_point      = QtCore.QPointF(0,0)
+        self.center_point    = QtCore.QPointF(0,0)      
+        
+        # geometry
+        self.bezier_path     = QtGui.QPainterPath()
+        self.poly_line       = QtGui.QPolygonF()
+
+        # flags
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, True)
+
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
+        self.setAcceptsHoverEvents(True)
+
+    def listConnections(self):
+        """
+        Returns a list of connected nodes.
+        """
+        return (self.source_item.node, self.dest_item.node)
+
+    @property
+    def source_node(self):
+        """
+        Returns the source node widget.
+        """
+        return self.source_item.node
+
+    @property
+    def dest_node(self):
+        """
+        Returns the destination node widget.
+        """
+        return self.dest_item.node
+
+    @property
+    def line_color(self):
+        """
+        Returns the current line color.
+        """
+        if self.is_selected:
+            return QtGui.QColor(*self._h_color)
+        if self.is_hover:
+            base_color = QtGui.QColor(*self._l_color)
+            return base_color.lighter(125)
+        return QtGui.QColor(*self._l_color)
