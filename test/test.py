@@ -45,6 +45,7 @@ class TestGraph(form_class, base_class):
     def __init__(self, parent=None, **kwargs):
         super(TestGraph, self).__init__(parent)
 
+        self.environment = 'standalone'
         self.setupUi(self)
         
         # allow docks to be nested
@@ -68,8 +69,17 @@ class TestGraph(form_class, base_class):
         ssf.close()
 
     def initializeGraphicsView(self):
-        scene = QtGui.QGraphicsScene()
-        self.gview.setScene(scene)
+        from SceneGraph import ui
+        from SceneGraph import core
+        reload(ui)
+        reload(core)
+        self.graph = core.Graph()
+        self.network = self.graph.network
+        self.network.graph['environment'] = self.environment
+
+        # add our custom GraphicsView object
+        self.view = ui.GraphicsView(self.gview, ui=self)
+        self.gviewLayout.addWidget(self.view) 
 
     def connectSignals(self):
         self.button_add.clicked.connect(self.addAction)
@@ -77,8 +87,13 @@ class TestGraph(form_class, base_class):
         self.button_refresh.clicked.connect(self.refreshAction)
 
     def addAction(self):
-        print '# adding...'
-        return False
+        from SceneGraph.test import nodes
+        from SceneGraph.core import DagNode
+        reload(nodes)
+        dag=DagNode('default', name='node1')
+        node=nodes.Node(dag)
+        self.view.scene().addNodes(node)
+        return True
 
     def removeAction(self):
         print '# removing...'
@@ -87,3 +102,6 @@ class TestGraph(form_class, base_class):
     def refreshAction(self):
         print '# refreshing...'
         return False
+
+    def readGraph(self, filename):
+        pass

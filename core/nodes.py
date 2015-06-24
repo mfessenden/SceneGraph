@@ -37,6 +37,7 @@ class DagNode(dict):
         self.expanded           = kwargs.pop('expanded', False)
         self.height_collapsed   = kwargs.pop('height_collapsed', 15)
         self.height_expanded    = kwargs.pop('height_expanded', 175)
+        self.pos                = kwargs.pop('pos', (0,0))
 
         # node unique ID
         UUID = kwargs.pop('id', None)

@@ -394,25 +394,36 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.manager     = manager.WindowManager(self)
         self.scenenodes  = dict()
 
-    def update(self, *args, **kwargs):
+    def addNodes(self, nodes):
         """
-        Update certain node/edge attributes on update.
+        Add nodes to the current scene.
         """
-        for item in self.items():
-            if hasattr(item, 'debug_mode'):
-                item.debug_mode = bool(eval(os.getenv("SCENEGRAPH_DEBUG", "0")))
-                item.update()
+        if type(nodes) not in [list, tuple]:
+            nodes = [nodes,]
 
-            if hasattr(item, 'edge_type'):  
-                item.edge_type = self.edge_type
-                item.update()
-        QtGui.QGraphicsScene.update(self, *args, **kwargs)
+        for node in nodes:
+            if node.Type > 65536:
+                if node.dagnode.UUID not in self.scenenodes:
+                    self.scenenodes[node.dagnode.UUID]=node
+                    self.addItem(node)
 
     def getNodes(self):
         """
         Returns a list of node widgets.
         """
         return self.scenenodes.values()
+
+    def getNode(self, val):
+        """
+        Get a named node from the scene.
+        """
+        if val in self.scenenodes:
+            return self.scenenodes.get(val)
+
+        for id, node in self.scenenodes.iteritems():
+            node_name = node.dagnode.name
+            if node_name == val:
+                return node
 
     def popNode(self, node):
         """

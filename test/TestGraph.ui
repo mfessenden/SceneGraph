@@ -22,7 +22,9 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QGraphicsView" name="gview"/>
+        <widget class="QWidget" name="gview" native="true">
+         <layout class="QVBoxLayout" name="gviewLayout"/>
+        </widget>
        </item>
        <item>
         <layout class="QVBoxLayout" name="buttonsLayout">
