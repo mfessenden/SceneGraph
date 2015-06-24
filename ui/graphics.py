@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from PySide import QtCore, QtGui, QtSvg
+from PySide import QtCore, QtGui
 from functools import partial
 
 from SceneGraph import core
@@ -20,7 +20,7 @@ class GraphicsView(QtGui.QGraphicsView):
     tabPressed    = QtCore.Signal()
     statusEvent   = QtCore.Signal(dict)
 
-    def __init__(self, parent=None, ui=None, **kwargs):
+    def __init__(self, parent=None, ui=None, opengl=False, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
 
         self.log                 = log
@@ -29,7 +29,7 @@ class GraphicsView(QtGui.QGraphicsView):
         self._scale              = 1
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
 
-        self.initializeSceneGraph(ui.graph)
+        self.initializeSceneGraph(ui.graph, opengl=opengl)
         self.setUpdateMode(False)
 
         # Mouse Interaction
@@ -53,10 +53,14 @@ class GraphicsView(QtGui.QGraphicsView):
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.connectSignals()
 
-    def initializeSceneGraph(self, graph):
+    def initializeSceneGraph(self, graph, opengl=False):
         """
         Setup the GraphicsScene
         """
+        if opengl:
+            from PySide import QtOpenGL
+            self.setViewport(QtOpenGL.QGLWidget())
+            log.info('initializing OpenGL renderer.')
         scene = GraphicsScene(self, graph=graph)
         scene.setSceneRect(-5000, -5000, 10000, 10000)
         self.setScene(scene)
@@ -119,9 +123,8 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def getTranslation(self):
         """
-        Returns the current scrollbar 
+        Returns the current scrollbar positions.
         """
-        #return [self.transform().m31(), self.transform().m32()]
         return [self.horizontalScrollBar().value(), self.verticalScrollBar().value()]
 
     def getScaleFactor(self):
@@ -346,7 +349,7 @@ class GraphicsView(QtGui.QGraphicsView):
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        menuActions = self._parent.initializeViewContextMenu()
+        menuActions = []
         for action in menuActions:
             #action.setData((action.data()[0], self.mapToScene(pos)))
             menu.addAction(action)

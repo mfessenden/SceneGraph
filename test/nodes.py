@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 from PySide import QtCore, QtGui
 
 
@@ -61,11 +62,13 @@ class Node(QtGui.QGraphicsObject):
         self.background = NodeBackground(self)
         self.label = NodeLabel(self)        
 
-        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable |
-            QtGui.QGraphicsObject.ItemIsMovable | 
-            QtGui.QGraphicsObject.ItemIsFocusable | 
-            QtGui.QGraphicsObject.ItemSendsGeometryChanges | 
-            QtGui.QGraphicsObject.ItemSendsScenePositionChanges)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, True)
+
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
+        self.setAcceptsHoverEvents(True)
 
     def boundingRect(self):
         w = self.width
@@ -74,10 +77,26 @@ class Node(QtGui.QGraphicsObject):
         by = self.bufferY
         return QtCore.QRectF(-w/2 -bx, -h/2 - by, w + bx*2, h + by*2)
 
+    def shape(self):
+        """
+        Create the shape for collisions.
+        """
+        w = self.width
+        h = self.height
+        bx = self.bufferX
+        by = self.bufferY
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(QtCore.QRectF(-w/2, -h/2, w, h), 7, 7)
+        return path
+
     @property
     def bg_color(self):
         if self.is_selected:
             return QtGui.QColor(*[255, 183, 44])
+
+        if self.is_hover:
+            base_color = QtGui.QColor(*self._b_color)
+            return base_color.lighter(125)
         return QtGui.QColor(*self._b_color)
 
     @property
@@ -209,33 +228,56 @@ class NodeBackground(QtGui.QGraphicsItem):
     def boundingRect(self):
         return self.node.boundingRect()
 
-    def labelLine(self):
+    def labelLine(self, offset=0):
         """
         Draw a line for the node label area
         """
         p1 = self.boundingRect().topLeft()
+        p1.setX(p1.x() + self.node.bufferX)
         p1.setY(p1.y() + self.node.bufferY*7)
+
         p2 = self.boundingRect().topRight()
+        p2.setX(p2.x() - self.node.bufferX)
         p2.setY(p2.y() + self.node.bufferY*7)
+
+        if offset:
+            p1.setY(p1.y() + offset)
+            p2.setY(p2.y() + offset)
+
         return QtCore.QLineF(p1, p2)
 
     def paint(self, painter, option, widget):
+        """
+        Paint the node background.
+        """
         # setup colors
-        bgcolor = self.node.bg_color
+        bg_clr1 = self.node.bg_color
+        bg_clr2 = bg_clr1.darker(125)
+
+        # background gradient
+        gradient = QtGui.QLinearGradient(0, -self.node.height/2, 0, self.node.height/2)
+        gradient.setColorAt(0, bg_clr1)
+        gradient.setColorAt(1, bg_clr2)
+
+        # pen color
         pcolor = self.node.pen_color
-
         qpen = QtGui.QPen(pcolor)
-        qpen.setWidthF(2)
+        qpen.setWidthF(1.5)
 
-        painter.setBrush(QtGui.QBrush(bgcolor))
+        painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(qpen)
         painter.drawRoundedRect(self.boundingRect(), 7, 7)
 
-        qpen = QtGui.QPen(self.node.pen_color)
-        qpen.setWidthF(0.5)
+        # line pen #1
+        lcolor = self.node.pen_color
+        lcolor.setAlpha(80)
+        lpen = QtGui.QPen(lcolor)
+        lpen.setWidthF(0.5)
 
         if self.node.is_expanded:
             painter.setBrush(QtCore.Qt.NoBrush)
-            painter.setPen(qpen)
+            painter.setPen(lpen)
+
             label_line = self.labelLine()
             painter.drawLine(label_line)
+

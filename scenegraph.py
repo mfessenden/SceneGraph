@@ -49,7 +49,7 @@ form_class, base_class = loadUiType(SCENEGRAPH_UI)
 
 
 class SceneGraphUI(form_class, base_class):
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, opengl=False, **kwargs):
         super(SceneGraphUI, self).__init__(parent)
 
         self.setupUi(self)
@@ -60,7 +60,8 @@ class SceneGraphUI(form_class, base_class):
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.view             = None  
+        self.view             = None
+        self.use_gl           = opengl
         self.environment      = kwargs.get('env', 'standalone')  
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
@@ -186,7 +187,7 @@ class SceneGraphUI(form_class, base_class):
         self.network.graph['environment'] = self.environment
 
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self)
+        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl)
         self.gviewLayout.addWidget(self.view) 
 
         # debugging signals
@@ -669,17 +670,6 @@ class SceneGraphUI(form_class, base_class):
 
         tab_menu.addMenu(add_menu)
         tab_menu.exec_(qcurs.pos())
-
-    def initializeViewContextMenu(self):
-        """
-        Initialize the GraphicsView context menu.
-        """
-        menu_actions = []
-        menu_actions.append(QtGui.QAction('Rename node', self, triggered=self.renameNodeAction))
-        return menu_actions
-
-    def renameNodeAction(self):
-        print 'renaming node...'
 
     def spinAction(self):
         self.timer.timeout.connect(self.rotateView)

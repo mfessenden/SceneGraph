@@ -8,6 +8,7 @@ from optparse import OptionParser
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-f", "--filename", action="store", dest="filename")
+    parser.add_option("-g", "--opengl", action="store_true", dest="opengl", default=False)
     (options, args) = parser.parse_args()
     from SceneGraph import scenegraph
     app = QtGui.QApplication(sys.argv)
@@ -20,7 +21,7 @@ if __name__ == "__main__":
         app.setStyle("oxygen")
 
     #app.setStyle("gtk") # gtk is default
-    sgui = scenegraph.SceneGraphUI()
+    sgui = scenegraph.SceneGraphUI(opengl=options.opengl)
     sgui.show()
 
     if options.filename:

@@ -25,6 +25,10 @@ QTabBar{
 }
 
 QPushButton.Console{
+    border-color: #454545;
+    border-style: outset;
+    border-width: 1px;
+    border-radius: 10px;
     font-weight: bold;
     background-color: #383838;
 }
@@ -213,5 +217,10 @@ QTabBar::tab:!selected {
 }
 
 QGroupBox{
-    font-weight: bold
+    /*margin-top: 10px;*/
+    padding: 5px;
+    font-weight: bold;
+    border: 1px solid #454545;
+    border-radius: 4px;
 }
+

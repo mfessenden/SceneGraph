@@ -39,6 +39,9 @@
            <property name="text">
             <string>Add</string>
            </property>
+           <property name="class" stdset="0">
+            <string>Console</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -52,6 +55,9 @@
            <property name="text">
             <string>Remove</string>
            </property>
+           <property name="class" stdset="0">
+            <string>Console</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -64,6 +70,9 @@
            </property>
            <property name="text">
             <string>Refresh</string>
+           </property>
+           <property name="class" stdset="0">
+            <string>Console</string>
            </property>
           </widget>
          </item>
@@ -93,7 +102,7 @@
      <x>0</x>
      <y>0</y>
      <width>742</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

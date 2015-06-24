@@ -42,9 +42,10 @@ form_class, base_class = loadUiType(SCENEGRAPH_TEST_UI)
 
 
 class TestGraph(form_class, base_class):
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, opengl=False, **kwargs):
         super(TestGraph, self).__init__(parent)
 
+        self.use_gl      = opengl
         self.environment = 'standalone'
         self.setupUi(self)
         
@@ -78,7 +79,7 @@ class TestGraph(form_class, base_class):
         self.network.graph['environment'] = self.environment
 
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self)
+        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl)
         self.gviewLayout.addWidget(self.view) 
 
     def connectSignals(self):
@@ -93,6 +94,9 @@ class TestGraph(form_class, base_class):
         dag=DagNode('default', name='node1')
         node=nodes.Node(dag)
         self.view.scene().addNodes(node)
+
+        node.height=75
+        node.is_expanded=True
         return True
 
     def removeAction(self):
