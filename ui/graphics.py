@@ -207,10 +207,10 @@ class GraphicsView(QtGui.QGraphicsView):
             for item in self.scene().selectedItems():
                 if hasattr(item, 'node_class'):
                     if item.node_class in ['dagnode']:
-                        self.scene().graph.removeNode(item.dagnode.name, UUID=item.UUID)
+                        self.scene().graph.removeNode(item.dagnode.name, UUID=item.id)
 
                     elif item.node_class in ['edge']:
-                        self.scene().graph.removeEdge(UUID=item.UUID)
+                        self.scene().graph.removeEdge(UUID=item.id)
                     # TODO: scene different error
                     self.scene().removeItem(item)
                     continue
@@ -311,22 +311,22 @@ class GraphicsScene(QtGui.QGraphicsScene):
         widgets = []
         for dag in dagnodes:
             if isinstance(dag, core.DagNode):              
-                if dag.UUID not in self.scenenodes:
+                if dag.id not in self.scenenodes:
                     widget = nodes.Node(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
-                    self.scenenodes[dag.UUID]=widget
+                    self.scenenodes[dag.id]=widget
                     self.addItem(widget)
                     widgets.append(widget)
 
             elif isinstance(dag, core.DagEdge):              
-                if dag.UUID not in self.scenenodes:
+                if dag.id not in self.scenenodes:
                     widget = nodes.Edge(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
-                    self.scenenodes[dag.UUID]=widget
+                    self.scenenodes[dag.id]=widget
                     self.addItem(widget)
                     widgets.append(widget)
 
@@ -426,7 +426,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             return False
 
         # don't let the user connect input/output on the same node!
-        if str(source_item.dagnode.UUID) == str(dest_item.dagnode.UUID):
+        if str(source_item.dagnode.id) == str(dest_item.dagnode.id):
             return False
 
         # check here to see if destination can take another connection
@@ -440,7 +440,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 edges = dest_node.listConnections().values()
 
                 for edge in edges:
-                    edge_id = str(edge.dagnode.UUID)
+                    edge_id = str(edge.dagnode.id)
                     self.graph.removeEdge(UUID=edge_id)
                 return True
 

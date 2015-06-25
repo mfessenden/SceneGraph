@@ -8,7 +8,7 @@ from . import attributes
 from . import commands
 
 
-reload(nodes)
+#reload(nodes)
 reload(attributes)
 reload(commands)
 
@@ -16,6 +16,8 @@ reload(commands)
 # nodes
 DagNode             = nodes.DagNode
 DagEdge             = nodes.DagEdge
+Attribute           = nodes.Attribute
+Connection          = nodes.Connection
 
 
 # attributes

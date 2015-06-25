@@ -104,7 +104,7 @@ class Graph(object):
         dagnodes = self.getNodes()
         dagedges = self.getEdges()
 
-        dag_ids = [str(d.UUID) for d in dagnodes]
+        dag_ids = [str(d.id) for d in dagnodes]
         edge_ids = self.getEdgeIDs()
 
         if self.network.nodes():
@@ -226,7 +226,7 @@ class Graph(object):
         if self.dagnodes:
             for UUID in self.dagnodes:
                 node = self.dagnodes.get(UUID)
-                if node and node.name in args or str(node.UUID) in args:
+                if node and node.name in args or str(node.id) in args:
                     nodes.append(node)
         return nodes
 
@@ -240,7 +240,7 @@ class Graph(object):
         edges = []
         for edge in  self.network.edges(data=True):
             src_id, dest_id, attrs = edge
-            UUID = attrs.get('UUID')
+            UUID = attrs.get('id')
             if UUID in self.dagnodes:
                 edges.append(self.dagnodes.get(UUID))
         return edges
@@ -374,10 +374,10 @@ class Graph(object):
             name = self.getValidNodeName(name)
 
         dag = DagNode(node_type, name=name, **kwargs)
-        self.dagnodes[dag.UUID] = dag
+        self.dagnodes[dag.id] = dag
         
         # add the node to the networkx graph
-        self.network.add_node(dag.UUID, **dag)
+        self.network.add_node(dag.id, **dag)
 
         # update the scene
         if self.manager is not None:
@@ -444,8 +444,8 @@ class Graph(object):
             log.warning('connection alread exists: %s' % conn_str)
             return 
 
-        self.network.add_edge(src.UUID, dest.UUID, **edge)
-        self.dagnodes[edge.UUID] = edge
+        self.network.add_edge(src.id, dest.id, **edge)
+        self.dagnodes[edge.id] = edge
 
         # update the scene
         if self.manager is not None:
