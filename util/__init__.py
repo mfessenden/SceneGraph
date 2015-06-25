@@ -52,7 +52,7 @@ def lower_case_underscore_to_camel_case(string):
     return splitted_string[0] + class_.join('', map(class_.capitalize, splitted_string[1:]))
 
 
-# attribute conversions
+# attribute helpers
 def is_number(s):
     """
     Check if a string is a int/float 
@@ -68,3 +68,7 @@ def is_bool(s):
     if str(s).lower() in ['true', 'false', '1', '0']:
         return True
     return False
+
+
+def is_list(s):
+    return type(s) in [list, tuple]

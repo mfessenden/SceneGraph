@@ -16,11 +16,12 @@ reload(commands)
 # nodes
 DagNode             = nodes.DagNode
 DagEdge             = nodes.DagEdge
-Attribute           = nodes.Attribute
 Connection          = nodes.Connection
 
 
 # attributes
+attribute_factory   = attributes.attribute_factory
+Attribute           = attributes.Attribute
 StringAttribute     = attributes.StringAttribute
 IntegerAttribute    = attributes.IntegerAttribute
 FloatAttribute      = attributes.FloatAttribute
