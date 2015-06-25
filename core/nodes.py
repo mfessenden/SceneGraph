@@ -20,14 +20,12 @@ class DagNode(MutableMapping):
     defaults      = {}
     private       = []  
 
-    def __init__(self, nodetype, **kwargs):        
-        MutableMapping.__init__(self)
+    def __init__(self, nodetype, **kwargs):
 
         # stash attributes
         MutableMapping._data    = dict()
         MutableMapping._inputs  = dict()
-        MutableMapping._outputs = dict()
-
+        MutableMapping._outputs = dict()        
 
         self.node_type          = nodetype
         self.name               = kwargs.pop('name', 'node1')
@@ -45,8 +43,16 @@ class DagNode(MutableMapping):
         self.update(**kwargs)
 
     def __str__(self):
-        data = {self.__class__.__name__:self._data}
-        return json.dumps(data, indent=4)
+        data = self.copy()
+        name = data.pop('name')
+        output = { k: data[k] for k in data.keys() if data[k]}
+        return json.dumps({name:output}, indent=4)
+
+    def __repr__(self):
+        data = self.copy()
+        name = data.pop('name')
+        output = { k: data[k] for k in data.keys() if data[k]}
+        return json.dumps({name:output}, indent=4)
 
     def __getitem__(self, key, default=None):
         try:
@@ -85,16 +91,16 @@ class DagNode(MutableMapping):
     __delattr__ = __delitem__
   
     def copy(self):
-        return copy.deepcopy(self._data)
+        return copy.deepcopy(MutableMapping._data)
   
     def __deepcopy__(self, *args, **kwargs):
         ad = self.__class__()
         ad.update(copy.deepcopy(self.__dict__))
         return ad
   
-    def update(self, adict={}):
+    def update(self, **adict):
         for (key, value) in list(adict.items()):
-            if key in self.readonly:
+            if key in self.private:
                 continue
             self.__setitem__(key, value)
 
@@ -142,11 +148,21 @@ class DagNode(MutableMapping):
                 connections[k] = v
         return connections
 
-    def addAttributes(self, input=True, **attributes):
-        for attr, val in attributes.iteritems():
-            conn = Connection(attr, val, node=self)
-            if input:
-                self._inputs[attr]=conn
+    #- Attributes ----
+    def addAttr(self, name, value=None, input=True, **kwargs):
+        """
+        Add attributes to the current node.
+        """
+        from SceneGraph.core import Attribute
+        attrs = Attribute(name, value=value, input=input, **kwargs)
+        # TODO: need a way to protect core values
+        self.update(**attrs.data)
+
+    def getAttr(self, attr):
+        data = self.get(attr, None)
+        if type(data) is dict:
+            print 'dict attr: ', attr
+        return data
 
     def ParentClasses(self, p=None):
         """
@@ -168,7 +184,6 @@ class DagEdge(MutableMapping):
     private       = []
 
     def __init__(self, source, dest, **kwargs):        
-        super(DagEdge, self).__init__()
 
         # stash attributes
         MutableMapping._data    = dict()
@@ -225,7 +240,7 @@ class DagEdge(MutableMapping):
     __delattr__ = __delitem__
   
     def copy(self):
-        return copy.deepcopy(self._data)
+        return copy.deepcopy(MutableMapping._data)
   
     def __deepcopy__(self, *args, **kwargs):
         ad = self.__class__()
@@ -234,7 +249,7 @@ class DagEdge(MutableMapping):
   
     def update(self, adict={}):
         for (key, value) in list(adict.items()):
-            if key in self.readonly:
+            if key in self.private:
                 continue
             self.__setitem__(key, value)
 
@@ -262,7 +277,6 @@ class Connection(MutableMapping):
     private       = []
 
     def __init__(self, name, value, node=None, **kwargs):
-        super(Connection, self).__init__()
 
         MutableMapping._data   = dict()
         self.name              = name
@@ -330,7 +344,7 @@ class Connection(MutableMapping):
   
     def update(self, adict={}):
         for (key, value) in list(adict.items()):
-            if key in self.readonly:
+            if key in self.private:
                 continue
             self.__setitem__(key, value)
 

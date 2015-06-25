@@ -59,6 +59,12 @@
 	print g.allConnections()
 
 
+####### Advanced API:
+
+	# add attributes to a dag node, flag it as an input connection
+	n1.addAttrs(name='env', value='maya', input=True)
+
+
 ##### Dependencies:
 
 - simplejson
