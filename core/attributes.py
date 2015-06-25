@@ -9,13 +9,18 @@ __all__  = ['StringAttribute', 'IntegerAttribute', 'FloatAttribute']
 
 class Attribute(object):
 
-    def __init__(self, name, value=None, parent=None, index=0):
+    def __init__(self, name, value=None, parent=None, index=0, **kwargs):
 
         self._name            = name
         self._parent          = parent
 
+        self._private         = False
+        self._user            = False
+
+
         # value & overrides
-        self._value           = value
+        self._default         = None        # default value  
+        self._value           = value       # current value    
         self._value_override  = None        # secondary "override" value
 
         # indexing

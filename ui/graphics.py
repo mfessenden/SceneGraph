@@ -334,12 +334,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 log.warning('unknown node type: "%s"' % dag.__class__.__name__)
         return widgets
 
-    def getNodes(self):
-        """
-        Returns a list of node widgets.
-        """
-        return self.scenenodes.values()
-
     def getNode(self, val):
         """
         Get a named node from the scene.
@@ -359,9 +353,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
         dagnodes = []
         selected = self.selectedItems()
         for item in selected:
-            if isinstance(item, core.DagNode):
+            if isinstance(item, nodes.Node):
                 dagnodes.append(item)
         return dagnodes
+
+    def getNodes(self):
+        """
+        Returns a list of node widgets.
+        """
+        nodes = []
+        for item in self.items():
+            if isinstance(item, nodes.Node):
+                nodes.append(item)
+        return nodes
 
     def selectedEdges(self):
         """
@@ -370,16 +374,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
         edges = []
         selected = self.selectedItems()
         for item in selected:
-            if hasattr(item, 'node_class'):
-                if item.node_class in ['edge']:
-                    edges.append(item)
+            if isinstance(item, ndoes.Edge):
+                edges.append(item)
         return edges
 
     def getEdges(self):
         """
         Returns a list of edge widgets.
         """
-        return self.scenenodes.values()
+        edges = []
+        for item in self.items():
+            if isinstance(item, nodes.Edge):
+                edges.append(item)
+        return edges
 
     def getEdge(self, edge):
         return

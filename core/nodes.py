@@ -29,6 +29,7 @@ class DagNode(dict):
     TYPE_KEY      = "node_type"
     OUTPUTS_KEY   = "outputs"
     INPUTS_KEY    = "inputs"
+    ENABLED_KEY   = "enabled"
 
     def __init__(self, nodetype, **kwargs):        
 
@@ -39,6 +40,8 @@ class DagNode(dict):
         self.height_collapsed   = kwargs.pop('height_collapsed', 15)
         self.height_expanded    = kwargs.pop('height_expanded', 175)
         self.pos                = kwargs.pop('pos', (0,0))
+
+        self.enabled            = kwargs.pop('enabled', True)
 
         # node unique ID
         UUID = kwargs.pop('id', None)
@@ -154,6 +157,27 @@ class DagNode(dict):
     def outputs(self, value):
         self[self.OUTPUTS_KEY] = value
         return
+
+    @property
+    def enabled(self):
+        return self[self.ENABLED_KEY]
+
+    @enabled.setter
+    def enabled(self, value):
+        self[self.ENABLED_KEY] = value
+        return
+
+    def ParentClasses(self, p=None):
+        """
+        Return all subclasses.
+        """
+        base_classes = []
+        cl = p if p is not None else self.__class__
+        for b in cl.__bases__:
+            if b.__name__ != "object":
+                base_classes.append(b.__name__)
+                base_classes.extend(self.ParentClasses(b))
+        return base_classes
 
 
 class Connection(dict):
