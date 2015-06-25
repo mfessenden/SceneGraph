@@ -6,11 +6,13 @@ log = logger.myLogger()
 from . import nodes
 from . import attributes
 from . import commands
+from . import manager
 
 
 #reload(nodes)
 reload(attributes)
 reload(commands)
+reload(manager)
 
 
 # nodes
@@ -30,6 +32,10 @@ FloatAttribute      = attributes.FloatAttribute
 # undo commands
 NodeDataCommand     = commands.NodeDataCommand
 CommandMove         = commands.CommandMove
+
+
+# Observer
+NodeManager 		= manager.NodeManager
 
 
 from . import graph

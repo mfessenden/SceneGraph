@@ -15,16 +15,18 @@ class Attribute(MutableMapping):
     node_class    = "attribute"
     defaults      = {}
     private       = []
+    reserved      = ['_data', '_node']  
 
     def __init__(self, *args, **kwargs):       
 
         # attributes dictionary
         self._data             = dict()
+        self._node             = None
 
         self.name              = args[0] if args else None
         self.default_value     = kwargs.get('default_value', None)
         self.value             = kwargs.get('value', None)
-        self.type              = type(self.value) if self.value else 'null'
+        self.type              = util.attr_type(self.value)
         
         # globals
         self.is_private        = kwargs.get('is_private', False)  # hidden
@@ -43,10 +45,7 @@ class Attribute(MutableMapping):
         """
         Filter the current dictionary to only return set values.
         """
-        data = self.copy()
-        name = data.keys()[0]
-        new_data = data.get(name)
-        return  {name:{ k: new_data[k] for k in new_data.keys() if new_data[k]}}
+        return self.copy()
 
     def __getitem__(self, key, default=None):
         try:
@@ -64,14 +63,22 @@ class Attribute(MutableMapping):
             msg = 'Attribute "%s" in %s object is read only!'
             raise AttributeError(msg % (key, self.__class__.__name__))
 
-        if key == '_data':
+        if key in self.reserved:
             super(Attribute, self).__setattr__(key, value)
         else:
-            self._data[key] = value
+            
             if key == 'value':
                 valtyp = util.attr_type(value)
                 if self.type != valtyp:
                     self.type = valtyp
+
+            # update the parent node
+            if self.node is not None:
+                self.node.pop(self.name)
+
+            self._data[key] = value
+            if self.node is not None:
+                self.node.update(**self.copy())
 
   
     def __delitem__(self, key):
@@ -93,7 +100,7 @@ class Attribute(MutableMapping):
         #return copy.deepcopy(MutableMapping._data)
         data = copy.deepcopy(self._data)
         name = data.pop('name', 'null')
-        return {name:data}
+        return  {name:{ k: data[k] for k in data.keys() if data[k]}}
 
     def __deepcopy__(self, *args, **kwargs):
         """
@@ -131,6 +138,13 @@ class Attribute(MutableMapping):
             return self.default_value
         return self._data.get('value')
 
+    @property 
+    def type(self):
+        return util.attr_type(self.value)
+
+    @property 
+    def node(self):
+        return self._node
 
 
 class StringAttribute(Attribute):

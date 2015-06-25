@@ -1,4 +1,4 @@
-#### branch: master
+#### branch: development
 
 ##### Usage:
 
@@ -62,7 +62,9 @@
 ####### Advanced API:
 
 	# add attributes to a dag node, flag it as an input connection
-	n1.addAttrs(name='env', value='maya', input=True)
+	n1.addAttr(name='env', value='maya', input=True)
+
+
 
 
 ##### Dependencies:
