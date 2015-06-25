@@ -19,7 +19,7 @@ class Attribute(MutableMapping):
     def __init__(self, *args, **kwargs):       
 
         # attributes dictionary
-        MutableMapping._data   = dict()
+        self._data             = dict()
 
         self.name              = args[0] if args else None
         self.default_value     = kwargs.get('default_value', None)
@@ -34,8 +34,7 @@ class Attribute(MutableMapping):
 
     def __str__(self):
         data = self.copy()
-        name = data.pop('name')
-        return json.dumps({name:data}, indent=4)
+        return json.dumps(data, indent=4)
 
     def __repr__(self):
         return json.dumps(self.__dict__(), indent=5)
@@ -64,11 +63,15 @@ class Attribute(MutableMapping):
         if key in self.private:
             msg = 'Attribute "%s" in %s object is read only!'
             raise AttributeError(msg % (key, self.__class__.__name__))
-        self._data[key] = value
-        if key == 'value':
-            valtyp = util.attr_type(value)
-            if self.type != valtyp:
-                self.type = valtyp
+
+        if key == '_data':
+            super(Attribute, self).__setattr__(key, value)
+        else:
+            self._data[key] = value
+            if key == 'value':
+                valtyp = util.attr_type(value)
+                if self.type != valtyp:
+                    self.type = valtyp
 
   
     def __delitem__(self, key):
@@ -88,7 +91,7 @@ class Attribute(MutableMapping):
   
     def copy(self):
         #return copy.deepcopy(MutableMapping._data)
-        data = copy.deepcopy(MutableMapping._data)
+        data = copy.deepcopy(self._data)
         name = data.pop('name', 'null')
         return {name:data}
 
@@ -96,8 +99,10 @@ class Attribute(MutableMapping):
         """
         Defines the result of a deepcopy operation.
         """
-        ad = self.__class__()
-        ad.update(copy.deepcopy(MutableMapping._data))
+        data = copy.deepcopy(self._data)
+        name = data.pop('name', None)
+        ad = self.__class__(name, **data)
+        #ad.update(**copy.deepcopy(self._data)) # works, but returns empty object
         return ad
   
     def update(self, **kwargs):
