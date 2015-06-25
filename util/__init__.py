@@ -53,6 +53,10 @@ def lower_case_underscore_to_camel_case(string):
 
 
 # attribute helpers
+def is_string(s):
+    return type(s) in [str, unicode]
+
+
 def is_number(s):
     """
     Check if a string is a int/float 

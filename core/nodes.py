@@ -25,8 +25,8 @@ class DagNode(MutableMapping):
 
         # stash attributes
         MutableMapping._data    = dict()
-        self._inputs            = dict()
-        self._outputs           = dict()
+        MutableMapping._inputs  = dict()
+        MutableMapping._outputs = dict()
 
 
         self.node_type          = nodetype
@@ -142,6 +142,12 @@ class DagNode(MutableMapping):
                 connections[k] = v
         return connections
 
+    def addAttributes(self, input=True, **attributes):
+        for attr, val in attributes.iteritems():
+            conn = Connection(attr, val, node=self)
+            if input:
+                self._inputs[attr]=conn
+
     def ParentClasses(self, p=None):
         """
         Return all subclasses.
@@ -256,9 +262,11 @@ class Connection(MutableMapping):
     private       = []
 
     def __init__(self, name, value, node=None, **kwargs):
-        super(Connection, self).__init__(name, value, node=node, **kwargs)
+        super(Connection, self).__init__()
 
         MutableMapping._data   = dict()
+        self.name              = name
+        self.value             = value 
         self.parent            = node
         self.node              = node.UUID if hasattr(node, 'UUID') else None
 

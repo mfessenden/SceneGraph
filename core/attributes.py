@@ -111,7 +111,7 @@ class StringAttribute(Attribute):
     parent        = None
 
     def __init__(self, name, value, node=None, **kwargs):
-        super(StringAttribute, self).__init__(name, value, node=node, **kwargs)
+        super(StringAttribute, self).__init__()
 
 
 class FloatAttribute(Attribute):
@@ -120,7 +120,7 @@ class FloatAttribute(Attribute):
     parent        = None
 
     def __init__(self, name, value, node=None, **kwargs):
-        super(FloatAttribute, self).__init__(name, value, node=node, **kwargs)
+        super(FloatAttribute, self).__init__()
 
 
 class IntegerAttribute(Attribute):
@@ -129,8 +129,7 @@ class IntegerAttribute(Attribute):
     parent        = None
 
     def __init__(self, name, value, node=None, **kwargs):
-        super(IntegerAttribute, self).__init__(name, value, node=node, **kwargs)
-
+        super(IntegerAttribute, self).__init__()
 
 
 
@@ -144,5 +143,10 @@ def attribute_factory(name, value):
             return FloatAttribute(name, value)
         if type(value) is int:
             return IntegerAttribute(name, value)
+    elif util.is_string(value):
+        return StringAttribute(name, value)
 
+    else:
+        print '# Attribute error: ', value
+        return 
 
