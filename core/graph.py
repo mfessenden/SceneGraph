@@ -227,11 +227,13 @@ class Graph(object):
             if arg in self.dagnodes:
                 nodes.append(self.dagnodes.get(arg))
 
+        network_nodes = self.network.nodes()
         if self.dagnodes:
             for UUID in self.dagnodes:
-                node = self.dagnodes.get(UUID)
-                if node and node.name in args or str(node.id) in args:
-                    nodes.append(node)
+                if UUID in network_nodes:
+                    node = self.dagnodes.get(UUID)
+                    if node and node.name in args or str(node.id) in args:
+                        nodes.append(node)
         return nodes
 
     def getEdges(self):
@@ -321,8 +323,6 @@ class Graph(object):
     def getEdge(self, *args):
         """
         Return a dag edge.
-
-        Pass 
 
         returns:
             (obj)
