@@ -23,9 +23,9 @@ class DagNode(MutableMapping):
     def __init__(self, nodetype, **kwargs):
 
         # stash attributes
-        MutableMapping._data    = dict()
-        MutableMapping._inputs  = dict()
-        MutableMapping._outputs = dict()        
+        self._data              = dict()
+        self._inputs            = dict()
+        self._outputs           = dict()        
 
         self.node_type          = nodetype
         self.name               = kwargs.pop('name', 'node1')
@@ -68,7 +68,10 @@ class DagNode(MutableMapping):
         if key in self.private:
             msg = 'Attribute "%s" in %s object is read only!'
             raise AttributeError(msg % (key, self.__class__.__name__))
-        self._data[key] = value
+        if key in ['_data', '_inputs', '_outputs']:
+            super(DagNode, self).__setattr__(key, value)
+        else:
+            self._data[key] = value
   
     def __delitem__(self, key):
         del self._data[key]
@@ -186,7 +189,7 @@ class DagEdge(MutableMapping):
     def __init__(self, source, dest, **kwargs):        
 
         # stash attributes
-        MutableMapping._data    = dict()
+        self._data              = dict()
         self._source            = dict()
         self._dest              = dict()
 
@@ -217,7 +220,10 @@ class DagEdge(MutableMapping):
         if key in self.private:
             msg = 'Attribute "%s" in %s object is read only!'
             raise AttributeError(msg % (key, self.__class__.__name__))
-        self._data[key] = value
+        if key in ['_data', '_source', '_dest']:
+            super(DagEdge, self).__setattr__(key, value)
+        else:
+            self._data[key] = value
   
     def __delitem__(self, key):
         del self._data[key]
@@ -312,7 +318,10 @@ class Connection(MutableMapping):
         if key in self.private:
             msg = 'Attribute "%s" in %s object is read only!'
             raise AttributeError(msg % (key, self.__class__.__name__))
-        self._data[key] = value
+        if key in ['_data', '_inputs', '_outputs']:
+            super(Connection, self).__setattr__(key, value)
+        else:
+            self._data[key] = value
   
     def __delitem__(self, key):
         del self._data[key]
