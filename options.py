@@ -34,3 +34,24 @@ def get_platform():
 
 
 get_platform()
+
+
+
+SCENEGRAPH_COLORS = {
+	'blush':[246, 202, 203, 255],
+	'petal':[247, 170, 189, 255],
+	'petunia':[231, 62, 151, 255],
+	'deep_pink':[229, 2, 120, 255],
+	'melon':[241, 118, 110, 255],
+	'pomegranate':[178, 27, 32, 255],
+	'poppy_red':[236, 51, 39, 255],
+	'orange_red':[240, 101, 53, 255],
+	'olive':[174, 188, 43, 255],
+	'spring':[227, 229, 121, 255],
+	'yellow':[255, 240, 29, 255],
+	'mango':[254, 209, 26, 255],
+	'cantaloupe':[250, 176, 98, 255],
+	'tangelo':[247, 151, 47, 255],
+	'burnt_orange':[236, 137, 36, 255],
+	'bright_orange':[242, 124, 53, 255],
+}
