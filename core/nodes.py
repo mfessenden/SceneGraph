@@ -46,7 +46,7 @@ class DagNode(MutableMapping):
 
         self.node_type          = nodetype
         self.name               = kwargs.pop('name', 'node1')
-        self.color              = kwargs.pop('color', [180, 180, 180])
+        self.color              = kwargs.pop('color', [172, 172, 172, 255])
         self.expanded           = kwargs.pop('expanded', False)
 
         self.pos                = kwargs.pop('pos', (0,0))

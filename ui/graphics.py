@@ -163,8 +163,10 @@ class GraphicsView(QtGui.QGraphicsView):
         self.updateGraphViewAttributes()
 
     def mouseMoveEvent(self, event):
-
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
+
+    def mouseDoubleClickEvent(self, event):
+        QtGui.QGraphicsView.mouseDoubleClickEvent(self, event)
 
     def mousePressEvent(self, event):
         """
@@ -323,6 +325,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     self.addItem(widget)
                     widgets.append(widget)
 
+                    widget.nodeChanged.connect(self.nodeChangedEvent)
+
             elif isinstance(dag, core.DagEdge):              
                 if dag.id not in self.scenenodes:
                     widget = nodes.Edge(dag)
@@ -406,20 +410,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         return True
 
-    def itemPositionChanged(self, item, pos):
-        """
-        Update the dag node when the widget position changes
-        """
-        item.dagnode.pos_x = pos[0]
-        item.dagnode.pos_y = pos[1]
-        # manager: update Graph nodss
-        #self.nodeChanged.emit(item)
-
     def nodeChangedEvent(self, node):
         """
         Update dag node when widget attributes change.
         """
-        pass
+        if hasattr(node, 'dagnode'):
+            if node.dagnode.node_class == 'dagnode':
+                node.dagnode.pos = (node.pos().x(), node.pos().y())
 
     def validateConnection(self, source_item, dest_item, force=True):
         """

@@ -34,6 +34,8 @@ Node.setHandlesChildEvents(False)
 class Node(QtGui.QGraphicsObject):
 
     Type = QtGui.QGraphicsObject.UserType + 1
+    doubleClicked     = QtCore.Signal()
+    nodeChanged       = QtCore.Signal(object)  
 
     def __init__(self, dagnode, parent=None):
         super(Node, self).__init__(parent)
@@ -42,14 +44,11 @@ class Node(QtGui.QGraphicsObject):
         self.dagnode._widget = self
         
         # attributes
-        self.width           = 100
-        self.height          = 20
         self.bufferX         = 3
         self.bufferY         = 3
         self.orientation     = 'horizontal'           # connect on sides/top    
 
         self._l_color        = [5, 5, 5, 255]         # label color
-        self._b_color        = [172, 172, 172, 255]   # bg color
         self._p_color        = [10, 10, 10, 255]      # pen color (outer rim)
         self._s_color        = [0, 0, 0, 60]          # shadow color
 
@@ -79,10 +78,78 @@ class Node(QtGui.QGraphicsObject):
         # signals/slots
         self.label.doubleClicked.connect(self.labelDoubleClickedEvent)
 
+        # set node position
+        self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
+
+    #- Attributes ----
+    @property
+    def width(self):
+        return self.dagnode.width
+        
+    @width.setter
+    def width(self, val):
+        self.dagnode.width = val
+
+    @property
+    def height(self):
+        return self.dagnode.height
+
+    @height.setter
+    def height(self, val):
+        self.dagnode.height = val
+
+    @property
+    def color(self):
+        """
+        Return the 'node color' (background color)
+        """
+        return self.dagnode.color
+
+    @color.setter
+    def color(self, val):
+        """
+        Return the 'node color' (background color)
+        """
+        self.dagnode.color = val
+
     #- TESTING ---
     def labelDoubleClickedEvent(self):
+        """
+        Signal when the label item is double-clicked.
+
+         * currently not using
+        """
         val = self.label.is_editable
-        self.label.setTextEditable(not val)
+        #self.label.setTextEditable(not val)
+
+    #- Events ----
+    def itemChange(self, change, value):
+        """
+        Default node 'changed' signal.
+
+        ItemMatrixChange
+
+        change == "GraphicsItemChange"
+        """
+        #print 'change: ', change.__class__.__name__
+        if change == self.ItemPositionHasChanged:
+            self.nodeChanged.emit(self)
+        return super(Node, self).itemChange(change, value)
+
+    def mouseDoubleClickEvent(self, event):
+        """
+        translate Y: height_expanded - height_collapsed/2
+        """
+        expanded = self.dagnode.expanded
+        self.dagnode.expanded = not self.dagnode.expanded
+        self.update()
+
+        # translate the node in relation to it's expanded height
+        diffy = (self.dagnode.height_expanded - self.dagnode.height_collapsed)/2
+        if expanded:
+            diffy = -diffy
+        self.translate(0, diffy)
+        QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
 
     def boundingRect(self):
         w = self.width
@@ -114,9 +181,9 @@ class Node(QtGui.QGraphicsObject):
             return QtGui.QColor(*[255, 183, 44])
 
         if self.is_hover:
-            base_color = QtGui.QColor(*self._b_color)
+            base_color = QtGui.QColor(*self.color)
             return base_color.lighter(125)
-        return QtGui.QColor(*self._b_color)
+        return QtGui.QColor(*self.color)
 
     @property
     def pen_color(self):
@@ -135,10 +202,6 @@ class Node(QtGui.QGraphicsObject):
         if self.is_selected:
             return QtGui.QColor(*[104, 56, 0, 60])
         return QtGui.QColor(*self._s_color)
-
-    #- Events ----
-    def mouseDoubleClickEvent(self, event):
-        QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
 
     def paint(self, painter, option, widget):
         """
@@ -207,8 +270,8 @@ class NodeLabel(QtGui.QGraphicsObject):
 
         # bounding shape
         self.rect_item = QtGui.QGraphicsRectItem(self.boundingRect(), self)
-        #self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-        self.rect_item.setPen(QtGui.QPen(QtGui.QColor(125,125,125)))        
+        self.rect_item.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        #self.rect_item.setPen(QtGui.QPen(QtGui.QColor(125,125,125)))        
         self.rect_item.pen().setStyle(QtCore.Qt.DashLine)
         self.rect_item.stackBefore(self.label)
         self.setHandlesChildEvents(False)

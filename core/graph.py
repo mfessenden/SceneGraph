@@ -373,7 +373,11 @@ class Graph(object):
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
 
-        dag = DagNode(node_type, name=name, **kwargs)
+        dag = DagNode(node_type, name=name, pos=self.grid.coords, **kwargs)
+
+        # advance the grid to the next value.
+        self.grid.next()
+
         self.dagnodes[dag.id] = dag
         #dag.MANAGER = self._manager
         
@@ -940,6 +944,10 @@ class Grid(object):
         self._col       = 0
         self._current   = None
 
+        # coordinates
+        self._width     = 150
+        self._height    = 150
+
         for row in range(rows):
             self._data[row] = Array(columns, fillValue)
 
@@ -1041,6 +1049,16 @@ class Grid(object):
             (tuple) - current row-column coordinates
         """
         return (self._row, self._col)
+
+    @property
+    def coords(self):
+        """
+        Return the current x/y values of the current grid coordinates.
+
+        returns:
+            (tuple) - current row-column coordinates
+        """
+        return (self._row * self._width, self._col * self._height)
 
     @property
     def height(self):
