@@ -89,8 +89,13 @@ class TestGraph(form_class, base_class):
         self.button_refresh.clicked.connect(self.refreshAction)
 
     def addAction(self, nodetype='default'):
+        """
+        Add a node to the Graph object.
+        """
         dag=self.graph.addNode(nodetype)
-        node = self.view.scene().getNode(dag.name)
+
+        # get the node's widget.
+        node = dag._widget
         if node:
             node.height=75
             node.is_expanded=True
@@ -99,7 +104,10 @@ class TestGraph(form_class, base_class):
         return False
 
     def removeAction(self):
-        print '# removing...'
+        nodes = self.view.scene().selectedNodes()
+        if nodes:
+            for node in nodes:
+                print node.dagnode.id
         return False
 
     def refreshAction(self):

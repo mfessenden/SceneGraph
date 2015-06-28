@@ -223,10 +223,6 @@ class Graph(object):
             (obj)
         """
         nodes=[]
-        for arg in args:
-            if arg in self.dagnodes:
-                nodes.append(self.dagnodes.get(arg))
-
         network_nodes = self.network.nodes()
         if self.dagnodes:
             for UUID in self.dagnodes:
@@ -410,7 +406,6 @@ class Graph(object):
                 self.network.remove_node(UUID)
             self.evaluate()
             return True
-
         return False
 
     def addEdge(self, src, dest, **kwargs):
@@ -447,7 +442,7 @@ class Graph(object):
         log.debug('parsing edge: "%s"' % conn_str)
 
         if conn_str in self.allConnections():
-            log.warning('connection alread exists: %s' % conn_str)
+            log.warning('connection already exists: %s' % conn_str)
             return 
 
         # TODO: networkx check here!

@@ -39,12 +39,14 @@ class Node(QtGui.QGraphicsObject):
         super(Node, self).__init__(parent)
 
         self.dagnode         = dagnode
+        self.dagnode._widget = self
         
         # attributes
         self.width           = 100
         self.height          = 20
         self.bufferX         = 3
         self.bufferY         = 3
+        self.orientation     = 'horizontal'           # connect on sides/top    
 
         self._l_color        = [5, 5, 5, 255]         # label color
         self._b_color        = [172, 172, 172, 255]   # bg color
@@ -54,7 +56,6 @@ class Node(QtGui.QGraphicsObject):
         # globals
         self._debug          = False
         self.is_enabled      = True                   # node is enabled (will eval)  
-        self.orientation     = 'horizontal'           # connect on sides/top    
         self.is_expanded     = False                  # node is expanded 
         self.is_selected     = False                  # indicates that the node is selected
         self.is_hover        = False                  # indicates that the node is under the cursor
@@ -77,7 +78,7 @@ class Node(QtGui.QGraphicsObject):
 
         # signals/slots
         self.label.doubleClicked.connect(self.labelDoubleClickedEvent)
-        
+
     #- TESTING ---
     def labelDoubleClickedEvent(self):
         val = self.label.is_editable
