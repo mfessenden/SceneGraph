@@ -36,6 +36,9 @@
 	from SceneGraph import core
 	g=core.Graph()
 
+	# query the currently loaded node types
+	node_types = g.node_types()
+
 	# add some default nodes
 	n1 = g.addNode('default', name='node1')
 	n2 = g.addNode('default', name='node2')
@@ -47,10 +50,10 @@
 	e1 = g.connectNodes('node1.output', 'node2.input')
 
 	# write the graph
-	g.write('~/my_graph.json')
+	g.write('~/graphs/my_graph.json')
 
 	# query all nodes in the graph
-	print g.getDagNodes()
+	print g.getNodes()
 
 	# query all node names
 	print g.allNodes()

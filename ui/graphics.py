@@ -270,7 +270,9 @@ class GraphicsView(QtGui.QGraphicsView):
     
     #- Actions -----
     def sceneChangedAction(self, *args):
-        #print '# GraphicsView: scene changed'
+        """
+        Runs when the scene has changed in some manner.
+        """
         pass
         
     def sceneRectChangedAction(self, *args):
@@ -308,6 +310,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
 
+        log.info('GraphicsScene: adding %d nodes.' % len(dagnodes))
         widgets = []
         for dag in dagnodes:
             if isinstance(dag, core.DagNode):              
@@ -411,6 +414,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item.dagnode.pos_y = pos[1]
         # manager: update Graph nodss
         #self.nodeChanged.emit(item)
+
+    def nodeChangedEvent(self, node):
+        """
+        Update dag node when widget attributes change.
+        """
+        pass
 
     def validateConnection(self, source_item, dest_item, force=True):
         """

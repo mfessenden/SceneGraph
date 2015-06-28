@@ -6,5 +6,5 @@ height_collapsed: int8: 20;
 [default]
 name: str: node1;
 node_type: str: default;
-color: byte3: 0,0,0;
+color: color: 0,0,0;
 enabled: bool: true;

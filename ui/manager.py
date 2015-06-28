@@ -24,14 +24,13 @@ class WindowManager(QtCore.QObject):
 
         if parent is not None:
             if self.connectGraph(parent):
-                log.info('connecting Graph...')
                 self.connectSignals()
     
     def connectSignals(self):
         """
         Setup widget signals.
         """
-        log.info('connecting WindowManager to Scene.') 
+        log.info('WindowManager: connecting WindowManager to Scene.') 
         self.nodesAdded.connect(self.scene.addNodes)
 
     def connectGraph(self, scene):
@@ -47,6 +46,7 @@ class WindowManager(QtCore.QObject):
                 self.graph = graph
                 self.graph.manager=self
                 self.graph.mode = 'ui'
+                log.info('WindowManager: connecting Graph...')
                 return True
         return False
     
