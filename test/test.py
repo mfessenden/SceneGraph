@@ -5,9 +5,10 @@ import os
 import pysideuic
 import xml.etree.ElementTree as xml
 from cStringIO import StringIO
-from SceneGraph.core import log
+from SceneGraph import core 
 from SceneGraph import options
 
+log = core.log
 
 
 SCENEGRAPH_TEST_PATH = options.SCENEGRAPH_TEST_PATH
@@ -73,9 +74,7 @@ class TestGraph(form_class, base_class):
 
     def initializeGraphicsView(self):
         from SceneGraph import ui
-        from SceneGraph import core
         reload(ui)
-        reload(core)
         self.graph = core.Graph()
         self.network = self.graph.network
         self.network.graph['environment'] = self.environment

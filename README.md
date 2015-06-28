@@ -1,4 +1,4 @@
-#### branch: master
+#### branch: development
 
 ##### Usage:
 
@@ -57,6 +57,14 @@
 
 	# query all connections
 	print g.allConnections()
+
+
+####### Advanced API:
+
+	# add attributes to a dag node, flag it as an input connection
+	n1.addAttr(name='env', value='maya', input=True)
+
+
 
 
 ##### Dependencies:

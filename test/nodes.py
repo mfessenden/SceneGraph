@@ -374,7 +374,7 @@ class NodeBackground(QtGui.QGraphicsItem):
 
 
 
-class Egde(QtGui.QGraphicsObject):
+class Edge(QtGui.QGraphicsObject):
     
     Type        = QtGui.QGraphicsObject.UserType + 2
     adjustment  = 5
@@ -422,6 +422,13 @@ class Egde(QtGui.QGraphicsObject):
         self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
         self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
         self.setAcceptsHoverEvents(True)
+
+    def setDebug(self, val):
+        """
+        Set the widget debug modeself.
+        """
+        if val != self._debug:
+            self._debug = val
 
     def listConnections(self):
         """

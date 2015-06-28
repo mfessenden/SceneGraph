@@ -1,187 +1,194 @@
 #!/usr/bin/env python
+from collections import MutableMapping
 import simplejson as json
 import uuid
+import copy
 from SceneGraph import util
 
 
-__all__  = ['StringAttribute', 'IntegerAttribute', 'FloatAttribute']
+__all__  = ['Attribute', 'StringAttribute', 'IntegerAttribute', 'FloatAttribute', 'attribute_factory']
 
 
-class Attribute(object):
 
-    def __init__(self, name, value=None, parent=None, index=0):
+class Attribute(MutableMapping):
 
-        self._name            = name
-        self._parent          = parent
+    node_class    = "attribute"
+    defaults      = {}
+    private       = []
+    reserved      = ['_data', '_node']  
 
-        # value & overrides
-        self._value           = value
-        self._value_override  = None        # secondary "override" value
+    def __init__(self, *args, **kwargs):       
 
-        # indexing
-        self._index           = index       # internal index (for recalling in order)
-        self._type            = None        # attribute type (int, float, string, etc.)
+        # attributes dictionary
+        self._data             = dict()
+        self._node             = None
 
-        self._is_locked       = False       # attribute cannot be changed
-        self._is_private      = False       # attribute is private & hidden from the ui
+        self.name              = args[0] if args else None
+        self.default_value     = kwargs.get('default_value', None)
+        self.value             = kwargs.get('value', None)
+        self.type              = util.attr_type(self.value)
+        
+        # globals
+        self.is_private        = kwargs.get('is_private', False)  # hidden
+        self.is_connectable    = kwargs.get('is_connectable', False)
+        self.is_user           = kwargs.get('is_user', False)
+        self.is_locked         = kwargs.get('is_locked', False)   
 
+    def __str__(self):
+        data = self.copy()
+        return json.dumps(data, indent=4)
 
     def __repr__(self):
-        if self.value is not None:
-            return '"%s" : "%s"' % (self.name, self.value)
-        return '"%s" : None' % self.name
+        return json.dumps(self.__dict__(), indent=5)
 
-    def __hash__(self):
-        return hash(self.name)
-
-    def __eq__(self, other):
-        return (self.name) == (other.name)
-
-    @property
-    def name(self):
-        return self.name
-
-    @name.setter
-    def name(self, name=None):
-        if self._name != name:
-            self._name = name
-        return self.name
-
-    @property
-    def nice_name(self):
-        return util.clean_name(self.name)
-
-    @property
-    def has_override(self):
+    def __dict__(self):
         """
-        Returns true if the attribute has an override value.
+        Filter the current dictionary to only return set values.
         """
-        return self._value_override is not None
+        return self.copy()
+
+    def __getitem__(self, key, default=None):
+        try:
+            if key in self._data:
+                return self._data[key]
+        except KeyError:
+            if key in self.defaults:
+                return self.defaults[key]
+            if default is None:
+                raise
+            return default
+  
+    def __setitem__(self, key, value):
+        if key in self.private:
+            msg = 'Attribute "%s" in %s object is read only!'
+            raise AttributeError(msg % (key, self.__class__.__name__))
+
+        if key in self.reserved:
+            super(Attribute, self).__setattr__(key, value)
+        else:
+            
+            if key == 'value':
+                valtyp = util.attr_type(value)
+                if self.type != valtyp:
+                    self.type = valtyp
+
+            # update the parent node
+            if self.node is not None:
+                self.node.pop(self.name)
+
+            self._data[key] = value
+            if self.node is not None:
+                self.node.update(**self.copy())
+
+  
+    def __delitem__(self, key):
+        del self._data[key]
+  
+    def __getstate__(self):
+        return self._data
+  
+    def __setstate__(self, state):
+        self._data.update(self.defaults)
+        # update with pickled
+        self.update(state)
     
+    __getattr__ = __getitem__
+    __setattr__ = __setitem__
+    __delattr__ = __delitem__
+  
+    def copy(self):
+        #return copy.deepcopy(MutableMapping._data)
+        data = copy.deepcopy(self._data)
+        name = data.pop('name', 'null')
+        return  {name:{ k: data[k] for k in data.keys() if data[k]}}
+
+    def __deepcopy__(self, *args, **kwargs):
+        """
+        Defines the result of a deepcopy operation.
+        """
+        data = copy.deepcopy(self._data)
+        name = data.pop('name', None)
+        ad = self.__class__(name, **data)
+        #ad.update(**copy.deepcopy(self._data)) # works, but returns empty object
+        return ad
+  
+    def update(self, **kwargs):
+        for (key, value) in list(kwargs.items()):
+            if key in self.private:
+                continue
+            self.__setitem__(key, value)
+
+    def __iter__(self):
+        return iter(self._data)
+  
+    def __len__(self):
+        return len(self._data)
+
+    @classmethod
+    def node_from_meta(name, data):
+        """
+        Instantiate a new instance from a dictionary.
+        """
+        self = Attribute(name, **data)
+        return self
+
     @property
     def value(self):
-        """
-        Returns the current value. If the attribute has an override,
-        return that instead.
-        """
-        if self.has_override:
-            return self._value_override
-        return self._value
+        if self._data.get('value') is None:
+            return self.default_value
+        return self._data.get('value')
 
-    @value.setter
-    def value(self, value=None):
-        """
-        Set the current value - If the attribute currently
-        has an override, set that.
-        """
-        if not self.is_locked:
-            if self.has_override:
-                return self._value_override
-            else:
-                self._value = value
-        return self.value
+    @property 
+    def type(self):
+        return util.attr_type(self.value)
 
-    @property
-    def attribute_type(self):
-        return self._type
-
-    @property
-    def connectable(self):
-        """
-        Returns true if the attribute can accept a connection.
-        """
-        return self._type
-
-    #- Overrides ----
-    def addOverride(self, value=None):
-        """
-        Override the attribute value with another.
-        """
-        if not self.is_locked:
-            self.has_override = True
-            if self._value_override != value:
-                self._value_override = value
-        return self.value
-
-    def clearOverride(self):
-        """
-        Remove the override flag - but stash any override
-        value for future use.
-        """
-        if not self._is_locked:
-            self._value_override = None
-
-    #- Locking ---
-    @property
-    def is_locked(self):
-        """
-        Returns the current lock state of the attribute.
-        """
-        return self._is_locked
-
-    def lock(self):
-        """
-        Lock the attribute. If successful, returns true.
-        """
-        if self._is_locked is not True:
-            self._is_locked = True
-            return True
-        return False
-
-    def unlock(self):
-        """
-        Unock the attribute. If successful, returns true.
-        """
-        if self._is_locked is not False:
-            self._is_locked = False
-            return True
-        return False
+    @property 
+    def node(self):
+        return self._node
 
 
 class StringAttribute(Attribute):
-    def __init__(self, name, value=None, parent=None, **kwargs):
-        super(StringAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
-        self._type = 'string'
 
-    @property
-    def value(self):
-        return str(self.value)
+    ATTR_TYPE     = "string"
+    parent        = None
 
-    @value.setter
-    def value(self, value=None):
-        if value: value = str(value)
-        self.value = value
-
-
-class IntegerAttribute(Attribute):
-    def __init__(self, name, value=None, parent=None, **kwargs):
-        super(IntegerAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
-        self._type  = 'int'
-
-    @property
-    def value(self):
-        return int(self.value)
-
-    @value.setter
-    def value(self, value=None):
-        if value: value = int(value)
-        self.value = value
+    def __init__(self, name, **kwargs):
+        super(StringAttribute, self).__init__(name, **kwargs)
 
 
 class FloatAttribute(Attribute):
-    def __init__(self, name, value=None, parent=None, **kwargs):
-        super(FloatAttribute, self).__init__(name, value=value, parent=parent, **kwargs)
-        self._type  = 'float'
 
-    @property
-    def value(self):
-        return float(self.value)
+    ATTR_TYPE     = "float"
+    parent        = None
 
-    @value.setter
-    def value(self, value=None):
-        if value:
-            if util.is_number(value):
-                value = float(value)
-                self.value = value
-                return self.value 
-        return
+    def __init__(self, name, **kwargs):
+        super(FloatAttribute, self).__init__(name, **kwargs)
+
+
+class IntegerAttribute(Attribute):
+
+    ATTR_TYPE     = "int"
+    parent        = None
+
+    def __init__(self, name, **kwargs):
+        super(IntegerAttribute, self).__init__(name, **kwargs)
+
+
+
+def attribute_factory(name, value, **kwargs):
+    """
+    Returns an attribute type based on the
+    given value.
+    """
+    if util.is_number(value):
+        if type(value) is float:
+            return FloatAttribute(name, value=value, **kwargs)
+        if type(value) is int:
+            return IntegerAttribute(name, value=value, **kwargs)
+    elif util.is_string(value):
+        return StringAttribute(name, value=value, **kwargs)
+
+    else:
+        print '# Attribute error: ', value
+        return 
+
