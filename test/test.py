@@ -97,8 +97,8 @@ class TestGraph(form_class, base_class):
         # get the node's widget.
         node = dag._widget
         if node:
-            node.height=75
-            node.is_expanded=True
+            #node.height=75
+            #node.is_expanded=True
             return True
         log.warning('cannot find a node widget for "%s"' % dag.name)
         return False

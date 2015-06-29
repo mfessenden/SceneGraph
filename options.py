@@ -4,7 +4,7 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 VERSION                     = 0.60
-REVISION                    = 7
+REVISION                    = 8
 VERSION_AS_STRING           = '%.02f.%d' % (VERSION, REVISION)
 PLATFORM 					= None
 

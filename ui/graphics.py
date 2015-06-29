@@ -368,11 +368,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Returns a list of node widgets.
         """
-        nodes = []
+        widgets = []
         for item in self.items():
             if isinstance(item, nodes.Node):
-                nodes.append(item)
-        return nodes
+                widgets.append(item)
+        return widgets
 
     def selectedEdges(self):
         """

@@ -183,8 +183,9 @@ class Graph(object):
             (list)
         """
         node_names = []
-        if self.network.nodes(data=True):
-            for node in self.network.nodes(data=True):
+        nodes = self.network.nodes(data=True)
+        if nodes:
+            for node in nodes:
                 id, data = node
                 name = data.get('name')
                 node_names.append(name)
@@ -365,6 +366,7 @@ class Graph(object):
                           - node widget in ui mode
         """
         name  = kwargs.pop('name', 'node1')
+        pos  = kwargs.pop('pos', self.grid.coords)
 
         # check to see if node type is valid
         if node_type not in self.node_types():
@@ -373,8 +375,7 @@ class Graph(object):
 
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
-
-        dag = NodeBase(node_type, name=name, pos=self.grid.coords, **kwargs)
+        dag = NodeBase(node_type=node_type, name=name, pos=pos, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()
@@ -382,8 +383,10 @@ class Graph(object):
         self.dagnodes[dag.id] = dag
         #dag.MANAGER = self._manager
         
+        # todo: figure out why I have to load this
+        node_data = json.loads(str(dag))
         # add the node to the networkx graph
-        self.network.add_node(dag.id, **dag.data)
+        self.network.add_node(dag.id, **node_data)
 
         # update the scene
         if self.manager is not None:
@@ -442,12 +445,13 @@ class Graph(object):
             return False
 
         # don't connect the same node
-        if src == dest:
+        if src.name == dest.name:
             log.warning('invalid connection: "%s", "%s"' % (src.name, dest.name))
             return
 
         # create an edge
         edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
+
         #edge.MANAGER = self._manager
         conn_str = self.parseEdgeName(edge)
         log.debug('parsing edge: "%s"' % conn_str)
@@ -591,10 +595,10 @@ class Graph(object):
         Returns a list of all incoming edges to the given node(s).
 
         params:
-            nodes - (str) or (list)
+            nodes - (str) or (list) node names to query.
 
         returns:
-            (list
+            (list) - list of edge dictionaries.
         """
         if type(nodes) not in [list, tuple]:
             nodes = [nodes,]
@@ -605,10 +609,10 @@ class Graph(object):
         Returns a list of all outgoing edges to the given node(s).
 
         params:
-            nodes - (str) or (list)
+            nodes - (str) or (list) node names to query.
 
         returns:
-            (list
+            (list) - list of edge dictionaries.
         """
         if type(nodes) not in [list, tuple]:
             nodes = [nodes,]
@@ -777,6 +781,17 @@ class Graph(object):
         json.dump(graph_data, fn, indent=4)
         fn.close()
         return self.setScene(filename)
+
+    def save(self):
+        """
+        Save the current scene.
+        """
+        if not self.getScene():
+            log.error('please save the current scene.')
+            return
+
+        log.info('saving current scene: "%s"' % self.getScene())
+        return self.write(self.getScene())
 
     def read(self, filename):
         """

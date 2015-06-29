@@ -120,7 +120,6 @@ class NodeBase(MutableMapping):
         self.height_collapsed   = kwargs.pop('height_collapsed', 15)
         self.height_expanded    = kwargs.pop('height_expanded', 175)
 
-        self.name               = kwargs.pop('name', 'node1')
         self.color              = kwargs.pop('color', [172, 172, 172, 255])
         self.expanded           = kwargs.pop('expanded', False)
 
@@ -150,7 +149,6 @@ class NodeBase(MutableMapping):
 
             return self._data[key]
         except KeyError, e:
-            print 'Error: ', e
             return default
 
     def __setitem__(self, key, value):
@@ -192,6 +190,19 @@ class NodeBase(MutableMapping):
 
     def dumps(self):
         print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
+
+    @property
+    def height(self):
+        if self.expanded:
+            return self.height_expanded
+        return self.height_collapsed
+
+    @height.setter
+    def height(self, value):
+        if self.expanded:
+            self.height_expanded=value
+            return
+        self.height_collapsed=value
 
     #- Connections ----
     def addInput(self, **kwargs):
@@ -443,13 +454,13 @@ class DagEdge(MutableMapping):
             if isinstance(args[0], NodeBase):
                 source_node = args[0]
                 self.src_id = source_node.id
-                self._source[dag_src.id] = source_node
+                self._source[source_node.id] = source_node
 
             if len(args) > 1:
                 if isinstance(args[1], NodeBase):
                     dest_node = args[1]
                     self.dest_id = dest_node.id
-                    self._dest[dag_dest.id] = dest_node
+                    self._dest[dest_node.id] = dest_node
 
     def __str__(self):
         """printed"""
@@ -493,8 +504,8 @@ class DagEdge(MutableMapping):
         data = copy.deepcopy(self._data)
         src_id = self._source.keys()[0]
         dest_id = self._dest.keys()[0]
-        #return (src_id, dest_id, data)
-        return {k: data[k] for k in data.keys() if data[k]}
+        #return {k: data[k] for k in data.keys() if data[k]}
+        return (src_id, dest_id, data)        
 
     def dumps(self):
         print json.dumps(self.data, default=lambda obj: obj.data, indent=5)

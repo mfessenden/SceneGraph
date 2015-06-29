@@ -429,7 +429,7 @@ class NodeBackground(QtGui.QGraphicsItem):
         lpen = QtGui.QPen(lcolor)
         lpen.setWidthF(0.5)
 
-        if self.node.is_expanded:
+        if self.dagnode.expanded:
             painter.setBrush(QtCore.Qt.NoBrush)
             painter.setPen(lpen)
 
