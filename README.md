@@ -68,10 +68,13 @@
 	n1.addAttr(name='env', value='maya', input=True)
 
 
-
+####### To Do:
+###### API:
+- Node defaults, private attributes not yet re-implemented in new API
+- Node.__setstate__, __getstate__ not yet re-implemented
 
 ##### Dependencies:
-
+- Python 2.7
 - simplejson
 - NetworkX 1.9.1
 - matplotlib

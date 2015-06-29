@@ -8,8 +8,6 @@ import sys
 from SceneGraph.core import log
 
 
-sys.setrecursionlimit(100)
-
 
 """
 Goals:
@@ -19,107 +17,50 @@ Goals:
  - can be cleanly mapped to and from json & new instances
 """
 
+class Container(MutableMapping):
+    """
+    Generic mappable container class.
 
-class DagNode(MutableMapping):
+    Mappings can be added as attributes but still functions as a dictionary.
+    Private attributes should be added to the "reserved" attribute. In the
+    default node types, the mapping is represented by the "_data" attribute.
+    """
+    reserved = ["_data"]
+    def __init__(self, *args, **kwargs):
 
-    CLASS_KEY     = "dagnode"
-    defaults      = {}          # default attribute values
-    private       = []          # attributes that cannot be changed
-    # 'reserved' attributes, (need to be handled by the superclass) 
-    reserved      = ['_data', '_graph', '_inputs', '_outputs']
-    MANAGER       = None             
-
-    def __init__(self, nodetype, **kwargs):
-
-        # stash attributes
-        self._data              = dict()
-        self._graph             = None
-        self._inputs            = []
-        self._outputs           = []
-
-        # reference to the node widget.
-        self._widget            = None  
-
-        self.width              = kwargs.pop('width', 100)
-        self.height_collapsed   = kwargs.pop('height_collapsed', 15)
-        self.height_expanded    = kwargs.pop('height_expanded', 175)
-
-        self.node_type          = nodetype
-        self.name               = kwargs.pop('name', 'node1')
-        self.color              = kwargs.pop('color', [172, 172, 172, 255])
-        self.expanded           = kwargs.pop('expanded', False)
-
-        self.pos                = kwargs.pop('pos', (0,0))
-        self.enabled            = kwargs.pop('enabled', True)
-        self.orientation        = kwargs.pop('orientation', 'horizontal')
-
-        # connections
-        inputs                  = kwargs.pop('inputs', ['input'])
-        outputs                 = kwargs.pop('outputs', ['output'])
-
-        # node unique ID
-        UUID = kwargs.pop('id', None)
-        self.id = UUID if UUID else str(uuid.uuid4())
+        self._data             = dict()
         self.update(**kwargs)
 
-        # setup connections
-        for i in inputs:
-            self.addConnection(i, input=True)
-
-        for o in outputs:
-            self.addConnection(o, input=False)
-
     def __str__(self):
-        data = self.copy()
-        return json.dumps(data, indent=4)
-
-    def __del__(self):
-        self.updateGraph('deleting node: "%s"' % self.id)
-        # delete any connected connections.
-        for conn_name, conn_node in self.getConnections().iteritems():
-            self.updateGraph('deleting node connection: "%s"' % conn_name)
-
-            del conn_node
+        """
+        String representation of the object, for printing.
+        """
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return json.dumps(self.__dict__(), indent=5)
-
-    def __dict__(self):
-        """
-        Filter the current dictionary to only return set values.
-        """
-        return self.copy()
+        return 'Container()'
 
     def __getitem__(self, key, default=None):
         try:
             return self._data[key]
         except KeyError:
-            if key in self.defaults:
-                return self.defaults[key]
-            if default is None:
-                raise
             return default
-  
+
     def __setitem__(self, key, value):
-        if key in self.private:
-            msg = 'Attribute "%s" in %s object is read only!'
-            raise AttributeError(msg % (key, self.__class__.__name__))
         if key in self.reserved:
-            super(DagNode, self).__setattr__(key, value)
+            super(Container, self).__setattr__(key, value)
         else:
             self._data[key] = value
-  
+
     def __delitem__(self, key):
         del self._data[key]
-  
-    def __getstate__(self):
-        return self._data
-  
-    def __setstate__(self, state):
-        self._data.update(self.defaults)
-        # update with pickled
-        self.update(state)
-    
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
     def __getattr__(self, key, default=None):
         try:
             return self.__getitem__(key, default)
@@ -130,197 +71,21 @@ class DagNode(MutableMapping):
     __delattr__ = __delitem__
 
     @property
+    def node(self):
+        return self._node
+
+    @property
     def data(self):
         """
-        Data output for networkx graph.
+        The data attribute is where you build your object's output. This
+        should be hashable data so that this object can be serialized.
+
+        In this example, we are *only* returning attributes that have a value,
+        to reduce saved file size.
         """
         data = copy.deepcopy(self._data)
-        data.update(_inputs=self._inputs)
-        data.update(_outputs=self._outputs)
-        return { k: data[k] for k in data.keys() if data[k]}
-
-    def copy(self):
-        """
-        Data output for display.
-        """
-        data = copy.deepcopy(self._data)
-        name = data.pop('name', 'null')
-        data.update(_inputs=self._inputs)
-        data.update(_outputs=self._outputs)
-        return  {name:{ k: data[k] for k in data.keys() if data[k]}}
-  
-    def __deepcopy__(self, *args, **kwargs):
-        """
-        Defines the result of a deepcopy operation.
-        """
-        data = copy.deepcopy(self._data)
-        node_type = data.pop('node_type', 'default')
-        ad = self.__class__(node_type, **data)
-        return ad
-  
-    def update(self, **adict):
-        for (key, value) in list(adict.items()):
-            if key in self.private:
-                continue
-            self.__setitem__(key, value)
-
-    def __iter__(self):
-        return iter(self._data)
-  
-    def __len__(self):
-        return len(self._data)
-
-    @classmethod
-    def node_from_meta(nodetype, data):
-        """
-        Instantiate a new instance from a dictionary.
-        """
-        self = DagNode(nodetype, **data)
-        return self
-
-    @property
-    def node_class(self):
-        return self.CLASS_KEY
-
-    @property
-    def height(self):
-        if self.expanded:
-            return self.height_expanded
-        return self.height_collapsed
-
-    @height.setter
-    def height(self, value):
-        if self.expanded:
-            self.height_expanded=value
-            return
-        self.height_collapsed=value
-
-    #- Attributes ----
-    def addAttr(self, name, value=None, input=True, **kwargs):
-        """
-        Add attributes to the current node.
-        """
-        from SceneGraph.core import Attribute
-        # TODO: need a way to protect core values
-        attr = Attribute(name, value=value, input=input, **kwargs)
-        attr._node = self
-        self.update(**attr.copy())
-        #self.__setattr__(name, attr)
-        return attr
-
-    def getAttr(self, attr):
-        """
-        Query any attribute from the node, returning
-        an Attribute object if the attr is a dict.
-        """
-        from SceneGraph.core import Attribute
-        value = self.get(attr, None)
-        if type(value) is dict:
-            if 'type' in value:
-                value = Attribute(attr, **value)
-                value._node = self
-        return value
-
-    def getAttrs(self):
-        return self.keys()
-
-    def deleteAttr(self, attr):
-        """
-        Remove the attribute.
-
-        If the attribute is an Attribute, disconnect it.
-        """
-        data = self.getAttr(attr)
-        if hasattr(data, '_node'):
-            data._node = None
-        return self.pop(attr)
-
-    #- Connections ----
-    def getConnections(self):
-        """
-        Return all connection nodes.
-
-        returns:
-            (dict) - dictionary of connection name/Connection nodes.
-        """
-        connections = dict()
-        for i in self._inputs:
-            connections[i.name]=i
-        for o in self._outputs:
-            connections[o.name]=o
-
-    def inputNames(self):
-        return [x.name for x in self._inputs]
-
-    def inputConnection(self, name='input'):
-        """
-        Returns a named connection.
-
-        params:
-            name - (str) name of connection.
-
-        returns:
-            (dict) - connection attributes.
-        """
-        if name in self.inputNames():
-            for i in self._inputs:
-                if i.name == name:
-                    return i
-        return
-
-    def outputNames(self):
-        return [x.name for x in self._outputs]
-
-    def outputConnection(self, name='output'):
-        """
-        Returns a named connection.
-
-        params:
-            name - (str) name of connection.
-
-        returns:
-            (dict) - connection attributes.
-        """
-        if name in self.outputNames():
-            for i in self._outputs:
-                if i.name == name:
-                    return i
-        return
-
-    @property
-    def inputs(self):
-        return self._inputs
-
-    @property
-    def outputs(self):
-        return self._outputs
-
-    def addConnection(self, name, input=True):
-        """
-        Add a connection.
-
-        Default is input
-        """
-        conn =  self.inputNames()
-        if not input:
-            conn = self.outputNames()
-
-        # return if the connection exists.
-        if name in conn:
-            ctype = 'input' if input else 'output'
-            log.warning('%s connection "%s" already exists.' % (ctype, name))
-            return False
-
-        cnode = Connection(self, name=name)
-        if input:
-            self._inputs.append(cnode)
-        else:
-            self._outputs.append(cnode)
-        return True
-
-    def updateGraph(self, msg):
-        if hasattr(self.MANAGER, 'updateGraph'):
-            self.MANAGER.updateGraph(msg)
+        #return data
+        return {k: data[k] for k in data.keys() if data[k]}
 
     def ParentClasses(self, p=None):
         """
@@ -335,17 +100,326 @@ class DagNode(MutableMapping):
         return base_classes
 
 
-class DagEdge(MutableMapping):
 
-    node_class    = "dagedge"
-    defaults      = {}
-    private       = []
-    reserved      = ['_data', '_source', '_dest']
-    MANAGER       = None
+class NodeBase(MutableMapping):
+    reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes']
+    def __init__(self, *args, **kwargs):
+
+        self._data              = dict()
+        self._inputs            = dict()
+        self._outputs           = dict()
+        self._attributes        = dict()
+
+        self.name               = kwargs.pop('name', 'node1')
+        self.node_type          = kwargs.pop('node_type', 'default')
+
+        # reference to the node widget.
+        self._widget            = None  
+
+        self.width              = kwargs.pop('width', 100)
+        self.height_collapsed   = kwargs.pop('height_collapsed', 15)
+        self.height_expanded    = kwargs.pop('height_expanded', 175)
+
+        self.name               = kwargs.pop('name', 'node1')
+        self.color              = kwargs.pop('color', [172, 172, 172, 255])
+        self.expanded           = kwargs.pop('expanded', False)
+
+        self.pos                = kwargs.pop('pos', (0,0))
+        self.enabled            = kwargs.pop('enabled', True)
+        self.orientation        = kwargs.pop('orientation', 'horizontal')
+
+        self.addInput(name='input')
+        self.addOutput(name='output')
+
+        # node unique ID
+        UUID = kwargs.pop('id', None)
+        self.id = UUID if UUID else str(uuid.uuid4())
+        self.update(**kwargs)
+
+    def __str__(self):
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
+
+    def __repr__(self):
+        return 'NodeBase("%s")' % self.name
+
+    def __getitem__(self, key, default=None):
+        try:
+            if key in self._attributes:
+                attr = self._attributes.get(key)
+                return attr.value
+
+            return self._data[key]
+        except KeyError, e:
+            print 'Error: ', e
+            return default
+
+    def __setitem__(self, key, value):
+        if key in self.reserved:
+            super(NodeBase, self).__setattr__(key, value)
+
+        elif key in self._attributes:
+            attr = self._attributes.get(key)
+            attr.value = value
+        else:
+            self._data[key] = value
+
+    def __delitem__(self, key):
+        del self._data[key]
+
+    def __iter__(self):
+        return iter(self.__dict__)
+
+    def __len__(self):
+        return len(self.__dict__)
+
+    def __getattr__(self, key, default=None):
+        try:
+            return self.__getitem__(key, default)
+        except KeyError as e:
+            raise AttributeError(e.args[0])
+
+    __setattr__ = __setitem__
+    __delattr__ = __delitem__
+
+    @property
+    def data(self):
+        data = copy.deepcopy(self._data)
+        data.update(_inputs=self._inputs)
+        data.update(_outputs=self._outputs)
+        #data.update(_attributes=self._attributes)
+        data.update(**self._attributes)
+        return {k: data[k] for k in data.keys() if data[k]}
+
+    def dumps(self):
+        print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
+
+    #- Connections ----
+    def addInput(self, **kwargs):
+        """
+        Add a named input to the node.
+
+        returns:
+            (object) - Connection object
+        """
+        name = kwargs.pop('name', 'input')
+        node = Connection(self, **kwargs)
+        self._inputs.update({name:node})
+        return node
+
+    def getInput(self, name='input'):
+        """
+        Return a named node input.
+
+        params:
+            name (str) - name of input.
+        """
+        if name in self._inputs:
+            return self._inputs.get(name)
+        return
+
+    def addOutput(self, **kwargs):
+        """
+        Add a named input to the node.
+
+        returns:
+            (object) - Connection object
+        """
+        name = kwargs.pop('name', 'output')
+        node = Connection(self, type='output', **kwargs)
+        self._outputs.update({name:node})
+        return node
+
+    def getOutput(self, name='output'):
+        """
+        Return a named node output.
+
+        params:
+            name (str) - name of output.
+        """
+        if name in self._outputs:
+            return self._outputs.get(name)
+        return
+
+    def getConnection(self, name):
+        """
+        Returns a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (Connection) - connection object.
+        """
+        conn = None
+        if name in self.inputs:
+            conn = self._inputs.get(name)
+
+        if name in self.outputs:
+            conn = self._outputs.get(name)
+        return conn
+
+    def renameConnection(self, old, new):
+        """
+        Rename a connection.
+
+        params:
+            old (str) - old connection name.
+            new (new) - new connection name.
+
+        returns:
+            (bool) - rename was successful.
+        """
+        node = self.getConnection(old)
+        if node:
+            if node.is_input:
+                self._inputs.pop(old)
+                self._inputs.update({new:node})
+                return True
+
+            if node.is_output:
+                self._outputs.pop(old)
+                self._outputs.update({new:node})
+                return True
+        return False
+
+    def allConnections(self):
+        """
+        Returns a list of connections (input & output)
+
+        returns:
+            (list) - list of connection names.
+        """
+        conn = self.inputs 
+        conn.extend(self.outputs)
+        return conn
+
+    def isConnected(self, name):
+        """
+        Returns true if the named connection has 
+        a connection.
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (bool) - connection status.
+        """
+        conn = self.getConnection(name)
+        if not conn:
+            return False
+        return not conn.is_connectable
+
+    @property
+    def inputs(self):
+        return self._inputs.keys()
+
+    @property
+    def outputs(self):
+        return self._outputs.keys()
+
+    #- Attributes ----
+    def addAttr(self, name, value=None, input=True, **kwargs):
+        """
+        Add attributes to the current node.
+
+         *todo: need a way to protect default attributes.
+
+        params:
+            name  (str)  - attribute name to add.
+            value (n/a)  - value
+            input (bool) - attribute represents an input connection.
+
+        returns:
+            (Attribute) - attribute object.
+        """
+        from SceneGraph.core import Attribute
+        # TODO: need a way to protect core values
+        attr = Attribute(name, value=value, input=input, **kwargs)
+        attr._node = self
+        self._attributes.update({attr.name:attr})
+        return attr
+
+    def getAttr(self, name):
+        """
+        Query any user attribute from the node, returning
+        the attribute value.
+
+        params:
+            name (str) - attribute name to query.
+
+        returns:
+            (n/a) - attribute value.
+        """
+        if name in self.getAttrs():
+            attr = self._attributes.get(name)
+            return attr.value
+        return
+
+    def getAttrNode(self, name):
+        """
+        Query any attribute from the node, returning
+        an Attribute object if the attr is a dict.
+
+        params:
+            name (str) - attribute name to query.
+
+        returns:
+            (Attribute) - attribute object.
+        """
+        if name in self.getAttrs():
+            return self._attributes.get(name)
+        return
+
+    def setAttr(self, name, value):
+        """
+        Set a named user attribute.
+
+        params:
+            name (str) - attribute name to query.
+            value (n/a) - value to set.
+
+        returns:
+            (n/a) - attribute value.
+        """
+        if name in self.getAttrs():
+            attr = self._attributes.get(name)
+            attr.value = value
+            return attr.value
+        return
+
+    def getAttrs(self):
+        """
+        Query all user atttributes.
+
+        returns:
+            (list) - list of attribute names.
+        """
+        return self._attributes.keys()
+
+    def deleteAttr(self, name):
+        """
+        Remove the attribute.
+
+        params:
+            name (str) - attribute name to remove.
+        
+        returns:
+            (bool) - attribute was removed.
+        """
+        attr = self.getAttr(name)
+        attr._node = None
+        return self._attributes.pop(name)
+
+
+class DagEdge(MutableMapping):
     """
-    Source/dest = Connection nodes.
+    Notes:
+        - needs a refernce to source node, dest node.
+        - needs to be able to query either at any time.
     """
-    def __init__(self, *args, **kwargs):        
+
+    reserved = ["_data", "_source", "_dest"]
+    def __init__(self, *args, **kwargs):
 
         # stash attributes
         self._data              = dict()
@@ -366,72 +440,45 @@ class DagEdge(MutableMapping):
         self.update(**kwargs)
 
         if len(args):
-            if isinstance(args[0], DagNode):
-                dag_src = args[0]
-                self.src_id = dag_src.id
-                self._source[dag_src.id] = dag_src
+            if isinstance(args[0], NodeBase):
+                source_node = args[0]
+                self.src_id = source_node.id
+                self._source[dag_src.id] = source_node
 
             if len(args) > 1:
-                if isinstance(args[1], DagNode):
-                    dag_dest = args[1]
-                    self.dest_id = dag_dest.id
-                    self._dest[dag_dest.id] = dag_dest
+                if isinstance(args[1], NodeBase):
+                    dest_node = args[1]
+                    self.dest_id = dest_node.id
+                    self._dest[dag_dest.id] = dest_node
 
     def __str__(self):
-        data = {self.__class__.__name__:self._data}
-        return json.dumps(data, indent=4)
+        """printed"""
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return 'DagEdge("%s.%s,%s.%s")' % (self.source_node.name, self.src_attr, 
-                                            self.dest_node.name, self.dest_attr)
-
-    def __del__(self):
-        """
-        Remove the edge instance from any connected connections.
-        """
-        self.updateGraph('deleting edge: "%s"' % self.id)
-        if self._source.keys():
-            sconn_name = self._source.keys()[0]
-            sconn_node = self._source.get(conn_name)
-            sconn_node._edges.pop(self.id)
-            self.updateGraph('breaking connection: "%s"' % sconn_name)
-
-        if self._dest.keys():
-            dconn_name = self._dest.keys()[0]
-            dconn_node = self._source.get(conn_name)
-            dconn_node._edges.pop(self.id)
-            self.updateGraph('breaking connection: "%s"' % dconn_name)
+        return 'DagEdge("%s")' %  self.type
 
     def __getitem__(self, key, default=None):
         try:
             return self._data[key]
         except KeyError:
-            if key in self.defaults:
-                return self.defaults[key]
-            if default is None:
-                raise
             return default
-  
+
     def __setitem__(self, key, value):
-        if key in self.private:
-            msg = 'Attribute "%s" in %s object is read only!'
-            raise AttributeError(msg % (key, self.__class__.__name__))
         if key in self.reserved:
             super(DagEdge, self).__setattr__(key, value)
         else:
             self._data[key] = value
-  
+
     def __delitem__(self, key):
         del self._data[key]
-  
-    def __getstate__(self):
-        return self._data
-  
-    def __setstate__(self, state):
-        self._data.update(self.defaults)
-        # update with pickled
-        self.update(state)
-    
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
     def __getattr__(self, key, default=None):
         try:
             return self.__getitem__(key, default)
@@ -440,52 +487,17 @@ class DagEdge(MutableMapping):
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
-    
-    @property 
+
+    @property
     def data(self):
         data = copy.deepcopy(self._data)
         src_id = self._source.keys()[0]
         dest_id = self._dest.keys()[0]
-        return (src_id, dest_id, data)
+        #return (src_id, dest_id, data)
+        return {k: data[k] for k in data.keys() if data[k]}
 
-    def copy(self):
-        data = copy.deepcopy(self._data)
-        src_id = self._source.keys()[0]
-        dest_id = self._dest.keys()[0]
-        return (src_id, dest_id, data)
-  
-    def __deepcopy__(self, *args, **kwargs):
-        ad = self.__class__()
-        ad.update(copy.deepcopy(self.__dict__))
-        return ad
-  
-    def update(self, adict={}):
-        for (key, value) in list(adict.items()):
-            if key in self.private:
-                continue
-            self.__setitem__(key, value)
-
-    def __iter__(self):
-        return iter(self._data)
-  
-    def __len__(self):
-        return len(self._data)
-
-    @classmethod
-    def node_from_meta(*args, **kwargs):
-        """
-        Instantiate a new instance from a dictionary.
-        """
-        self = DagEdge(*args, **kwargs)
-        return self
-
-    @property
-    def source_node(self):
-        return self._source.values()[0]
-
-    @property
-    def dest_node(self):
-        return self._dest.values()[0]
+    def dumps(self):
+        print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
 
     def updateGraph(self, msg):
         if hasattr(self.MANAGER, 'updateGraph'):
@@ -493,73 +505,56 @@ class DagEdge(MutableMapping):
 
 
 class Connection(MutableMapping):
-    """
-    This needs to exlude the node reference (or stash the Node.UUID)
+    reserved = ["_data", "_edges", "_node"]
+    def __init__(self, *args, **kwargs):
 
-    edges = dict of edge.id, edge node
-    """
-    node_class    = "connection"
-    defaults      = {}
-    private       = []
-    reserved      = ['_node', '_data', '_edges']
-
-    def __init__(self, node, **kwargs):
         self._data             = dict()
-        self._edges            = dict()     # connected edges
+        self._edges            = []        # connected edges
 
-        self._node             = node
-        self.name              = kwargs.pop('name', 'input')
+        self._node             = None
         self.type              = kwargs.get('type', 'input') 
         self.input_color       = kwargs.pop('input_color', [255,255,51])
         self.output_color      = kwargs.pop('output_color', [0,204,0])
         self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
+        self.is_input          = True if self.type == 'input' else False
+
+        # input nodes can have only one connection
+        if self.type == 'input':
+            self.max_connections = 1
+
+        for arg in args:
+            if isinstance(arg, NodeBase):
+                self._node = arg
 
         self.update(**kwargs)
 
     def __str__(self):
-        return json.dumps(self._data, indent=4)
+        """printed"""
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        #return 'Connection("%s.%s")' % (self._node.name, self.name)
-        return json.dumps(self._data, indent=4)
-
-    def __del__(self):
-        """
-        When this is deleted, delete the edges that will be orphaned.
-        """
-        for edge in self._edges.values():
-            self.node.updateGraph('deleting connected edge: "%s"' % edge.id)
-            del edge
+        return 'Connection("%s.%s")' %  (self.node.name, self.type)
 
     def __getitem__(self, key, default=None):
         try:
             return self._data[key]
         except KeyError:
-            if key in self.defaults:
-                return self.defaults[key]
-            if default is None:
-                raise
             return default
-  
+
     def __setitem__(self, key, value):
-        if key in self.private:
-            msg = 'Attribute "%s" in %s object is read only!'
-            raise AttributeError(msg % (key, self.__class__.__name__))
         if key in self.reserved:
             super(Connection, self).__setattr__(key, value)
         else:
             self._data[key] = value
-  
+
     def __delitem__(self, key):
         del self._data[key]
-  
-    def __getstate__(self):
-        return self._data
-  
-    def __setstate__(self, state):
-        self._data.update(self.defaults)
-        # update with pickled
-        self.update(state)
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
 
     def __getattr__(self, key, default=None):
         try:
@@ -569,33 +564,57 @@ class Connection(MutableMapping):
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
-    
-    @property 
+
+    @property
+    def node(self):
+        return self._node
+
+    @property
     def data(self):
-        return {self.name:self._edges.keys()}
-
-    def copy(self):
-        #return copy.deepcopy(MutableMapping._data)
         data = copy.deepcopy(self._data)
-        name = data.pop('name', 'null')
-        return  {name:{ k: data[k] for k in data.keys() if data[k]}}
-  
-    def __deepcopy__(self, *args, **kwargs):
-        ad = self.__class__()
-        ad.update(copy.deepcopy(self.__dict__))
-        return ad
-  
-    def update(self, adict={}):
-        for (key, value) in list(adict.items()):
-            if key in self.private:
-                continue
-            self.__setitem__(key, value)
+        # breakage here, no doubt
+        data.update(_edges=self._edges)
+        return data
 
-    def __iter__(self):
-        return iter(self._data)
-  
-    def __len__(self):
-        return len(self._data)
+    #- Connection Attributes ---
+    @property
+    def is_connectable(self):
+        """
+        Returns true if the connection is able to be 
+        connected to an edge.
+
+        returns:
+            (bool) - edge can be connected.
+        """
+        if self.max_connections == 0:
+            return True
+        return len(self._edges) < self.max_connections
+
+    def connectedEdges(self):
+        """
+        Returns a list of connected edge ids.
+
+        returns:
+            (list) - list of edge ids.
+        """
+        if not self._edges:
+            return []
+        return [edge.id for edge in self._edges]
+
+    def addEdge(self, edge):
+        """
+        Add an edge to the connection.
+
+        params:
+            edge (DagEdge) - edge node.
+
+        returns:
+            (bool) - connection was successful.
+        """
+        if edge.id not in self.connectedEdges():
+            self._edges.append(edge.id)
+            return True
+        return False
 
     @classmethod
     def node_from_meta(node, data):
@@ -625,57 +644,12 @@ class Connection(MutableMapping):
         Return the parent node object.
 
         returns:
-            (DagNode) - parent node object.
+            (NodeBase) - parent node object.
         """
         return self._node
 
-    @property 
-    def connection_string(self):
-        """
-        Returns the connection string.
-        """
-        return '%s.%s' % (self._node.name, self.name)
 
-    def getEdges(self):
-        """
-        Returns a list of edge nodes.
-
-        returns:
-            (list) - list of DagEdge objects
-        """
-        return self._edges.values()
-
-    def allEdges(self):
-        """
-        Returns a list of all edge ids.
-
-        returns:
-            (list) - list of edge ids
-        """
-        return self._edges.keys()
-
-    def addEdge(self, edge, source=True):
-        """
-        Add and edge to the edges attribute.
-
-        params:
-            edge - (DagEdge) edge to add to the connection.
-
-        returns:
-            (bool) - edge was added successfully.
-        """
-        if edge.id in self._edges:
-            log.error('edge is already connected.')
-            return False
-
-        self._edges[edge.id] = edge
-
-        # if this connection is the source...
-        if source:
-            edge._source[self.connection_string] = self
-        else:
-            edge._dest[self.connection_string] = self
-        return True
-
-
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(verbose=True)
 

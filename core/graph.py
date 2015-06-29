@@ -7,7 +7,7 @@ import networkx as nx
 from functools import partial
 
 
-from SceneGraph.core import log, DagNode, DagEdge, NodeManager
+from SceneGraph.core import log, NodeBase, DagEdge, NodeManager
 
 
 class Graph(object):
@@ -80,20 +80,21 @@ class Graph(object):
 
         #print '# searching for nodes in: "%s"' % path
         for fn in os.listdir(path):
-            node_name = os.path.splitext(os.path.basename(fn))[0]
-            node_mod = os.path.join(path, '%s.py' % node_name)
-            node_data = os.path.join(path, '%s.mtd' % node_name)
-            if os.path.exists(node_mod) and os.path.exists(node_data):
-                #print '# loading node type "%s"' % node_name
-                node_attrs = dict()
-                node_attrs['module'] = node_mod
-                node_attrs['metadata'] = node_data
-                nodes[node_name]=node_attrs
-            else:
-                if not os.path.exists(node_mod):
-                    log.warning('cannot find "%s" module %s' % (node_name, node_mod))
-                if not os.path.exists(node_data):
-                    log.warning('cannot find "%s" metadata %s' % (node_name, node_data))
+            if fn not in ['README']:
+                node_name = os.path.splitext(os.path.basename(fn))[0]
+                node_mod = os.path.join(path, '%s.py' % node_name)
+                node_data = os.path.join(path, '%s.mtd' % node_name)
+                if os.path.exists(node_mod) and os.path.exists(node_data):
+                    #print '# loading node type "%s"' % node_name
+                    node_attrs = dict()
+                    node_attrs['module'] = node_mod
+                    node_attrs['metadata'] = node_data
+                    nodes[node_name]=node_attrs
+                else:
+                    if not os.path.exists(node_mod):
+                        log.warning('cannot find "%s" module %s' % (node_name, node_mod))
+                    if not os.path.exists(node_data):
+                        log.warning('cannot find "%s" metadata %s' % (node_name, node_data))
         return nodes
 
     def evaluate(self, verbose=False):
@@ -194,7 +195,7 @@ class Graph(object):
         Returns a list of all dag nodes.
 
         returns:
-            (list) - list of DagNode objects.
+            (list) - list of NodeBase objects.
         """
         nodes = []
         for node in  self.network.nodes(data=True):
@@ -373,7 +374,7 @@ class Graph(object):
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
 
-        dag = DagNode(node_type, name=name, pos=self.grid.coords, **kwargs)
+        dag = NodeBase(node_type, name=name, pos=self.grid.coords, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()
@@ -389,7 +390,7 @@ class Graph(object):
             self.manager.addNodes([dag,])
         return dag
 
-    def removeNode(self, name, UUID=None):
+    def removeNode(self, *args):
         """
         Removes a node from the graph
 
@@ -399,17 +400,23 @@ class Graph(object):
         returns:
             (object)  - removed node
         """
-        if UUID is None:
-            UUID = self.getNodeID(name)
-        if UUID and UUID in self.dagnodes:
-            log.info('Removing node: "%s"' % name)
-            if UUID in self.dagnodes:
-                self.dagnodes.pop(UUID)
+        nodes = []
+        dagnodes = self.getNode(args)
+        if dagnodes:
+            for dag in dagnodes:
+                dag_id = dag.id
+                if dag_id in self.network.nodes():
+                    self.network.remove_node(dag_id)
 
-            if UUID in self.network.nodes():
-                self.network.remove_node(UUID)
-            self.evaluate()
+                if dag_id in self.dagnodes:
+                    self.dagnodes.pop(dag_id)
+                    nodes.append(dag_id)
+        if nodes:
+            # update the scene
+            if self.manager is not None:
+                self.manager.removeNodes(nodes)
             return True
+
         return False
 
     def addEdge(self, src, dest, **kwargs):
@@ -417,8 +424,8 @@ class Graph(object):
         Add an edge connecting two nodes.
 
         params:
-            src  - (DagNode) source node
-            dest - (DagNode) destination node
+            src  - (NodeBase) source node
+            dest - (NodeBase) destination node
 
         returns:
             (DagEdge) - edge object

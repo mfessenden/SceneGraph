@@ -16,17 +16,13 @@ reload(manager)
 
 
 # nodes
-DagNode             = nodes.DagNode
+NodeBase            = nodes.NodeBase
 DagEdge             = nodes.DagEdge
 Connection          = nodes.Connection
 
 
 # attributes
-attribute_factory   = attributes.attribute_factory
 Attribute           = attributes.Attribute
-StringAttribute     = attributes.StringAttribute
-IntegerAttribute    = attributes.IntegerAttribute
-FloatAttribute      = attributes.FloatAttribute
 
 
 # undo commands

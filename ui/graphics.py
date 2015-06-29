@@ -315,7 +315,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         log.info('GraphicsScene: adding %d nodes.' % len(dagnodes))
         widgets = []
         for dag in dagnodes:
-            if isinstance(dag, core.DagNode):              
+            if isinstance(dag, core.NodeBase):              
                 if dag.id not in self.scenenodes:
                     widget = nodes.Node(dag)
 

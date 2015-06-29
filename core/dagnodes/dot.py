@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from SceneGraph.core.nodes import DagNode
+from SceneGraph.core.nodes import NodeBase
 
 
-class DotNode(DagNode):
+class DotNode(NodeBase):
 
     def __init__(self, **kwargs):
         nodetype = "dot"
