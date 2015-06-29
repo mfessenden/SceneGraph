@@ -49,8 +49,8 @@ class Graph(object):
         """
         Add default attributes to the networkx graph.
         """
-        from SceneGraph.options import VERSION_AS_STRING
-        self.network.graph['version'] = VERSION_AS_STRING
+        from SceneGraph.options import API_VERSION_AS_STRING
+        self.network.graph['api_version'] = API_VERSION_AS_STRING
         self.network.graph['scene'] = scene
         self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
         self.network.graph['environment'] = 'command_line'

@@ -3,9 +3,9 @@ import os
 
 
 PACKAGE                     = 'SceneGraph'
-VERSION                     = 0.60
-REVISION                    = 8
-VERSION_AS_STRING           = '%.02f.%d' % (VERSION, REVISION)
+API_VERSION                 = 0.60
+API_REVISION                = 8
+API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
 PLATFORM 					= None
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)

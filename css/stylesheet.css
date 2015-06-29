@@ -242,47 +242,64 @@ QTextBrowser.Output{
 }
 
 QTabWidget::pane { /* The tab widget frame */
-    border-top: 1px solid #5f5f5f;
+    border-top: 1px solid #292929;
 }
 
 QTabWidget::tab-bar {
-    left: 5px; /* move to the right by 5px */
+    left: 5px; /* move the tab right 5px */
 }
 
 /* Style the tab using the tab sub-control. Note that
     it reads QTabBar _not_ QTabWidget */
-QTabBar::tab {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
-                                stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
-    border: 2px solid #C4C4C3;
-    border-bottom-color: #C2C7CB; /* same as the pane color */
-    border-top-left-radius: 4px;
-    border-top-right-radius: 4px;
-    min-width: 8ex;
-    padding: 2px;
+QTabBar::tab {    
+    border: 1px solid #292929;
+    border-bottom-color: #323232; /* same as the pane color */
+    min-width: 12ex;
+    min-height: 3ex;
+    font-size: 9pt;
+    /*padding: 2px;*/
+    padding-left: 6px;
+    padding-right: 6px;
+}
+
+QTabBar::tab::top{
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #434343, stop: 1.0 #343434);
+    padding-top: 0px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+
+}
+/* tab inverted (for nested dock widgets) */
+QTabBar::tab::bottom{
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #343434, stop: 1.0 #434343);
+    padding-bottom: 2px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+
 }
 
 QTabBar::tab:selected, QTabBar::tab:hover {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                stop: 0 #fafafa, stop: 0.4 #f4f4f4,
-                                stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #707070, stop: 1.0 #646464);
 }
 
-QTabBar::tab:selected {
-    border-color: #9B9B9B;
-    border-bottom-color: #C2C7CB; /* same as pane color */
+QTabBar::tab::bottom:!selected {
+    margin-top: 1px; /* make non-selected tabs look smaller */
 }
 
-QTabBar::tab:!selected {
-    margin-top: 2px; /* make non-selected tabs look smaller */
+QTabBar::tab::top:!selected {
+    margin-bottom: 1px; /* make non-selected tabs look smaller */
 }
 
-QGroupBox{
-    /*margin-top: 10px;*/
-    padding: 5px;
+QGroupBox {
+    border: 1px solid #515151;
+    border-radius: 5px;
+    margin-top: 2ex; /* leave space at the top for the title */
     font-weight: bold;
-    border: 1px solid #454545;
-    border-radius: 4px;
 }
 
+QGroupBox::title {
+    subcontrol-origin: margin;
+    padding: 0 3px;
+    /*margin-left: 4px;*/
+    background: none;
+}
