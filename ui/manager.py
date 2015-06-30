@@ -4,11 +4,12 @@ from SceneGraph.core import log
 
 
 class WindowManager(QtCore.QObject):
-
+    # graph -> scene
     nodesAdded      = QtCore.Signal(list)
     nodesRemoved    = QtCore.Signal(list)
     nodesUpdated    = QtCore.Signal(list)
-
+    # scene -> graph
+    widgetsUpdated  = QtCore.Signal(list)
     """
     Node Manager class:
         - Signal the scene that nodes have been
@@ -32,6 +33,7 @@ class WindowManager(QtCore.QObject):
         """
         log.info('WindowManager: connecting WindowManager to Scene.') 
         self.nodesAdded.connect(self.scene.addNodes)
+        self.widgetsUpdated.connect(self.graph.updateGraph)
 
     def connectGraph(self, scene):
         """
@@ -55,7 +57,7 @@ class WindowManager(QtCore.QObject):
         """
         Signal Graph -> GraphicsScene.
         """
-        log.info('WindowManager: sending %d nodes to scene...' % len(dagnodes))
+        log.debug('WindowManager: sending %d nodes to scene...' % len(dagnodes))
         self.nodesAdded.emit(dagnodes)
 
     def removeNodes(self, dagnodes):
@@ -71,3 +73,9 @@ class WindowManager(QtCore.QObject):
         self.nodesUpdated.emit(dagnodes)
 
     #- Scene to Graph ----    
+    def updateWidgets(self, dagnodes):
+        """
+        Signal GraphicsScene -> Graph.
+        """
+        self.widgetsUpdated.emit(dagnodes)
+

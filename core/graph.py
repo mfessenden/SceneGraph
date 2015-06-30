@@ -97,6 +97,16 @@ class Graph(object):
                         log.warning('cannot find "%s" metadata %s' % (node_name, node_data))
         return nodes
 
+    def updateGraph(self, dagnodes):
+        """
+        Update the networkx graph from the UI.
+        TODO: we need to store a weakref dict of dag nodes in the graph
+        """
+        for dag in dagnodes:
+            nid = dag.id
+            if nid in self.network.nodes():
+                self.network.node[nid].update(json.loads(str(dag)))
+
     def evaluate(self, verbose=False):
         """
         Evaluate the graph.

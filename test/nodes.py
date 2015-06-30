@@ -176,6 +176,10 @@ class Node(QtGui.QGraphicsObject):
 
     #- Global Properties ----
     @property
+    def label_pos(self):
+        return QtCore.QPointF(-self.width/2, -self.height/2 - self.bufferY)
+
+    @property
     def bg_color(self):
         if self.is_selected:
             return QtGui.QColor(*[255, 183, 44])
@@ -217,7 +221,7 @@ class Node(QtGui.QGraphicsObject):
             self.is_hover = True
 
         # translate the label
-        self.label.setPos(QtCore.QPointF(-self.width/2, -self.height/2))
+        self.label.setPos(self.label_pos)
 
         if self._render_effects:
             # background
@@ -525,3 +529,117 @@ class Edge(QtGui.QGraphicsObject):
             base_color = QtGui.QColor(*self._l_color)
             return base_color.lighter(125)
         return QtGui.QColor(*self._l_color)
+
+
+
+class Connection(QtGui.QGraphicsObject):
+    
+    Type                = QtGui.QGraphicsObject.UserType + 4
+    clickedSignal       = QtCore.Signal(QtCore.QObject)
+    nodeChanged         = QtCore.Signal(object)
+    PRIVATE             = []
+
+    def __init__(self, parent, is_input=True, **kwargs):
+        QtGui.QGraphicsObject.__init__(self, parent)
+
+        self.setAcceptHoverEvents(True)
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
+
+    @property
+    def name(self):
+        return '%s.%s' % (self.dagnode.name, self.attribute)  
+
+    @property
+    def node_class(self):
+        return 'connection'  
+
+    @property
+    def is_connected(self):
+        return len(self.connections)  
+
+    @property
+    def enabled(self):
+        return self.node.enabled
+
+    @property
+    def is_connectable(self):
+        """
+        Returns true if the connection can take a connection.
+         0 - unlimited connections
+        """
+        if self.max_conn == 0:
+            return True
+        return len(self.connections) < self.max_conn
+
+    @property
+    def UUID(self):
+        if self.dagnode:
+            return str(self.dagnode.UUID)
+        return None
+
+    def type(self):
+        """
+        Assistance for the QT windowing toolkit.
+        """
+        return Connection.Type
+
+    def boundingRect(self):
+        return self.bounds.mapRectToParent(self.bounds.boundingRect())
+
+    def shape(self):
+        """
+        Aids in selection.
+        """
+        path = QtGui.QPainterPath()
+        polyon = QtGui.QPolygonF(self.boundingRect())
+        path.addPolygon(polyon)
+        return path
+
+    def paint(self, painter, option, widget):
+        """
+        Draw the connection widget.
+        """
+        # DEBUG
+        if self.debug_mode:
+            conn_color = QtGui.QColor(175, 229, 168)
+            if self.isInputConnection():
+                conn_color = QtGui.QColor(255, 255, 190)
+            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.setPen(QtGui.QPen(conn_color, 0.5, QtCore.Qt.DashLine))
+            painter.drawRect(self.boundingRect())
+
+        self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
+        # background
+        gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)
+
+        color = self.color_input
+        if self.isOutputConnection():
+            color = self.color_output
+
+        if option.state & QtGui.QStyle.State_Selected or option.state & QtGui.QStyle.State_MouseOver:
+            color = [255, 157, 0]
+
+        if not self.enabled:
+            color = [125, 125, 125  ]
+        top_color = QtGui.QColor(*color)
+        btm_color = top_color.darker(200)
+
+        gradient.setColorAt(0, top_color)
+        gradient.setColorAt(1, btm_color)
+        
+        painter.setRenderHints(QtGui.QPainter.Antialiasing)
+
+        painter.setPen(QtGui.QPen(QtGui.QBrush(btm_color), 0.5, QtCore.Qt.SolidLine))
+        painter.setBrush(QtGui.QBrush(gradient))
+        painter.drawEllipse(QtCore.QPointF(0,0), self.draw_radius, self.draw_radius)
+        #painter.drawEllipse(self.boundingRect())
+
+    def isInputConnection(self):
+        if self.is_input == True:
+            return True
+        return False
+
+    def isOutputConnection(self):
+        if self.is_input == True:
+            return False
+        return True

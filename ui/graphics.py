@@ -305,6 +305,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.manager     = manager.WindowManager(self)
         self.scenenodes  = dict()
 
+    def initialize(self):
+        self.scenenodes=dict()
+        self.clear()
+
     def addNodes(self, dagnodes):
         """
         Add dag nodes to the current scene.
@@ -312,7 +316,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
 
-        log.info('GraphicsScene: adding %d nodes.' % len(dagnodes))
+        log.debug('GraphicsScene: adding %d nodes.' % len(dagnodes))
         widgets = []
         for dag in dagnodes:
             if isinstance(dag, core.NodeBase):              
@@ -412,11 +416,18 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def nodeChangedEvent(self, node):
         """
-        Update dag node when widget attributes change.
+        Update dag node when widget attributes change. 
+        Signal the graph that the data has changed as well.
+
+        params:
+            node (Node) - node widget.
         """
         if hasattr(node, 'dagnode'):
-            if node.dagnode.node_class == 'dagnode':
-                node.dagnode.pos = (node.pos().x(), node.pos().y())
+            pos = (node.pos().x(), node.pos().y())
+            node.setToolTip('(%d, %d)' % (pos[0], pos[1]))
+            node.dagnode.pos = pos
+            self.manager.updateWidgets([node.dagnode,])
+            
 
     def validateConnection(self, source_item, dest_item, force=True):
         """

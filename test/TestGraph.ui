@@ -20,6 +20,9 @@
       <property name="title">
        <string>Test Graph</string>
       </property>
+      <property name="flat">
+       <bool>true</bool>
+      </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QWidget" name="gview" native="true">
@@ -102,7 +105,7 @@
      <x>0</x>
      <y>0</y>
      <width>742</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>

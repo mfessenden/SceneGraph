@@ -470,7 +470,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Reset the current graph
         """
-        self.view.scene().clear()
+        self.view.scene().initialize()
         self.graph.reset()
         self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
@@ -583,7 +583,7 @@ class SceneGraphUI(form_class, base_class):
             self.updateAttributeEditor(dagnode)
 
     def nodesModelChangedAction(self):
-        self.scene.clearSelection()
+        self.view.scene().clearSelection()
         if self.nodeListSelModel.selectedRows():
             idx = self.nodeListSelModel.selectedRows()[0]
             node = self.nodesModel.nodes[idx.row()]
@@ -591,7 +591,7 @@ class SceneGraphUI(form_class, base_class):
             self.updateAttributeEditor(node.dagnode)
 
     def edgesModelChangedAction(self):
-        self.scene.clearSelection()
+        self.view.scene().clearSelection()
         if self.edgeListSelModel.selectedRows():
             idx = self.edgeListSelModel.selectedRows()[0]
 
@@ -608,7 +608,7 @@ class SceneGraphUI(form_class, base_class):
         """
         node = NodeWidget
         """
-        selected_nodes = self.scene.selectedNodes()
+        selected_nodes = self.view.scene().selectedNodes()
         if selected_nodes:
             # only update the attribute editor if
             # one node is selected
@@ -650,7 +650,7 @@ class SceneGraphUI(form_class, base_class):
         for node in self.graph.node_types():
             node_action = add_menu.addAction(node)
             # add the node at the scene pos
-            node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos_x=scene_pos.x(), pos_y=scene_pos.y()))
+            node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
 
         # haxx: stylesheet should work here
         ssf = QtCore.QFile(self.stylesheet)
@@ -827,19 +827,19 @@ class SceneGraphUI(form_class, base_class):
         self.nodesModel.clear()
         self.edgesModel.clear()
 
-        nodes = self.view.getNodes()
-        edges = self.view.getEdges()
+        nodes = self.view.scene().getNodes()
+        edges = self.view.scene().getEdges()
 
         self.nodesModel.addNodes(nodes)
         self.edgesModel.addEdges(edges)
 
-        self.nodeStatsLabel.setText('Nodes: (%d)' % len(nodes))
-        self.edgeStatsLabel.setText('Edges: (%d)' % len(edges))
+        self.group_nodes.setTitle('Nodes: (%d)' % len(nodes))
+        self.group_edges.setTitle('Edges: (%d)' % len(edges))
 
 
     def refreshGraph(self):
         self.graph.evaluate()
-        self.scene.update()
+        self.view.scene().update()
 
     def drawGraph(self, filename=None):
         """

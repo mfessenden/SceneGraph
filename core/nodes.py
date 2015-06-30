@@ -85,7 +85,7 @@ class Container(MutableMapping):
         """
         data = copy.deepcopy(self._data)
         #return data
-        return {k: data[k] for k in data.keys() if data[k]}
+        return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
 
     def ParentClasses(self, p=None):
         """
@@ -186,7 +186,7 @@ class NodeBase(MutableMapping):
         data.update(_outputs=self._outputs)
         #data.update(_attributes=self._attributes)
         data.update(**self._attributes)
-        return {k: data[k] for k in data.keys() if data[k]}
+        return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
 
     def dumps(self):
         print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
@@ -504,7 +504,7 @@ class DagEdge(MutableMapping):
         data = copy.deepcopy(self._data)
         src_id = self._source.keys()[0]
         dest_id = self._dest.keys()[0]
-        #return {k: data[k] for k in data.keys() if data[k]}
+        #return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
         return (src_id, dest_id, data)        
 
     def dumps(self):
