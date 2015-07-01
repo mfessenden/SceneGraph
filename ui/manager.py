@@ -40,22 +40,31 @@ class WindowManager(QtCore.QObject):
         Connect the parent scenes' Graph object.
 
         params:
-            scene (QGraphicsScene)
+            scene (GraphicsScene) - current QGraphicsScene scene.
+
+        returns:
+            (bool) - connection was successful.
         """
-        if hasattr(scene, 'graph'):
+        if hasattr(scene, 'graph'):            
             graph = scene.graph
             if graph.mode == 'standalone':
                 self.graph = graph
-                self.graph.manager=self
-                self.graph.mode = 'ui'
-                log.info('WindowManager: connecting Graph...')
-                return True
+
+                # make sure the graph doesn't have a manager instance.
+                if not getattr(graph, 'manager'):
+                    self.graph.manager=self
+                    self.graph.mode = 'ui'
+                    log.info('WindowManager: connecting Graph...')
+                    return True
         return False
     
     #- Graph to Scene ----    
     def addNodes(self, dagnodes):
         """
         Signal Graph -> GraphicsScene.
+
+        params:
+            dagnodes (list) - list of dagnode objects.
         """
         log.debug('WindowManager: sending %d nodes to scene...' % len(dagnodes))
         self.nodesAdded.emit(dagnodes)

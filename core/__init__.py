@@ -20,23 +20,16 @@ NodeBase            = nodes.NodeBase
 DagEdge             = nodes.DagEdge
 Connection          = nodes.Connection
 
-
 # attributes
 Attribute           = attributes.Attribute
 
-
-# Observer
-NodeManager 		= manager.NodeManager
-
-
+# Observers/Managers
+NodeManager         = manager.NodeManager
 DataParser          = metadata.DataParser 
 
 
 from . import graph
 reload(graph)
 
-
 # graph class
 Graph               = graph.Graph
-
-

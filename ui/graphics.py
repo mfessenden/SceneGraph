@@ -53,11 +53,18 @@ class GraphicsView(QtGui.QGraphicsView):
     def initializeSceneGraph(self, graph, opengl=False, debug=False):
         """
         Setup the GraphicsScene.
+
+        params:
+            graph (Graph) - graph instance.
+            opengl (bool) - render scene with OpenGL (beta).
+            debug (bool)  - activate debug mode.
         """
         if opengl:
             from PySide import QtOpenGL
             self.setViewport(QtOpenGL.QGLWidget())
             log.info('initializing OpenGL renderer.')
+
+        # pass the Graph instance to the GraphicsScene 
         scene = GraphicsScene(self, graph=graph, debug=debug)
         scene.setSceneRect(-5000, -5000, 10000, 10000)
         self.setScene(scene)
@@ -65,11 +72,14 @@ class GraphicsView(QtGui.QGraphicsView):
     def setUpdateMode(self, full):
         """
         Set the viewport update mode.
+
+        params:
+            full (bool) - use full update mode (slower).
         """
         if full:
-            self.setViewportUpdateMode(QtGui.QGraphicsView.SmartViewportUpdate)
-        else:
             self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+        else:
+            self.setViewportUpdateMode(QtGui.QGraphicsView.SmartViewportUpdate)            
 
     def updateGraphViewAttributes(self):
         """
@@ -82,6 +92,9 @@ class GraphicsView(QtGui.QGraphicsView):
         self.scene().network.graph['scene_size']=self.scene().sceneRect().getCoords()
 
     def connectSignals(self):
+        """
+        Connect widget signals.
+        """
         self.scene().changed.connect(self.sceneChangedAction)
         self.scene().sceneRectChanged.connect(self.sceneRectChangedAction)
         self.scene().selectionChanged.connect(self.sceneSelectionChangedAction)
@@ -309,12 +322,19 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.scenenodes  = dict()
 
     def initialize(self):
+        """
+        Initialize the scene nodes attributes and
+        clear the current scene.
+        """
         self.scenenodes=dict()
         self.clear()
 
     def addNodes(self, dagnodes):
         """
         Add dag nodes to the current scene.
+
+        params:
+            dagnodes (list) - list of dag node/edge objects.
         """
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
@@ -348,21 +368,43 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 log.warning('unknown node type: "%s"' % dag.__class__.__name__)
         return widgets
 
-    def getNode(self, val):
+    def getNodes(self):
         """
-        Get a named node from the scene.
+        Returns a list of node widgets.
+
+        returns:
+            (list) - list of NodeBase widgets.
+        """
+        widgets = []
+        for item in self.items():
+            if isinstance(item, node_widgets.Node):
+                widgets.append(item)
+        return widgets
+
+    def getNode(self, name):
+        """
+        Get a named node widget from the scene.
+
+        params:
+            name (str) - node name or id.
+
+        returns:
+            (NodeBase) - node widget.
         """
         if val in self.scenenodes:
-            return self.scenenodes.get(val)
+            return self.scenenodes.get(name)
 
         for id, node in self.scenenodes.iteritems():
             node_name = node.dagnode.name
-            if node_name == val:
+            if node_name == name:
                 return node
 
     def selectedNodes(self):
         """
         Returns a list of selected node widgets.
+
+        returns:
+            (list) - list of NodeBase widgets.
         """
         widgets = []
         selected = self.selectedItems()
@@ -371,19 +413,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 widgets.append(item)
         return widgets
 
-    def getNodes(self):
-        """
-        Returns a list of node widgets.
-        """
-        widgets = []
-        for item in self.items():
-            if isinstance(item, node_widgets.Node):
-                widgets.append(item)
-        return widgets
-
     def selectedEdges(self):
         """
         Returns a list of selected edge widgets.
+
+        returns:
+            (list) - list of Edge widgets.
         """
         edges = []
         selected = self.selectedItems()
@@ -395,6 +430,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def getEdges(self):
         """
         Returns a list of edge widgets.
+
+        returns:
+            (list) - list of Edge widgets.
         """
         edges = []
         for item in self.items():
@@ -407,13 +445,26 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def popNode(self, node):
         """
-        'Pop' a node from it's current connections.
+        'Pop' a node from its current chain.
+
+        params:
+            node (NodeBase) - node widget instance.
+
+        returns:
+            (bool) - node was properly removed from its chain.
         """
         return True
 
     def insertNode(self, node, edge):
         """
-        Insert a node into the selected edge.
+        Insert a node into the selected edge chain.
+
+        params:
+            node (NodeBase) - node widget instance.
+            edge (Edge) - edge widget instance.
+
+        returns:
+            (bool) - node was properly inserted into the current chain.
         """
         return True
 
@@ -426,41 +477,52 @@ class GraphicsScene(QtGui.QGraphicsScene):
             node (Node) - node widget.
         """
         if hasattr(node, 'dagnode'):
+            # update the 
             pos = (node.pos().x(), node.pos().y())
             node.setToolTip('(%d, %d)' % (pos[0], pos[1]))
             node.dagnode.pos = pos
+
+            # SIGNAL MANAGER (Scene -> Graph)
             self.manager.updateWidgets([node.dagnode,])           
 
-    def validateConnection(self, source_item, dest_item, force=True):
+    def validateConnection(self, src, dest, force=True):
         """
         When the mouse is released, validate the two connections.
+
+        params:
+            src  (Connection) - connection widget
+            dest (Connection) - connection widget
+            force (bool)      - force the connection
+
+        returns:
+            (bool) - connection is valid.
         """
-        if not hasattr(source_item, 'node_class') or not hasattr(dest_item, 'node_class'):
+        if not hasattr(src, 'node_class') or not hasattr(dest, 'node_class'):
             return False
 
-        if source_item.node_class not in ['connection'] or dest_item.node_class not in ['connection']:
+        if src.node_class not in ['connection'] or dest.node_class not in ['connection']:
             return False
 
-        if source_item.isInputConnection() or dest_item.isOutputConnection():
+        if src.isInputConnection() or dest.isOutputConnection():
             return False
 
         # don't let the user connect input/output on the same node!
-        if str(source_item.dagnode.id) == str(dest_item.dagnode.id):
+        if str(src.dagnode.id) == str(dest.dagnode.id):
             return False
 
         # check here to see if destination can take another connection
-        if hasattr(dest_item, 'is_connectable'):
-            if not dest_item.is_connectable:
+        if hasattr(dest, 'is_connectable'):
+            if not dest.is_connectable:
                 if not force:
                     return False
 
                 # remove the connected edge
-                dest_node = dest_item.node
+                dest_node = dest.node
                 edges = dest_node.listConnections().values()
 
                 for edge in edges:
                     edge_id = str(edge.dagnode.id)
-                    self.graph.removeEdge(UUID=edge_id)
+                    self.graph.removeEdge(id=edge_id)
                 return True
 
         return True

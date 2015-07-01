@@ -9,4 +9,4 @@ id: str: -p;
 name: str: node1;
 node_type: str: default: -p;
 color: color: 0,0,0;
-enabled: bool: true: -p;
+enabled: bool: true;

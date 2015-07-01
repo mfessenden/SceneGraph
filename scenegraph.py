@@ -532,28 +532,34 @@ class SceneGraphUI(form_class, base_class):
         self.tableView.setHidden(True)  
         if selected_nodes:
             node = selected_nodes[0]
-            self._selected_nodes = selected_nodes
-            dagnodes = [x.dagnode for x in selected_nodes]
 
-            self.updateAttributeEditor(dagnodes)
+            node_selection_changed = False
+            for n in selected_nodes:
+                if n not in self._selected_nodes:
+                    node_selection_changed = True
 
-            # populate the graph widget with downstream nodes
-            UUID = node.dagnode.id
-            if UUID:
-                ds_ids = self.graph.downstream(node.dagnode.name)
-                dagnodes = []
-                for nid in ds_ids:
-                    dnodes = self.graph.getDagNode(nnid)
-                    if dnodes:
-                        dagnodes.append(dnodes[0])
+            if node_selection_changed:
+                self._selected_nodes = selected_nodes
+                dagnodes = [x.dagnode for x in selected_nodes]
 
-                dagnodes = [x for x in reversed(dagnodes)]
-                self.tableModel.addNodes(dagnodes)
-                self.tableView.setHidden(False)
-                self.tableView.resizeRowToContents(0)
-                self.tableView.resizeRowToContents(1)
-            else:
-                self.removeAttributeEditorWidget()
+                self.updateAttributeEditor(dagnodes)
+
+                # populate the graph widget with downstream nodes
+                UUID = node.dagnode.id
+                if UUID:
+                    ds_ids = self.graph.downstream(node.dagnode.name)
+                    dagnodes = []
+                    for nid in ds_ids:
+                        dnodes = self.graph.getDagNode(nnid)
+                        if dnodes:
+                            dagnodes.append(dnodes[0])
+
+                    dagnodes = [x for x in reversed(dagnodes)]
+                    self.tableModel.addNodes(dagnodes)
+                    self.tableView.setHidden(False)
+                    self.tableView.resizeRowToContents(0)
+                    self.tableView.resizeRowToContents(1)
+
         else:
             self._selected_nodes = []
             self.removeAttributeEditorWidget()
@@ -578,14 +584,12 @@ class SceneGraphUI(form_class, base_class):
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
 
-        for node in dagnodes:
-            if isinstance(node, core.NodeBase):
-                attr_widget = self.getAttributeEditorWidget()
+        attr_widget = self.getAttributeEditorWidget()
                 
-                if not attr_widget:
-                    attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.view.scene().manager)                
-                    self.attributeScrollAreaLayout.addWidget(attr_widget)
-                attr_widget.setNodes([node])
+        if not attr_widget:
+            attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.view.scene().manager)                
+            self.attributeScrollAreaLayout.addWidget(attr_widget)
+        attr_widget.setNodes(dagnodes)
 
     def tableSelectionChangedAction(self):
         """
@@ -623,8 +627,9 @@ class SceneGraphUI(form_class, base_class):
         node = NodeWidget
         """
         selected_nodes = self.view.scene().selectedNodes()
+        dagnodes = [x.dagnode for x in selected_nodes]
         if selected_nodes:
-            self.updateAttributeEditor(node.dagnode)
+            self.updateAttributeEditor(dagnodes)
         self.updateOutput()
         self.saveTempFile()
 

@@ -43,7 +43,7 @@ QWidget{
 
 QDockWidget{
     font-weight: bold;
-    font-size: 9pt;
+    /*font-size: 9pt;*/
 }
 
 QDockWidget::title{
@@ -142,7 +142,7 @@ QMenu::item:disabled {
 
 QStatusBar {
     font-family: "Monospace";
-    font-size: 9pt;
+    /*font-size: 9pt;*/
 }
 
 QScrollBar:horizontal {
@@ -245,7 +245,7 @@ QLabel.ListHeader{
 
 QTextBrowser.Output{
     font: "Monospace";
-    font-size: medium;
+    /*font-size: medium;*/
     background-color: #252525;
 }
 
@@ -263,8 +263,8 @@ QTabBar::tab {
     border: 1px solid #292929;
     border-bottom-color: #323232; /* same as the pane color */
     min-width: 12ex;
-    min-height: 3ex;
-    font-size: 9pt;
+    min-height: 2ex;
+    /*font-size: 9pt;*/
     /*padding: 2px;*/
     padding-left: 6px;
     padding-right: 6px;
@@ -272,15 +272,14 @@ QTabBar::tab {
 
 QTabBar::tab::top{
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #434343, stop: 1.0 #343434);
-    padding-top: 0px;
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
-
+    padding-top: 3px;
 }
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #343434, stop: 1.0 #434343);
-    padding-bottom: 2px;
+    padding-bottom: 3px;
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
 }
@@ -306,4 +305,8 @@ QGroupBox::title {
     subcontrol-origin: margin;
     padding-left: 3px;
     font-weight: bold;
+}
+
+QGroupBox::title:flat {
+    font-style: italic;
 }

@@ -7,7 +7,7 @@ import networkx as nx
 from functools import partial
 
 
-from SceneGraph.core import log, NodeBase, DagEdge, NodeManager
+from SceneGraph.core import log, NodeBase, DagEdge
 
 
 class Graph(object):
@@ -23,7 +23,6 @@ class Graph(object):
         self.mode           = 'standalone'
         self.grid           = Grid(5, 5)
         self.manager        = None
-        self._manager       = NodeManager(self)
 
         # attributes for current nodes/dynamically loaded nodes
         self._node_types     = dict() 
@@ -101,6 +100,9 @@ class Graph(object):
         """
         Update the networkx graph from the UI.
         TODO: we need to store a weakref dict of dag nodes in the graph
+
+        params:
+            dagnodes (list) - list of dag node objects.
         """
         if type(dagnodes) not in [list, tuple]:
             dagnodes=[dagnodes,]
@@ -161,12 +163,12 @@ class Graph(object):
         """
         return self.network.graph.get('scene', None)
 
-    def setScene(self, scene=None):
+    def setScene(self, filename=None):
         """
         Set the current scene value.
 
         params:
-            scene (str) - scene file name.
+            filename (str) - scene file name.
 
         returns:
             (str) - scene file name.
@@ -174,8 +176,8 @@ class Graph(object):
         tmp_dir = os.getenv('TMPDIR')
         if not tmp_dir:
             log.warning('environment "TMPDIR" not set, please set and restart.')
-        if tmp_dir not in scene:
-            self.network.graph['scene'] = scene
+        if tmp_dir not in filename:
+            self.network.graph['scene'] = filename
         return self.getScene()
 
     def listNodes(self):
@@ -189,7 +191,7 @@ class Graph(object):
 
     def listNodeNames(self):
         """
-        Returns a list of node names in the scene
+        Returns a list of node names in the scene.
         
         returns:
             (list)
@@ -393,7 +395,6 @@ class Graph(object):
         self.grid.next()
 
         self.dagnodes[dag.id] = dag
-        #dag.MANAGER = self._manager
         
         # todo: figure out why I have to load this
         node_data = json.loads(str(dag))
@@ -464,7 +465,6 @@ class Graph(object):
         # create an edge
         edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
 
-        #edge.MANAGER = self._manager
         conn_str = self.parseEdgeName(edge)
         log.debug('parsing edge: "%s"' % conn_str)
 
