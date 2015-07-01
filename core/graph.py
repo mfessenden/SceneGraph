@@ -102,6 +102,8 @@ class Graph(object):
         Update the networkx graph from the UI.
         TODO: we need to store a weakref dict of dag nodes in the graph
         """
+        if type(dagnodes) not in [list, tuple]:
+            dagnodes=[dagnodes,]
         for dag in dagnodes:
             nid = dag.id
             if nid in self.network.nodes():
@@ -811,6 +813,7 @@ class Graph(object):
             filename - (str) file to read
         """
         if os.path.exists(filename):
+            log.info('reading scene file "%s"' % filename)
             raw_data = open(filename).read()
             tmp_data = json.loads(raw_data, object_pairs_hook=dict)
             self.network.clear()
@@ -827,6 +830,16 @@ class Graph(object):
             for node_attrs in nodes:
                 # get the node type
                 node_type = node_attrs.pop('node_type', 'default')
+
+                '''
+                inputs  = None
+                outputs = None
+                if '_inputs' in node_attrs:
+                    print '# inputs:  ', node_attrs.get('_inputs')
+
+                if '_outputs' in node_attrs:
+                    print '# outputs: ', node_attrs.get('_outputs')
+                '''
 
                 # add the dag node/widget
                 dag_node = self.addNode(node_type, **node_attrs)

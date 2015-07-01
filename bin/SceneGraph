@@ -20,6 +20,7 @@ if __name__ == "__main__":
     if 'linux' in sys.platform:
         app.setStyle("oxygen")
 
+
     #app.setStyle("gtk") # gtk is default
     sgui = scenegraph.SceneGraphUI(opengl=options.opengl)
     sgui.show()

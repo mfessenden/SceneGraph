@@ -55,6 +55,7 @@ QDockWidget::title{
     spacing: 3px; /* spacing between items in the tool bar */
     background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 #323232);
     padding-left: 12px;
+    border-radius: 4px;
 }
 
 QTabBar{
@@ -296,6 +297,9 @@ QTabBar::tab::top:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
 }
 
+QGroupBox {
+    font-weight: bold;
+}
 
 QGroupBox::title {
     subcontrol-position: top left;

@@ -151,6 +151,7 @@ class SceneGraphUI(form_class, base_class):
         self.scene_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posy))
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
+        self.toggleDebug()
 
     def initializeStylesheet(self):
         """
@@ -172,6 +173,7 @@ class SceneGraphUI(form_class, base_class):
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
+        self.fonts["ui"].setFamily('Verdana')
         self.fonts["ui"].setPointSize(size)
 
         self.fonts["output"] = QtGui.QFont('Monospace')
@@ -198,12 +200,8 @@ class SceneGraphUI(form_class, base_class):
         self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
 
-
         # maya online
-        #self.view.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(60, 60, 60, 255), QtCore.Qt.SolidPattern))
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-
-        # TESTING: disable
         self.view.scene().selectionChanged.connect(self.nodesSelectedAction)
 
     def connectSignals(self):
@@ -248,6 +246,8 @@ class SceneGraphUI(form_class, base_class):
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
         self.nodeListSelModel.selectionChanged.connect(self.nodesModelChangedAction)
         self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)
+
+        self.view.selectionChanged.connect(self.nodesSelectedAction)
 
     def initializeFileMenu(self):
         """
@@ -481,7 +481,8 @@ class SceneGraphUI(form_class, base_class):
 
     def toggleDebug(self):
         """
-        Set the debug environment variable.
+        Set the debug environment variable and set widget
+        debug values to match.
         """
         global SCENEGRAPH_DEBUG
         val = '0'
@@ -489,6 +490,18 @@ class SceneGraphUI(form_class, base_class):
             val = '1'
         os.environ["SCENEGRAPH_DEBUG"] = val
         SCENEGRAPH_DEBUG = val
+
+        node_widgets = self.view.scene().getNodes()
+        edge_widgets = self.view.scene().getEdges()
+
+        if node_widgets:
+            for widget in node_widgets:
+                widget.setDebug(eval(SCENEGRAPH_DEBUG))
+
+        if edge_widgets:
+            for ewidget in edge_widgets:
+                ewidget._debug = SCENEGRAPH_DEBUG
+
         self.view.scene().update()      
 
     def toggleEdgeTypes(self):
@@ -507,37 +520,36 @@ class SceneGraphUI(form_class, base_class):
         """
         Action that runs whenever a node is selected in the UI
         """
-        nodes = self.view.scene().selectedItems()
+        from SceneGraph import ui
+        # get a list of selected node widgets
+        selected_nodes = self.view.scene().selectedNodes()
 
         # clear the list view
         self.tableModel.clear()
         self.tableView.reset()
         self.tableView.setHidden(True)  
-        if nodes:
-            if len(nodes) == 1:                
-                node = nodes[0]
+        if selected_nodes:
+            node = selected_nodes[0]
+            self._selected_nodes = selected_nodes
+            dagnodes = [x.dagnode for x in selected_nodes]
 
-                if node not in self._selected_nodes:
-                    self._selected_nodes = nodes
+            self.updateAttributeEditor(dagnodes)
 
+            # populate the graph widget with downstream nodes
+            UUID = node.dagnode.id
+            if UUID:
+                ds_ids = self.graph.downstream(node.dagnode.name)
+                dagnodes = []
+                for nid in ds_ids:
+                    dnodes = self.graph.getDagNode(nnid)
+                    if dnodes:
+                        dagnodes.append(dnodes[0])
 
-                    if hasattr(node, 'node_class'):
-                        if node.node_class in ['dagnode']:
-                            self.updateAttributeEditor(node.dagnode)
-                            UUID = node.dagnode.UUID
-                            if UUID:
-                                ds_ids = self.graph.downstream(node.dagnode.name)
-                                dagnodes = []
-                                for nid in ds_ids:
-                                    dagnode = self.graph.getDagNode(UUID=nid)
-                                    if dagnode:
-                                        dagnodes.append(dagnode)
-
-                                dagnodes = [x for x in reversed(dagnodes)]
-                                self.tableModel.addNodes(dagnodes)
-                                self.tableView.setHidden(False)
-                                self.tableView.resizeRowToContents(0)
-                                self.tableView.resizeRowToContents(1)
+                dagnodes = [x for x in reversed(dagnodes)]
+                self.tableModel.addNodes(dagnodes)
+                self.tableView.setHidden(False)
+                self.tableView.resizeRowToContents(0)
+                self.tableView.resizeRowToContents(1)
             else:
                 self.removeAttributeEditorWidget()
         else:
@@ -556,22 +568,22 @@ class SceneGraphUI(form_class, base_class):
             if widget is not None:
                 widget.deleteLater()
 
-    def updateAttributeEditor(self, nodes, **attrs):
+    def updateAttributeEditor(self, dagnodes, **attrs):
         """
         Update the attribute editor with a selected node.
         """
-        if type(nodes) not in [list, tuple]:
-            nodes = [nodes,]
+        from SceneGraph.test import nodes
+        if type(dagnodes) not in [list, tuple]:
+            dagnodes = [dagnodes,]
 
-        for node in nodes:
-            if hasattr(node, 'Type'):
-                if node.Type == 65539:
-                    attr_widget = self.getAttributeEditorWidget()
-                    
-                    if not attr_widget:
-                        attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.graph, gui=self)                
-                        self.attributeScrollAreaLayout.addWidget(attr_widget)
-                    attr_widget.setNode(node)
+        for node in dagnodes:
+            if isinstance(node, core.NodeBase):
+                attr_widget = self.getAttributeEditorWidget()
+                
+                if not attr_widget:
+                    attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.view.scene().manager)                
+                    self.attributeScrollAreaLayout.addWidget(attr_widget)
+                attr_widget.setNodes([node])
 
     def tableSelectionChangedAction(self):
         """
@@ -610,10 +622,7 @@ class SceneGraphUI(form_class, base_class):
         """
         selected_nodes = self.view.scene().selectedNodes()
         if selected_nodes:
-            # only update the attribute editor if
-            # one node is selected
-            if len(selected_nodes) == 1:
-                self.updateAttributeEditor(node.dagnode)
+            self.updateAttributeEditor(node.dagnode)
         self.updateOutput()
         self.saveTempFile()
 

@@ -2,19 +2,20 @@
 import os
 from PySide import QtCore, QtGui
 from functools import partial
-from SceneGraph.test import nodes
 from SceneGraph import core
+from . import node_widgets
+
 # logger
 log = core.log
 
 from . import manager
 
 
-
 class GraphicsView(QtGui.QGraphicsView):
 
-    tabPressed    = QtCore.Signal()
-    statusEvent   = QtCore.Signal(dict)
+    tabPressed        = QtCore.Signal()
+    statusEvent       = QtCore.Signal(dict)
+    selectionChanged  = QtCore.Signal()
 
     def __init__(self, parent=None, ui=None, opengl=False, debug=False, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
@@ -51,7 +52,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def initializeSceneGraph(self, graph, opengl=False, debug=False):
         """
-        Setup the GraphicsScene
+        Setup the GraphicsScene.
         """
         if opengl:
             from PySide import QtOpenGL
@@ -282,8 +283,10 @@ class GraphicsView(QtGui.QGraphicsView):
         pass
         
     def sceneSelectionChangedAction(self):
-        #print '# GraphicsView: scene selection changed'
-        pass
+        """
+        Runs when the scene selection changes.
+        """
+        self.selectionChanged.emit()
 
 
 class GraphicsScene(QtGui.QGraphicsScene):
@@ -321,7 +324,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         for dag in dagnodes:
             if isinstance(dag, core.NodeBase):              
                 if dag.id not in self.scenenodes:
-                    widget = nodes.Node(dag)
+                    widget = node_widgets.Node(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
@@ -333,7 +336,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
             elif isinstance(dag, core.DagEdge):              
                 if dag.id not in self.scenenodes:
-                    widget = nodes.Edge(dag)
+                    widget = node_widgets.Edge(dag)
 
                     # set the debug mode
                     widget.setDebug(self.debug)
@@ -361,12 +364,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Returns a list of selected node widgets.
         """
-        dagnodes = []
+        widgets = []
         selected = self.selectedItems()
         for item in selected:
-            if isinstance(item, nodes.Node):
-                dagnodes.append(item)
-        return dagnodes
+            if isinstance(item, node_widgets.Node):
+                widgets.append(item)
+        return widgets
 
     def getNodes(self):
         """
@@ -374,7 +377,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         widgets = []
         for item in self.items():
-            if isinstance(item, nodes.Node):
+            if isinstance(item, node_widgets.Node):
                 widgets.append(item)
         return widgets
 
@@ -385,7 +388,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         edges = []
         selected = self.selectedItems()
         for item in selected:
-            if isinstance(item, ndoes.Edge):
+            if isinstance(item, node_widgets.Edge):
                 edges.append(item)
         return edges
 
@@ -395,7 +398,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         edges = []
         for item in self.items():
-            if isinstance(item, nodes.Edge):
+            if isinstance(item, node_widgets.Edge):
                 edges.append(item)
         return edges
 
@@ -426,8 +429,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             pos = (node.pos().x(), node.pos().y())
             node.setToolTip('(%d, %d)' % (pos[0], pos[1]))
             node.dagnode.pos = pos
-            self.manager.updateWidgets([node.dagnode,])
-            
+            self.manager.updateWidgets([node.dagnode,])           
 
     def validateConnection(self, source_item, dest_item, force=True):
         """

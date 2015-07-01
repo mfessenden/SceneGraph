@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import sys
 from PySide import QtCore, QtGui
-
+from SceneGraph.core import log
+from SceneGraph import options
 
 """
 pyqtgraph:
@@ -46,21 +47,24 @@ class Node(QtGui.QGraphicsObject):
         # attributes
         self.bufferX         = 3
         self.bufferY         = 3
-        self.orientation     = 'horizontal'           # connect on sides/top    
+        self.pen_width       = 1.5                    # pen width for NodeBackground  
 
+        # widget colors
         self._l_color        = [5, 5, 5, 255]         # label color
         self._p_color        = [10, 10, 10, 255]      # pen color (outer rim)
         self._s_color        = [0, 0, 0, 60]          # shadow color
 
-        # globals
+        # widget globals
         self._debug          = False
-        self.is_enabled      = True                   # node is enabled (will eval)  
-        self.is_expanded     = False                  # node is expanded 
         self.is_selected     = False                  # indicates that the node is selected
         self.is_hover        = False                  # indicates that the node is under the cursor
         self._render_effects = True                   # enable fx
-
         self._label_coord    = [0,0]                  # default coordiates of label
+
+        # connections widget
+        self.connections     = dict(input  = dict(),
+                                    output = dict(),
+                                    )
 
         self.setHandlesChildEvents(False)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
@@ -81,10 +85,13 @@ class Node(QtGui.QGraphicsObject):
         # set node position
         self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
 
+        # build the connection widgets.
+        self.buildConnections()
+
     #- Attributes ----
     @property
     def width(self):
-        return self.dagnode.width
+        return float(self.dagnode.width)
         
     @width.setter
     def width(self, val):
@@ -92,7 +99,7 @@ class Node(QtGui.QGraphicsObject):
 
     @property
     def height(self):
-        return self.dagnode.height
+        return float(self.dagnode.height)
 
     @height.setter
     def height(self, val):
@@ -111,6 +118,33 @@ class Node(QtGui.QGraphicsObject):
         Return the 'node color' (background color)
         """
         self.dagnode.color = val
+
+    @property
+    def orientation(self):
+        return self.dagnode.orientation
+
+    @orientation.setter
+    def orientation(self, val):
+        self.dagnode.orientation = val
+        return self.dagnode.orientation
+
+    @property
+    def is_enabled(self):
+        return self.dagnode.enabled
+
+    @is_enabled.setter
+    def is_enabled(self, val):
+        self.dagnode.enabled = val
+        return self.dagnode.enabled
+
+    @property
+    def is_expanded(self):
+        return self.dagnode.expanded
+
+    @is_expanded.setter
+    def is_expanded(self, val):
+        self.dagnode.expanded = val
+        return self.dagnode.expanded
 
     #- TESTING ---
     def labelDoubleClickedEvent(self):
@@ -149,6 +183,7 @@ class Node(QtGui.QGraphicsObject):
         if expanded:
             diffy = -diffy
         self.translate(0, diffy)
+        self.nodeChanged.emit(self)
         QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
 
     def boundingRect(self):
@@ -180,7 +215,48 @@ class Node(QtGui.QGraphicsObject):
         return QtCore.QPointF(-self.width/2, -self.height/2 - self.bufferY)
 
     @property
+    def input_pos(self):
+        """
+        Return the first input connection center point.
+
+        returns:
+            (QPointF) - input connection position.
+        """
+        rect = self.boundingRect()
+        width = rect.width()
+        height = rect.height()
+        ypos = -rect.center().y()
+        if self.is_expanded:         
+            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+        return QtCore.QPointF(-width/2, ypos)
+
+    @property
+    def output_pos(self):
+        """
+        Return the first output connection center point.
+
+        returns:
+            (QPointF) - output connection position.
+        """
+        rect = self.boundingRect()
+        width = rect.width()
+        height = rect.height()
+        ypos = -rect.center().y()
+        if self.is_expanded:         
+            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+        return QtCore.QPointF(width/2, ypos)
+
+    @property
     def bg_color(self):
+        """
+        Returns the widget background color.
+
+        returns:
+            (QColor) - widget background color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[125, 125, 125])
+
         if self.is_selected:
             return QtGui.QColor(*[255, 183, 44])
 
@@ -191,21 +267,155 @@ class Node(QtGui.QGraphicsObject):
 
     @property
     def pen_color(self):
+        """
+        Returns the widget pen color.
+
+        returns:
+            (QColor) - widget pen color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[40, 40, 40])
         if self.is_selected:
             return QtGui.QColor(*[251, 210, 91])
         return QtGui.QColor(*self._p_color)
 
     @property
     def label_color(self):
+        """
+        Returns the widget label color.
+
+        returns:
+            (QColor) - widget label color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[50, 50, 50])
         if self.is_selected:
             return QtGui.QColor(*[88, 0, 0])
         return QtGui.QColor(*self._l_color)
 
     @property
     def shadow_color(self):
+        """
+        Returns the node shadow color, as dictated
+        by the dagnode.
+
+        returns:
+            (QColor) - shadow color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[35, 35, 35, 60])
         if self.is_selected:
             return QtGui.QColor(*[104, 56, 0, 60])
         return QtGui.QColor(*self._s_color)
+
+    #- Connections -----
+    @property
+    def inputs(self):
+        """
+        Returns a list of dagnode input connections.
+
+        returns:
+            (list) - list of input connections.
+        """
+        return self.dagnode.inputs
+
+    @property
+    def outputs(self):
+        """
+        Returns a list of dagnode output connections.
+
+        returns:
+            (list) - list of output connections.
+        """
+        return self.dagnode.outputs
+
+    def inputConnections(self):
+        """
+        Returns a list of input connection widgets.
+
+        returns:
+            (list) - list of input connection widgets.
+        """
+        return self.connections.get('input').values()
+
+    def outputConnections(self):
+        """
+        Returns a list of output connection widgets.
+
+        returns:
+            (list) - list of output connection widgets.
+        """
+        return self.connections.get('output').values()
+
+    def getConnection(self, name):
+        """
+        Returns a named connection.
+
+        returns:
+            (Connection) - connection widget.
+        """
+        if name not in self.inputs and name not in self.outputs:
+            return 
+
+        if name in self.inputs:
+            return self.connections.get('input').get(name)
+
+        if name in self.outputs:
+            return self.connections.get('output').get(name)
+
+    def buildConnections(self):
+        """
+        Build the nodes' connection widgets.
+        """
+        for input_name in self.dagnode.inputs:            
+            # connection dag node
+            input_dag = self.dagnode._inputs.get(input_name)
+            input_widget = Connection(self, input_dag, input_name, **input_dag)
+            self.connections['input'][input_name] = input_widget
+
+        for output_name in self.dagnode.outputs:
+            # connection dag node
+            output_dag = self.dagnode._outputs.get(output_name)
+            output_widget = Connection(self, output_dag, output_name, **output_dag)
+            self.connections['output'][output_name] = output_widget
+
+    def removeConnectionWidgets(self):
+        """
+        Remove all of the connection widgets.
+        """
+        for input_name in self.connections.get('input'):            
+            input_widget = self.connections.get('input').get(input_name)
+            self.scene().removeItem(input_widget)
+
+        for output_name in self.dagnode.outputs:
+            output_widget = self.connections.get('output').get(output_name)
+            self.scene().removeItem(output_widget)
+
+    def updateConnections(self):
+        """
+        Update all of the connection widgets.
+        """
+        i = 0
+        for input_name in self.connections.get('input'):            
+            input_widget = self.connections.get('input').get(input_name)
+            input_pos = self.input_pos
+            y_offset1 = 0
+            if i:
+                y_offset1 = self.dagnode.height_collapsed * i
+            input_pos.setY(input_pos.y() + y_offset1)
+            input_widget.setPos(input_pos)
+            i += 1
+
+        o = 0
+        for output_name in self.dagnode.outputs:
+            output_widget = self.connections.get('output').get(output_name)
+            output_pos = self.output_pos
+            y_offset2 = 0
+            if o:
+                y_offset2 = self.dagnode.height_collapsed * o
+            output_pos.setY(output_pos.y() + y_offset2)
+            output_widget.setPos(output_pos)
+            o += 1
 
     def paint(self, painter, option, widget):
         """
@@ -222,6 +432,7 @@ class Node(QtGui.QGraphicsObject):
 
         # translate the label
         self.label.setPos(self.label_pos)
+        self.updateConnections()
 
         if self._render_effects:
             # background
@@ -238,11 +449,33 @@ class Node(QtGui.QGraphicsObject):
             self.lblshd.setOffset(4,4)
             self.label.setGraphicsEffect(self.lblshd)
 
+        if self._debug:
+            debug_color = QtGui.QColor(*[0, 0, 0])
+            painter.setBrush(QtCore.Qt.NoBrush)
+
+            green_color = QtGui.QColor(0, 255, 0)
+            painter.setPen(QtGui.QPen(green_color, 0.5, QtCore.Qt.SolidLine))
+            painter.drawEllipse(self.output_pos, 4, 4)
+
+            yellow_color = QtGui.QColor(255, 255, 0)
+            painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
+            painter.drawEllipse(self.input_pos, 4, 4)
+
+
     def setDebug(self, val):
+        """
+        Set the debug value of all child nodes.
+        """
+        vs = 'true'
+        if not val:
+            vs = 'false'
         if val != self._debug:
+            log.info('setting "%s" debug: %s' % (self.dagnode.name, vs))
             self._debug = val
-            self.label._debug = val
-            self.background._debug = val
+            for item in self.childItems():
+                if hasattr(item, '_debug'):
+                    item._debug = val
+
 
 
 class NodeLabel(QtGui.QGraphicsObject):
@@ -265,10 +498,6 @@ class NodeLabel(QtGui.QGraphicsObject):
         self.label = QtGui.QGraphicsTextItem(self.dagnode.name, self)
         self._document = self.label.document()
 
-        # flags/signals
-        self.setFlags(QtGui.QGraphicsItem.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
-        self.setAcceptedMouseButtons(QtCore.Qt.LeftButton)
-
         self._document.setMaximumBlockCount(1)
         self._document.contentsChanged.connect(self.nodeNameChanged)
 
@@ -279,12 +508,6 @@ class NodeLabel(QtGui.QGraphicsObject):
         self.rect_item.pen().setStyle(QtCore.Qt.DashLine)
         self.rect_item.stackBefore(self.label)
         self.setHandlesChildEvents(False)
-
-    def initDocument(self):
-        cursor = self.label.textCursor()
-        cursor.setPosition(0, QtGui.QTextCursor.KeepAnchor)
-        cursor.select(QtGui.QTextCursor.Document)
-        self.label.setTextCursor(cursor)
 
     @QtCore.Slot()
     def nodeNameChanged(self):
@@ -302,18 +525,6 @@ class NodeLabel(QtGui.QGraphicsObject):
     @property
     def is_editable(self):
         return self.label.textInteractionFlags() == QtCore.Qt.TextEditorInteraction
-
-    def mouseDoubleClickEvent(self, event):
-        if self.label.textInteractionFlags() == QtCore.Qt.NoTextInteraction:
-            self.label.setTextInteractionFlags(QtCore.Qt.TextEditorInteraction)
-            self.initDocument()
-        else:
-            if self.label.textCursor():
-                c = self.label.textCursor()
-                c.clearSelection()
-                self.label.setTextCursor(c)
-            self.label.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
-        QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
 
     def keyPressEvent(self, event):
         print '# NodeLabel: keyPressEvent'
@@ -354,6 +565,10 @@ class NodeLabel(QtGui.QGraphicsObject):
         label_color = self.node.label_color
         label_italic = self._font_italic
 
+        # diabled fonts always render italicized
+        if not self.node.is_enabled:
+            label_italic = True
+
         #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         qfont = QtGui.QFont(self._font)
         qfont.setPointSize(self._font_size)
@@ -383,6 +598,10 @@ class NodeBackground(QtGui.QGraphicsItem):
     @property
     def node(self):
         return self.parentItem()
+
+    @property 
+    def pen_width(self):
+        return self.node.pen_width
 
     def boundingRect(self):
         return self.node.boundingRect()
@@ -421,7 +640,7 @@ class NodeBackground(QtGui.QGraphicsItem):
         # pen color
         pcolor = self.node.pen_color
         qpen = QtGui.QPen(pcolor)
-        qpen.setWidthF(1.5)
+        qpen.setWidthF(self.pen_width)
 
         painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(qpen)
@@ -539,27 +758,90 @@ class Connection(QtGui.QGraphicsObject):
     nodeChanged         = QtCore.Signal(object)
     PRIVATE             = []
 
-    def __init__(self, parent, is_input=True, **kwargs):
+    def __init__(self, parent, conn_node, name, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
+        self.dagnode        = parent.dagnode
+        self.dagconn        = conn_node
+
+        self.name           = name
+        self.connections    = dict()
+        self.draw_radius    = 4.0
+        self.radius         = self.draw_radius*4
+        self.buffer         = 2.0
+        self.node_shape     = 'circle'
+        
+        self.draw_label     = False                  # draw a connection name label
+        self.is_proxy       = False                  # connection is a proxy for several connections
+
+        # widget colors
+        self._l_color       = [5, 5, 5, 255]         # label color
+        self._s_color       = [0, 0, 0, 60]          # shadow color
+        self._p_color       = [178, 187, 28, 255]    # proxy node color
+
+        # connection state
+        self._debug         = False
+        self.is_selected    = False
+        self.is_hover       = False
+
         self.setAcceptHoverEvents(True)
-        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemNegativeZStacksBehindParent)
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
+
+    def __repr__(self):
+        return 'Connection("%s.%s")' % (self.dagnode.name, self.name)
 
     @property
-    def name(self):
-        return '%s.%s' % (self.dagnode.name, self.attribute)  
+    def node(self):
+        return self.parentItem()
 
     @property
-    def node_class(self):
-        return 'connection'  
+    def is_input(self):
+        return self.dagconn.is_input
+
+    @is_input.setter
+    def is_input(self, val):
+        self.dagnode.is_input = val
+        return self.dagconn.is_input
 
     @property
     def is_connected(self):
         return len(self.connections)  
 
     @property
-    def enabled(self):
-        return self.node.enabled
+    def orientation(self):
+        return self.dagnode.orientation
+
+    @orientation.setter
+    def orientation(self, val):
+        self.dagnode.orientation = val
+        return self.dagnode.orientation
+
+    @property
+    def is_enabled(self):
+        return self.dagnode.enabled
+
+    @is_enabled.setter
+    def is_enabled(self, val):
+        self.dagnode.enabled = val
+        return self.dagnode.enabled
+
+    @property
+    def is_expanded(self):
+        return self.dagnode.expanded
+
+    @is_expanded.setter
+    def is_expanded(self, val):
+        self.dagnode.expanded = val
+        return self.dagnode.expanded
+
+    @property
+    def max_connections(self):
+        return self.dagconn.max_connections
+
+    @max_connections.setter
+    def max_connections(self, val):
+        self.dagconn.max_connections = val
+        return self.max_connections
 
     @property
     def is_connectable(self):
@@ -567,14 +849,14 @@ class Connection(QtGui.QGraphicsObject):
         Returns true if the connection can take a connection.
          0 - unlimited connections
         """
-        if self.max_conn == 0:
+        if self.max_connections == 0:
             return True
-        return len(self.connections) < self.max_conn
+        return len(self.connections) < self.max_connections
 
     @property
-    def UUID(self):
+    def id(self):
         if self.dagnode:
-            return str(self.dagnode.UUID)
+            return str(self.dagnode.id)
         return None
 
     def type(self):
@@ -583,8 +865,112 @@ class Connection(QtGui.QGraphicsObject):
         """
         return Connection.Type
 
+    @property
+    def color(self):
+        """
+        Return the 'node color' (background color)
+        """
+        return self.dagconn.color
+
+    @color.setter
+    def color(self, val):
+        """
+        Return the 'node color' (background color)
+        """
+        self.dagconn.color = val
+        return self.color
+
+    @property
+    def bg_color(self):
+        """
+        Returns the connection background color.
+
+        returns:
+            (QColor) - widget background color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[125, 125, 125])
+
+        if self.is_selected:
+            return QtGui.QColor(*[178, 27, 32])
+
+        if self.is_hover:
+            return QtGui.QColor(*[243, 118, 111])
+
+        return QtGui.QColor(*self.color)
+
+    @property
+    def pen_color(self):
+        """
+        Returns the connection pen color.
+
+        returns:
+            (QColor) - widget pen color.
+        """
+        return self.bg_color.darker(250)
+
+    @property
+    def label_color(self):
+        """
+        Returns the widget label color.
+
+        returns:
+            (QColor) - widget label color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[50, 50, 50])
+        if self.is_selected:
+            return QtGui.QColor(*[88, 0, 0])
+        return QtGui.QColor(*self._l_color)
+
+    def isInputConnection(self):
+        """
+        Returns true if the node is an input
+        connection in the graph.
+
+        returns:
+            (bool) - widget is an input connection.
+        """
+        if self.is_input == True:
+            return True
+        return False
+
+    def isOutputConnection(self):
+        """
+        Returns true if the node is an output
+        connection in the graph.
+
+        returns:
+            (bool) - widget is an output connection.
+        """
+        if self.is_input == True:
+            return False
+        return True
+
+    #- Events ----
+    def hoverLeaveEvent(self, event):
+        """
+        QGraphicsSceneHoverEvent.pos
+        """
+        if self.isSelected():
+            self.setSelected(False)
+        QtGui.QGraphicsObject.hoverLeaveEvent(self, event)
+
     def boundingRect(self):
-        return self.bounds.mapRectToParent(self.bounds.boundingRect())
+        """
+        Return the bounding rect for the connection (plus selection buffer).
+        """
+        r = self.radius
+        b = self.buffer
+        return QtCore.QRectF(-r/2 - b, -r/2 - b, r + b*2, r + b*2)
+
+    def drawRect(self):
+        """
+        Return the bounding rect for the connection.
+        """
+        r = self.draw_radius
+        b = self.buffer
+        return QtCore.QRectF(-r/2 - b, -r/2 - b, r + b*2, r + b*2)
 
     def shape(self):
         """
@@ -599,47 +985,40 @@ class Connection(QtGui.QGraphicsObject):
         """
         Draw the connection widget.
         """
-        # DEBUG
-        if self.debug_mode:
-            conn_color = QtGui.QColor(175, 229, 168)
-            if self.isInputConnection():
-                conn_color = QtGui.QColor(255, 255, 190)
-            painter.setBrush(QtCore.Qt.NoBrush)
-            painter.setPen(QtGui.QPen(conn_color, 0.5, QtCore.Qt.DashLine))
-            painter.drawRect(self.boundingRect())
+        self.is_selected = False
+        self.is_hover = False
 
-        self.setToolTip('%s.%s' % (self.dagnode.name, self.attribute))
+        # set node selection/hover states
+        if option.state & QtGui.QStyle.State_Selected:
+            self.is_selected = True
+
+        if option.state & QtGui.QStyle.State_MouseOver:
+            self.is_hover = True
+
+        self.setToolTip('%s.%s\n(%.2f, %.2f)' % (self.dagnode.name, self.name, self.pos().x(), self.pos().y()))
+
         # background
         gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)
-
-        color = self.color_input
-        if self.isOutputConnection():
-            color = self.color_output
-
-        if option.state & QtGui.QStyle.State_Selected or option.state & QtGui.QStyle.State_MouseOver:
-            color = [255, 157, 0]
-
-        if not self.enabled:
-            color = [125, 125, 125  ]
-        top_color = QtGui.QColor(*color)
-        btm_color = top_color.darker(200)
-
-        gradient.setColorAt(0, top_color)
-        gradient.setColorAt(1, btm_color)
+        gradient.setColorAt(0, self.bg_color)
+        gradient.setColorAt(1, self.bg_color.darker(125))
         
         painter.setRenderHints(QtGui.QPainter.Antialiasing)
 
-        painter.setPen(QtGui.QPen(QtGui.QBrush(btm_color), 0.5, QtCore.Qt.SolidLine))
+        painter.setPen(QtGui.QPen(QtGui.QBrush(self.pen_color), 1.5, QtCore.Qt.SolidLine))
         painter.setBrush(QtGui.QBrush(gradient))
-        painter.drawEllipse(QtCore.QPointF(0,0), self.draw_radius, self.draw_radius)
-        #painter.drawEllipse(self.boundingRect())
 
-    def isInputConnection(self):
-        if self.is_input == True:
-            return True
-        return False
-
-    def isOutputConnection(self):
-        if self.is_input == True:
-            return False
-        return True
+        # draw a circle
+        if self.node_shape == 'circle':
+            painter.drawEllipse(QtCore.QPointF(0,0), self.draw_radius, self.draw_radius)
+        elif self.node_shape == 'pie':
+            # pie drawing
+            start_angle = 16*90
+            if self.isOutputConnection():
+                start_angle = start_angle * -1
+            painter.drawPie(self.drawRect(), start_angle, 16*180)
+        
+        # visualize the bounding rect if _debug attribute is true
+        if self._debug:
+            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.setPen(QtGui.QPen(self.bg_color, 0.5, QtCore.Qt.DashLine))
+            painter.drawRect(self.boundingRect())

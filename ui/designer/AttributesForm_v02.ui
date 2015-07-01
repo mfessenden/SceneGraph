@@ -6,66 +6,134 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>562</width>
-    <height>571</height>
+    <width>413</width>
+    <height>455</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QGroupBox" name="groupBox">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>20</y>
-     <width>401</width>
-     <height>121</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Transform</string>
-   </property>
-   <property name="flat">
-    <bool>true</bool>
-   </property>
-   <layout class="QFormLayout" name="formLayout">
-    <item row="0" column="0">
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Pos:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QWidget" name="positionWidget" native="true">
-      <layout class="QHBoxLayout" name="mainLayout">
-       <property name="spacing">
-        <number>3</number>
-       </property>
-       <property name="margin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QLineEdit" name="pos1_edit"/>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="pos2_edit"/>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="widthLabel">
-      <property name="text">
-       <string>Width:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QLineEdit" name="widthLineEdit"/>
-    </item>
-   </layout>
-  </widget>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QGroupBox" name="mainGroup">
+     <property name="title">
+      <string>Node:</string>
+     </property>
+     <layout class="QVBoxLayout" name="mainGroupLayout">
+      <item>
+       <widget class="QGroupBox" name="transformGroup">
+        <property name="title">
+         <string>Transform</string>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+        <layout class="QFormLayout" name="transformGroupLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="pos_label1">
+           <property name="text">
+            <string>Pos:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QWidget" name="positionWidget" native="true">
+           <layout class="QHBoxLayout" name="postitionWidgetLayout">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="margin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLineEdit" name="pos1_edit"/>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="pos2_edit"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="widthLabel">
+           <property name="text">
+            <string>Width:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="widthLineEdit"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="colorGroup">
+        <property name="title">
+         <string>Color</string>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+        <layout class="QFormLayout" name="colorGroupForm">
+         <property name="fieldGrowthPolicy">
+          <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="pos_label2">
+           <property name="text">
+            <string>Pos:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QWidget" name="positionWidget2" native="true">
+           <layout class="QHBoxLayout" name="postitionWidget2Layout">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="margin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLineEdit" name="pos1_edit_2"/>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="pos2_edit_2"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="widthLabel_2">
+           <property name="text">
+            <string>Width:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="widthLineEdit_2"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

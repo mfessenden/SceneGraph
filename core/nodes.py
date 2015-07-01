@@ -6,7 +6,7 @@ from collections import MutableMapping
 import copy
 import sys
 from SceneGraph.core import log
-
+from SceneGraph.options import SCENEGRAPH_NODE_PATH
 
 
 """
@@ -102,23 +102,24 @@ class Container(MutableMapping):
 
 
 class NodeBase(MutableMapping):
-    reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes']
+    reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes', '_metadata']
     def __init__(self, *args, **kwargs):
 
         self._data              = dict()
         self._inputs            = dict()
         self._outputs           = dict()
         self._attributes        = dict()
-
+        self._metadata          = os.path.join(SCENEGRAPH_NODE_PATH, 'default.mtd')
+        
         self.name               = kwargs.pop('name', 'node1')
         self.node_type          = kwargs.pop('node_type', 'default')
 
         # reference to the node widget.
         self._widget            = None  
 
-        self.width              = kwargs.pop('width', 100)
-        self.height_collapsed   = kwargs.pop('height_collapsed', 15)
-        self.height_expanded    = kwargs.pop('height_expanded', 175)
+        self.width              = kwargs.pop('width', 100.0)
+        self.height_collapsed   = kwargs.pop('height_collapsed', 15.0)
+        self.height_expanded    = kwargs.pop('height_expanded', 175.0)
 
         self.color              = kwargs.pop('color', [172, 172, 172, 255])
         self.expanded           = kwargs.pop('expanded', False)
@@ -127,8 +128,16 @@ class NodeBase(MutableMapping):
         self.enabled            = kwargs.pop('enabled', True)
         self.orientation        = kwargs.pop('orientation', 'horizontal')
 
-        self.addInput(name='input')
-        self.addOutput(name='output')
+        # connections
+        input_connections       = kwargs.pop('_inputs', {'input':{}})
+        output_connections      = kwargs.pop('_outputs', {'output':{}})
+
+        # add input & output connections
+        for input_name, input_attrs in input_connections.iteritems():
+            self.addInput(name=input_name, **input_attrs)
+
+        for output_name, output_attrs in output_connections.iteritems():
+            self.addOutput(name=output_name, **output_attrs)
 
         # node unique ID
         UUID = kwargs.pop('id', None)
@@ -223,6 +232,9 @@ class NodeBase(MutableMapping):
 
         params:
             name (str) - name of input.
+
+        returns:
+            (Connection) - connection node.
         """
         if name in self._inputs:
             return self._inputs.get(name)
@@ -236,7 +248,8 @@ class NodeBase(MutableMapping):
             (object) - Connection object
         """
         name = kwargs.pop('name', 'output')
-        node = Connection(self, type='output', **kwargs)
+        ctype = kwargs.pop('type', 'output')
+        node = Connection(self, type=ctype, **kwargs)
         self._outputs.update({name:node})
         return node
 
@@ -246,6 +259,9 @@ class NodeBase(MutableMapping):
 
         params:
             name (str) - name of output.
+
+        returns:
+            (Connection) - connection node.
         """
         if name in self._outputs:
             return self._outputs.get(name)
@@ -292,6 +308,24 @@ class NodeBase(MutableMapping):
                 self._outputs.update({new:node})
                 return True
         return False
+
+    def removeConnection(self, name):
+        """
+        Remove a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (bool) - connection was removed.
+        """
+        conn = self.getConnection(name)
+        if conn:
+            if conn.is_input:
+                self._inputs.pop(name)
+            else:
+                self._outputs.pop(name)
+            del conn
 
     def allConnections(self):
         """
@@ -516,6 +550,7 @@ class DagEdge(MutableMapping):
 
 
 class Connection(MutableMapping):
+    
     reserved = ["_data", "_edges", "_node"]
     def __init__(self, *args, **kwargs):
 
@@ -524,8 +559,8 @@ class Connection(MutableMapping):
 
         self._node             = None
         self.type              = kwargs.get('type', 'input') 
-        self.input_color       = kwargs.pop('input_color', [255,255,51])
-        self.output_color      = kwargs.pop('output_color', [0,204,0])
+        self.input_color       = kwargs.pop('input_color', [255, 255, 51])
+        self.output_color      = kwargs.pop('output_color', [0, 204, 0])
         self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
         self.is_input          = True if self.type == 'input' else False
 
@@ -540,7 +575,6 @@ class Connection(MutableMapping):
         self.update(**kwargs)
 
     def __str__(self):
-        """printed"""
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
@@ -645,9 +679,9 @@ class Connection(MutableMapping):
     def color(self, value):
         if self.type == 'input':
             self.input_color = value
-            return
+            return self.color
         self.output_color = val
-        return
+        return self.color
 
     @property 
     def node(self):
