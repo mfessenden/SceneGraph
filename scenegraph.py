@@ -152,6 +152,7 @@ class SceneGraphUI(form_class, base_class):
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
         self.toggleDebug()
+        self.setFont(self.fonts.get("ui"))
 
     def initializeStylesheet(self):
         """
@@ -167,13 +168,14 @@ class SceneGraphUI(form_class, base_class):
         """
         Initializes the fonts attribute
         """
+        family = 'Verdana'
         if options.PLATFORM == 'MacOSX':
             size = 11
-            font = 'Menlo'
+            family = 'Menlo'
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
-        self.fonts["ui"].setFamily('Verdana')
+        self.fonts["ui"].setFamily(family)
         self.fonts["ui"].setPointSize(size)
 
         self.fonts["output"] = QtGui.QFont('Monospace')

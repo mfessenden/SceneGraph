@@ -574,6 +574,7 @@ class NodeLabel(QtGui.QGraphicsObject):
         qfont.setPointSize(self._font_size)
         qfont.setBold(self._font_bold)
         qfont.setItalic(label_italic)
+        qfont.setFamily("Courier")
         self.label.setFont(qfont)
 
         self.label.setDefaultTextColor(label_color)

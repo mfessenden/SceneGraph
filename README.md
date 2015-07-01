@@ -18,7 +18,7 @@
     scene = sgui.view.scene()
     nodes = scene.getNodes()
 
-    # get all of the nodes (dag nodes)
+    # query all of the current dag nodes
     dags = graph.getNodes()
 
     # return a named dag node

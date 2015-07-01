@@ -5,14 +5,14 @@ log = logger.myLogger()
 
 from . import nodes
 from . import attributes
-from . import commands
 from . import manager
+from . import metadata
 
 
 #reload(nodes)
 reload(attributes)
-reload(commands)
 reload(manager)
+reload(metadata)
 
 
 # nodes
@@ -25,13 +25,11 @@ Connection          = nodes.Connection
 Attribute           = attributes.Attribute
 
 
-# undo commands
-NodeDataCommand     = commands.NodeDataCommand
-CommandMove         = commands.CommandMove
-
-
 # Observer
 NodeManager 		= manager.NodeManager
+
+
+DataParser          = metadata.DataParser 
 
 
 from . import graph

@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 from PySide import QtCore, QtGui
 from SceneGraph import util
-from SceneGraph.core import log
+from SceneGraph.core import log, DataParser
 
 
 class AttributeEditor(QtGui.QWidget):
 
     def __init__(self, parent=None, **kwargs):
         super(AttributeEditor, self).__init__(parent)
-        from SceneGraph.core import metadata
-        reload(metadata)
+
+        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
         self._nodes         = []
-        self._parser        = metadata.DataParser()
+        self._parser        = DataParser()
         self._show_private  = False
 
         self.setObjectName("AttributeEditor")
@@ -31,6 +31,9 @@ class AttributeEditor(QtGui.QWidget):
     def initializeUI(self):
         self.mainGroup.setHidden(True)
         self.mainGroup.setTitle("Node:")
+
+    def sizeHint(self):
+        return QtCore.QSize(270, 550)
 
     def connectSignals(self):
         pass
@@ -57,11 +60,15 @@ class AttributeEditor(QtGui.QWidget):
                     attr_type = attr_attrs.pop('type')
                     default_value = attr_attrs.pop('default_value', None)
                     
-                    editor = map_widget(attr_type, parent=group, name=attr_name)
+                    # map the correct editor widget
+                    editor = map_widget(attr_type, parent=group, name=attr_name, ui=self)
                     if editor:
                         editor.setNodes(self.nodes)
                         grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
                         grpLayout.setWidget(row, QtGui.QFormLayout.FieldRole, editor)
+
+                        # signal here when editor changes
+                        editor.valueChanged.connect(self.nodeAttributeChanged)
                         row += 1     
             
             self.mainGroupLayout.addWidget(group)
@@ -70,9 +77,45 @@ class AttributeEditor(QtGui.QWidget):
         self.mainLayout.addWidget(self.mainGroup)
         self.mainGroup.setHidden(False)
 
+    #- Events -----
+    def nodeAttributeChanged(self, editor):
+        """
+        Runs when a child editor updates a node value.
+
+        params:
+            editor (QWidget) - node editor widget.
+
+        returns:
+            (list) - list of dag node objects that have been updated.
+        """
+        updated_nodes = []
+        for node in self.nodes:
+            if hasattr(node, attr):
+                cur_val = getattr(node, attr)
+                if cur_val and cur_val != value:
+                    setattr(node, attr, value)
+                    updated_nodes.append(node)
+        return updated_nodes
+
     @property
     def nodes(self):
         return self._nodes
+
+    def nodeValues(self, attr):
+        """
+        Returns a list of values for the given attribute.
+
+        params:
+            attr (str) - attribute to query for each node.
+        """
+        # set the nodes
+        node_values = []
+        for n in self.nodes:
+            if hasattr(n, attr):
+                cur_val = getattr(n, attr)
+                if cur_val not in node_values:
+                    node_values.append(cur_val)
+        return node_values
 
     @property
     def parser(self):
@@ -103,6 +146,25 @@ class AttributeEditor(QtGui.QWidget):
         self.buildLayout()
         self.mainGroup.setTitle("%s:" % self._nodes[0].name)
 
+    def childEditors(self):
+        """
+        Returns all of the current child editor widgets.
+
+        returns:
+            (list) - list of node editor widgets.
+        """
+        editors = []
+        for w in self.findChildren(QtGui.QWidget):
+            if hasattr(w, '_nodes'):
+                editors.append(w)
+        return editors
+
+    def refreshAll(self):
+        """
+        Refresh all of the sub-widgets.
+        """
+        pass
+
     def clearLayout(self, layout):
         """
         Clear the current grid
@@ -118,13 +180,15 @@ class AttributeEditor(QtGui.QWidget):
 class QFloat2Editor(QtGui.QWidget):
 
     attr_type       = 'float'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
         super(QFloat2Editor, self).__init__(parent)
 
-        self._nodes     = []
-        self._attribute = kwargs.get('name', 'array')
+        self._ui            = kwargs.get('ui', None)
+        self._attribute     = kwargs.get('name', 'array')
+        self._default_value = (0,0)
+        self._current_value = None
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
@@ -147,47 +211,64 @@ class QFloat2Editor(QtGui.QWidget):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
+    @property
+    def values(self):
+        """
+        Returns a list of the current node values.
+
+        returns:
+            (list) - list of node values for the editor's attribute.
+        """
+        if self._ui is not None:
+            if hasattr(self._ui, 'nodeValues'):
+                return self._ui.nodeValues(self.attribute)
+        return []
+    
+    @property
+    def default_value(self):
+        return self._default_value
+
+    @default_value.setter
+    def default_value(self, val):
+        if val != self._default_value:
+            self._default_value = val
+            return True
+        return False
+
     @property
     def value(self):
         """
         Get the current editor value.
         """
-        return (self.val1_edit.get_value(), self.val2_edit.get_value())
+        return (self.val1_edit.value, self.val2_edit.value)
 
-    def setNodes(self, dagnodes, name=None):
+    def initializeEditor(self):
         """
         Set the widgets nodes values.
         """
-        if name is not None:
-            if name!=self._attribute:
-                self._attribute = name
+        if not self.nodes or not self.attribute:
+            return
 
-        nodesChanged = False
-        for d in dagnodes:
-            if d not in self._nodes:
-                nodesChanged = True
-                self._nodes.append(d)
+        editor_value = self.default_value
 
-        # set the nodes
-        node_values = []
-        if nodesChanged:
-            for n in self._nodes:
-                if hasattr(n, self.attribute):
-                    nval = getattr(n, self.attribute)
-                    if nval not in node_values:
-                        node_values.append(nval)
-
-        editor_value = (0,0)
+        node_values = self.values
         if node_values:
-            if len(node_values) == 1:
+            if len(node_values) > 1:
+                pass
+
+            elif len(node_values) == 1:
                 if node_values[0]:
                     editor_value = node_values[0]
 
                 # set the editor value
                 self.val1_edit.blockSignals(True)
                 self.val2_edit.blockSignals(True)
+
                 # set the current node values.
                 self.val1_edit.setText(str(editor_value[0]))
                 self.val2_edit.setText(str(editor_value[1]))
@@ -195,28 +276,27 @@ class QFloat2Editor(QtGui.QWidget):
                 self.val1_edit.blockSignals(False)
                 self.val2_edit.blockSignals(False)
 
-                self.val1_edit.editingFinished.connect(self.updateNodeAction)
-                self.val2_edit.editingFinished.connect(self.updateNodeAction)
+                self.val1_edit.valueUpdated.connect(self.valueUpdatedAction)
+                self.val2_edit.valueUpdated.connect(self.valueUpdatedAction)
 
-    def updateNodeAction(self):
+    def valueUpdatedAction(self):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                print 'updating node: "%s.%s" : %s ' % (node.name, self._attribute, str(self.value))
-                setattr(node, self._attribute, self.value)
+        if self.value != self._current_value:
+            self._current_value = self.value
+            self.valueChanged.emit(self)
 
 
 class QFloat3Editor(QtGui.QWidget):
 
     attr_type       = 'float'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
         super(QFloat3Editor, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
         self.mainLayout = QtGui.QHBoxLayout(self)
@@ -245,14 +325,17 @@ class QFloat3Editor(QtGui.QWidget):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     @property
     def value(self):
         """
         Get the current editor value.
         """
-        return (self.val1_edit.get_value(), self.val2_edit.get_value(), self.val3_edit.get_value())
+        return (self.val1_edit.value, self.val2_edit.value, self.val3_edit.value)
 
     def setNodes(self, dagnodes, name=None):
         """
@@ -304,20 +387,18 @@ class QFloat3Editor(QtGui.QWidget):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, self.value)
+        self.valueChanged.emit(self)
 
 
 class QInt2Editor(QtGui.QWidget):
 
     attr_type       = 'int'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
         super(QInt2Editor, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
         self.mainLayout = QtGui.QHBoxLayout(self)
@@ -341,14 +422,17 @@ class QInt2Editor(QtGui.QWidget):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     @property
     def value(self):
         """
         Get the current editor value.
         """
-        return (self.val1_edit.get_value(), self.val2_edit.get_value())
+        return (self.val1_edit.value, self.val2_edit.value)
 
     def setNodes(self, dagnodes, name=None):
         """
@@ -396,21 +480,18 @@ class QInt2Editor(QtGui.QWidget):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                print 'updating node: "%s.%s" : %s ' % (node.name, self._attribute, str(self.value))
-                setattr(node, self._attribute, self.value)
+        self.valueChanged.emit(self)
 
 
 class QInt3Editor(QtGui.QWidget):
 
     attr_type       = 'in'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
         super(QInt3Editor, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
         self.mainLayout = QtGui.QHBoxLayout(self)
@@ -439,14 +520,17 @@ class QInt3Editor(QtGui.QWidget):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     @property
     def value(self):
         """
         Get the current editor value.
         """
-        return (self.val1_edit.get_value(), self.val2_edit.get_value(), self.val3_edit.get_value())
+        return (self.val1_edit.value, self.val2_edit.value, self.val3_edit.value)
 
     def setNodes(self, dagnodes, name=None):
         """
@@ -498,19 +582,20 @@ class QInt3Editor(QtGui.QWidget):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, self.value)
+        self.valueChanged.emit(self)
 
 
 class QBoolEditor(QtGui.QCheckBox):
+
     attr_type       = 'bool'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
+
     def __init__(self, parent=None, **kwargs):
         super(QBoolEditor, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
+
         self.toggled.connect(self.updateNodeAction)
 
     @property
@@ -519,7 +604,10 @@ class QBoolEditor(QtGui.QCheckBox):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     @property
     def value(self):
@@ -531,6 +619,10 @@ class QBoolEditor(QtGui.QCheckBox):
     def setNodes(self, dagnodes, name=None):
         """
         Set the widgets nodes values.
+
+        params:
+            dagnodes (list) - list of dag node objects.
+            name     (str)  - attrbiute name. 
         """
         if name is not None:
             if name!=self._attribute:
@@ -565,19 +657,17 @@ class QBoolEditor(QtGui.QCheckBox):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, self.isChecked())
+        self.valueChanged.emit(self)
 
 
 
 class StringEditor(QtGui.QLineEdit):
     attr_type       = 'str'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
     def __init__(self, parent=None, **kwargs):
         super(StringEditor, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
     @property
@@ -586,7 +676,10 @@ class StringEditor(QtGui.QLineEdit):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     @property
     def value(self):
@@ -634,24 +727,27 @@ class StringEditor(QtGui.QLineEdit):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, str(self.text()))
+        self.valueChanged.emit(self)
 
 
 class QFloatLineEdit(QtGui.QLineEdit):
+
     attr_type       = 'float'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
+
     def __init__(self, parent=None, **kwargs):
         super(QFloatLineEdit, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
         self.returnPressed.connect(self.update)
         self.editingFinished.connect(self.update)
 
-    def get_value(self):
+    @property
+    def value(self):
+        if self.text():
+            return 0.0
         return float(self.text())
 
     def setText(self, text):
@@ -669,7 +765,10 @@ class QFloatLineEdit(QtGui.QLineEdit):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     def setNodes(self, dagnodes, name=None):
         """
@@ -704,30 +803,30 @@ class QFloatLineEdit(QtGui.QLineEdit):
                 self.setText(editor_value)
                 self.blockSignals(False)
 
-
     def updateNodeAction(self):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, self.get_value())
+        self.valueChanged.emit(self)
 
 
 
 class QIntLineEdit(QtGui.QLineEdit):
+
     attr_type       = 'int'
-    valueChanged    = QtCore.Signal()
+    valueChanged    = QtCore.Signal(object)
+
     def __init__(self, parent=None, **kwargs):
         super(QIntLineEdit, self).__init__(parent)
 
-        self._nodes     = []
+        self._ui        = kwargs.get('ui', None)
         self._attribute = kwargs.get('name', 'array')
 
         self.returnPressed.connect(self.update)
         self.editingFinished.connect(self.update)
 
-    def get_value(self):
+    @property
+    def value(self):
         if self.text():
             return int(self.text())
         return 0
@@ -748,7 +847,10 @@ class QIntLineEdit(QtGui.QLineEdit):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
     def setNodes(self, dagnodes, name=None):
         """
@@ -783,14 +885,11 @@ class QIntLineEdit(QtGui.QLineEdit):
                 self.setText(editor_value)
                 self.blockSignals(False)
 
-
     def updateNodeAction(self):
         """
         Update the current nodes with the revised value.
         """
-        for node in self._nodes:
-            if hasattr(node, self._attribute):
-                setattr(node, self._attribute, self.get_value())
+        self.valueChanged.emit(self)
 
 
 
@@ -803,7 +902,7 @@ class ColorPicker(QtGui.QWidget):
     def __init__(self, parent=None, **kwargs):
         super(ColorPicker, self).__init__(parent)
 
-        self._nodes         = []
+        self._ui            = kwargs.get('ui', None)
         self._attribute     = kwargs.get('name', 'color')
 
         self.normalized     = kwargs.get('norm', True)
@@ -877,7 +976,6 @@ class ColorPicker(QtGui.QWidget):
         """
         rgb = (color.red(), color.green(), color.blue())
         for node in self._nodes:
-            print 'node: ', node.name, color
             node.color = rgb
 
     @property
@@ -886,9 +984,13 @@ class ColorPicker(QtGui.QWidget):
     
     @property
     def nodes(self):
-        return self._nodes
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
     
-    def getValue(self):
+    @property
+    def value(self):
         """
         Returns the current color's RGB values.
 
@@ -909,7 +1011,9 @@ class ColorPicker(QtGui.QWidget):
         self.colorSwatch._update()
 
     def sliderChangedAction(self):
-        """ set the value """
+        """ 
+        Set the value.
+        """
         sval = float(self.slider.value())
 
         # normalize the slider value
@@ -946,10 +1050,22 @@ class ColorPicker(QtGui.QWidget):
             self.colorSwatch._update()
 
     def setMin(self, val):
+        """
+        Set the slider minimum value.
+
+        params:
+            val (int) - slider minimum.
+        """
         self.min = val
         self.slider.setMinimum(val)
 
     def setMax(self, val):
+        """
+        Set the slider maximum value.
+
+        params:
+            val (int) - slider maximum.
+        """
         self.max = val
         self.slider.setMaximum(val)
 
@@ -1024,7 +1140,9 @@ class ColorSwatch(QtGui.QToolButton):
         Update the widget color. 
         """
         self.color = self.qcolor.getRgb()[0:3]
-        self.setStyleSheet("QToolButton{background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgb(%d, %d, %d), stop:1 rgb(%d, %d, %d))};" % (self.color[0]*.45, self.color[1]*.45, self.color[2]*.45, self.color[0], self.color[1], self.color[2]))
+        self.setStyleSheet("QToolButton{background-color: qlineargradient(spread:pad, \
+            x1:0, y1:1, x2:0, y2:0, stop:0 rgb(%d, %d, %d), stop:1 rgb(%d, %d, %d))};" % 
+            (self.color[0]*.45, self.color[1]*.45, self.color[2]*.45, self.color[0], self.color[1], self.color[2]))
 
     def _getHsvF(self):
         return self.qcolor.getHsvF()
@@ -1082,11 +1200,11 @@ WIDGET_MAPPER = dict(
 
 
 
-def map_widget(typ, parent, name):
+def map_widget(typ, parent, name, ui):
     typ=typ.replace(" ", "")
     if typ in WIDGET_MAPPER:
         cls = WIDGET_MAPPER.get(typ)
-        return cls(parent, name=name)
+        return cls(parent, name=name, ui=ui)
     return
 
 

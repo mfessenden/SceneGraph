@@ -3,6 +3,7 @@ from . import node_widgets
 from . import models
 from . import manager
 from . import attributes
+from . import commands
 
 
 reload(graphics)
@@ -10,6 +11,7 @@ reload(node_widgets)
 reload(models)
 reload(manager)
 reload(attributes)
+reload(commands)
 
 
 GraphicsView            = graphics.GraphicsView
@@ -32,3 +34,6 @@ QBoolEditor             = attributes.QBoolEditor
 QFloatLineEdit          = attributes.QFloatLineEdit
 QIntLineEdit            = attributes.QIntLineEdit
 ColorPicker             = attributes.ColorPicker
+
+NodeDataCommand         = commands.NodeDataCommand
+CommandMove             = commands.CommandMove

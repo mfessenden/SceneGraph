@@ -18,6 +18,7 @@ SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE
 SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
 
 
+
 def get_platform():
     """
     Returns the current platform (OS) variation.
@@ -34,7 +35,7 @@ def get_platform():
 
 
 # initialize the platform variable
-get_platform()
+PLATFORM = get_platform()
 
 
 
