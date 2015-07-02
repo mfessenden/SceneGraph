@@ -14,6 +14,7 @@ class AttributeEditor(QtGui.QWidget):
         self._nodes         = []
         self._parser        = DataParser()
         self._show_private  = False
+        self._manager       = kwargs.get('manager', None)
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -92,6 +93,8 @@ class AttributeEditor(QtGui.QWidget):
 
             for attr_name, attr_attrs in attrs.iteritems():           
                 private = attr_attrs.pop('private', False)
+                locked = attr_attrs.pop('locked', False)
+
                 if not private or self._show_private:
                     # create a label
                     attr_label = QtGui.QLabel('%s: ' % attr_name, parent=group)
@@ -107,6 +110,7 @@ class AttributeEditor(QtGui.QWidget):
 
                         # signal here when editor changes
                         editor.valueChanged.connect(self.nodeAttributeChanged)
+                        editor.setEnabled(not locked)
                         row += 1     
             
             self.mainGroupLayout.addWidget(group)
@@ -139,6 +143,9 @@ class AttributeEditor(QtGui.QWidget):
                 if cur_val != editor.value:
                     setattr(node, editor.attribute, editor.value)
                     updated_nodes.append(node)
+        
+        # update graph
+        self.manager.dagNodesUpdatedAction(updated_nodes)
         return updated_nodes
 
     @property
@@ -161,6 +168,10 @@ class AttributeEditor(QtGui.QWidget):
                     node_values.append(cur_val)
         return node_values
 
+    @property
+    def manager(self):
+        return self._manager
+    
     @property
     def parser(self):
         return self._parser
@@ -1217,7 +1228,6 @@ class ColorPicker(QtGui.QWidget):
         """ 
         Set the value.
         """
-        print 'ColorPicker: slider changed action...'
         sval = float(self.slider.value())
 
         # normalize the slider value
@@ -1236,7 +1246,6 @@ class ColorPicker(QtGui.QWidget):
         """
         Update the items' color when the slider handle is released.
         """
-        print 'ColorPicker: slider released action...'
         color = self.colorSwatch.color        
         self.colorSwatch._update()
         self.valueUpdatedAction()
