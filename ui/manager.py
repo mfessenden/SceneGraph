@@ -8,10 +8,13 @@ class WindowManager(QtCore.QObject):
     nodesAdded      = QtCore.Signal(list)
     nodesRemoved    = QtCore.Signal(list)
     nodesUpdated    = QtCore.Signal(list)
+    nodesRenamed    = QtCore.Signal(list)
     # scene -> graph
     widgetsUpdated  = QtCore.Signal(list)
+    dagNodesUpdated = QtCore.Signal(list)
+    
     """
-    Node Manager class:
+    WindowManager class:
         - Signal the scene that nodes have been
           updated in the Graph.
         - Update the Graph when nodes are
@@ -27,14 +30,6 @@ class WindowManager(QtCore.QObject):
             if self.connectGraph(parent):
                 self.connectSignals()
     
-    def connectSignals(self):
-        """
-        Setup widget signals.
-        """
-        log.info('WindowManager: connecting WindowManager to Scene.') 
-        self.nodesAdded.connect(self.scene.addNodes)
-        self.widgetsUpdated.connect(self.graph.updateGraph)
-
     def connectGraph(self, scene):
         """
         Connect the parent scenes' Graph object.
@@ -57,16 +52,38 @@ class WindowManager(QtCore.QObject):
                     log.info('WindowManager: connecting Graph...')
                     return True
         return False
-    
+
+    def connectSignals(self):
+        """
+        Setup widget signals.
+        """
+        log.info('WindowManager: connecting WindowManager to Scene.') 
+        self.nodesAdded.connect(self.scene.addNodes)
+        self.dagNodesUpdated.connect(self.graph.updateGraph)
+        self.nodesUpdated.connect(self.scene.updateNodesAction)
+
+    def evaluate(self):
+        """
+        Do cool shit here.
+        """
+        pass
+
     #- Graph to Scene ----    
-    def addNodes(self, dagnodes):
+    def addNodes(self, dagnodes, edges=False):
         """
         Signal Graph -> GraphicsScene.
 
         params:
             dagnodes (list) - list of dagnode objects.
         """
-        log.debug('WindowManager: sending %d nodes to scene...' % len(dagnodes))
+        num_nodes = len(dagnodes)
+        node_type = 'node'
+        if edges:
+            node_type = 'edge'
+
+        if num_nodes > 1:
+            node_type = '%ss' % node_type
+        log.debug('WindowManager: sending %d %s to scene...' % (num_nodes, node_type))
         self.nodesAdded.emit(dagnodes)
 
     def removeNodes(self, dagnodes):
@@ -79,12 +96,31 @@ class WindowManager(QtCore.QObject):
         """
         Signal Graph -> GraphicsScene.
         """
+        log.info('WindowManager: updating %d nodes...' % len(dagnodes))
         self.nodesUpdated.emit(dagnodes)
 
-    #- Scene to Graph ----    
-    def updateWidgets(self, dagnodes):
+    def renameNodes(self, dagnodes):
+        """
+        Signal Graph -> GraphicsScene.
+        """
+        log.info('WindowManager: renaming %d nodes...' % len(dagnodes))
+        self.nodesRenamed.emit(dagnodes)
+
+    #- Scene to Graph ----
+    def widgetsUpdatedAction(self, nodes):
         """
         Signal GraphicsScene -> Graph.
         """
-        self.widgetsUpdated.emit(dagnodes)
+        # connect to main UI
+        self.widgetsUpdated.emit(nodes)
 
+        # connect to Graph
+        dagnodes = [x.dagnode for x in nodes]
+        self.dagNodesUpdated.emit(dagnodes)
+
+    #- Atribute Editor ----
+    def dagNodesUpdatedAction(self, dagnodes):
+        """
+        Signal AttributeEditor -> Graph.
+        """
+        self.dagNodesUpdated.emit(dagnodes)

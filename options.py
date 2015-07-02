@@ -3,8 +3,8 @@ import os
 
 
 PACKAGE                     = 'SceneGraph'
-API_VERSION                 = 0.60
-API_REVISION                = 9
+API_VERSION                 = 0.61
+API_REVISION                = 0
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
 PLATFORM                    = None
 

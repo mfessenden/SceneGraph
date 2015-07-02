@@ -1,36 +1,10 @@
 #!/usr/bin/env python
 import sys
+import math
 from PySide import QtCore, QtGui
 from SceneGraph.core import log
 from SceneGraph import options
 
-"""
-pyqtgraph:
-
-    - Node = QObject
-        Node.graphicsItem = QGraphicsObject
-
-    def close(self):
-        self.disconnectAll()
-        self.clearTerminals()
-        item = self.graphicsItem()
-        if item.scene() is not None:
-            item.scene().removeItem(item)
-        self._graphicsItem = None
-        w = self.ctrlWidget()
-        if w is not None:
-            w.setParent(None)
-        #self.emit(QtCore.SIGNAL('closed'), self)
-        self.sigClosed.emit(self)
-
-My Node:
-    Requirements:
-        - needs to send signals from label
-        - needs to have connections
-
-Node.setHandlesChildEvents(False)
-
-"""
 
 class Node(QtGui.QGraphicsObject):
 
@@ -176,7 +150,6 @@ class Node(QtGui.QGraphicsObject):
         """
         expanded = self.dagnode.expanded
         self.dagnode.expanded = not self.dagnode.expanded
-        self.update()
 
         # translate the node in relation to it's expanded height
         diffy = (self.dagnode.height_expanded - self.dagnode.height_collapsed)/2
@@ -185,8 +158,15 @@ class Node(QtGui.QGraphicsObject):
         self.translate(0, diffy)
         self.nodeChanged.emit(self)
         QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
+        self.update()
 
     def boundingRect(self):
+        """
+        Returns a bounding rectangle for the node.
+
+        returns:
+            (QRectF) - node bounding rect.
+        """
         w = self.width
         h = self.height
         bx = self.bufferX
@@ -195,11 +175,20 @@ class Node(QtGui.QGraphicsObject):
 
     @property
     def label_rect(self):
+        """
+        Returns a bounding rectangle for the label item.
+
+        returns:
+            (QRectF) - label bounding rect.
+        """
         return self.label.boundingRect()
 
     def shape(self):
         """
         Create the shape for collisions.
+
+        returns:
+            (QPainterPath) - painter path object.
         """
         w = self.width + 4
         h = self.height + 4
@@ -346,6 +335,28 @@ class Node(QtGui.QGraphicsObject):
             (list) - list of output connection widgets.
         """
         return self.connections.get('output').values()
+
+    def getInputConnection(self, name):
+        """
+        Returns a named connection.
+
+        returns:
+            (Connection) - connection widget.
+        """
+        if name not in self.inputs:
+            return 
+        return self.connections.get('input').get(name)
+
+    def getOutputConnection(self, name):
+        """
+        Returns a named connection.
+
+        returns:
+            (Connection) - connection widget.
+        """
+        if name not in self.outputs:
+            return 
+        return self.connections.get('output').get(name)
 
     def getConnection(self, name):
         """
@@ -574,7 +585,7 @@ class NodeLabel(QtGui.QGraphicsObject):
         qfont.setPointSize(self._font_size)
         qfont.setBold(self._font_bold)
         qfont.setItalic(label_italic)
-        qfont.setFamily("Courier")
+        qfont.setFamily("Menlo")
         self.label.setFont(qfont)
 
         self.label.setDefaultTextColor(label_color)
@@ -667,7 +678,7 @@ class Edge(QtGui.QGraphicsObject):
     Type        = QtGui.QGraphicsObject.UserType + 2
     adjustment  = 5
 
-    def __init__(self, dagnode, *args, **kwargs):
+    def __init__(self, dagnode, source_item, dest_item, *args, **kwargs):
         QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
 
         self.dagnode         = dagnode
@@ -691,8 +702,8 @@ class Edge(QtGui.QGraphicsObject):
         self.edge_type       = 'bezier'
 
         # connections
-        self.source_item     = None
-        self.dest_item       = None
+        self.source_item     = source_item
+        self.dest_item       = dest_item
 
         # points
         self.source_point    = QtCore.QPointF(0,0)
@@ -700,6 +711,7 @@ class Edge(QtGui.QGraphicsObject):
         self.center_point    = QtCore.QPointF(0,0)      
         
         # geometry
+        self.gline           = QtGui.QGraphicsLineItem(self)
         self.bezier_path     = QtGui.QPainterPath()
         self.poly_line       = QtGui.QPolygonF()
 
@@ -710,6 +722,10 @@ class Edge(QtGui.QGraphicsObject):
         self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
         self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
         self.setAcceptsHoverEvents(True)
+        self.setZValue(-1.0)
+
+    def __repr__(self):
+        return 'Edge("%s")' % self.dagnode.name
 
     def setDebug(self, val):
         """
@@ -745,11 +761,179 @@ class Edge(QtGui.QGraphicsObject):
         """
         if self.is_selected:
             return QtGui.QColor(*self._h_color)
+
         if self.is_hover:
-            base_color = QtGui.QColor(*self._l_color)
-            return base_color.lighter(125)
+            return QtGui.QColor(*[109, 205, 255])
+
         return QtGui.QColor(*self._l_color)
 
+    def boundingRect(self):
+        """
+        Create a bounding rect for the line.
+
+         todo: see why self.bezier_path.controlPointRect()
+         doesn't work.
+        """
+        extra = (self.gline.pen().width() + 100)  / 2.0
+        line = self.getLine()
+        p1 = line.p1()
+        p2 = line.p2()
+        return QtCore.QRectF(p1, QtCore.QSizeF(p2.x() - p1.x(), p2.y() - p1.y())).normalized().adjusted(-extra, -extra, extra, extra)
+
+    def getLine(self):
+        """
+        Return the line between two points.
+        """
+        p1 = self.source_item.sceneBoundingRect().center()
+        p2 = self.dest_item.sceneBoundingRect().center()
+
+        # offset the end point a few pixels
+        p2 = QtCore.QPointF(p2.x(), p2.y())
+        return QtCore.QLineF(self.mapFromScene(p1), self.mapFromScene(p2))
+
+    def getBezierPath(self, poly=False):
+        """
+        Returns a bezier path based on the current line.
+        Crude, but works.
+        """
+        line = self.getLine()
+        path = QtGui.QPainterPath()
+        path.moveTo(line.p1().x(), line.p1().y())
+
+        # some very crude bezier math here
+        x1 = line.p1().x()
+        x2 = line.p2().x()
+
+        y1 = line.p1().y()
+        y2 = line.p2().y()
+
+        # distances
+        dx = x2 - x1
+        dy = y2 - y1
+
+        dx = math.fabs(dx)
+        # bezier percentage
+        t = .25
+
+        # x coord
+        cx1 = x1 + (dx * t)
+        cx2 = x2 - (dx * t)
+
+        # y coord
+        cy1 = y1 - (dy * (t/4))
+        cy2 = y2 + (dy * (t/4))
+
+        # create the control points
+        self.source_point = QtCore.QPointF(cx1, cy1)
+        self.dest_point = QtCore.QPointF(cx2, cy2)
+
+        # create a polyline
+        self.poly_line = QtGui.QPolygonF([line.p1(), self.source_point, self.dest_point, line.p2()])
+        path.cubicTo(self.source_point, self.dest_point, line.p2())
+        #path.quadTo(line.p1(), line.p2())
+        return path
+
+    def getCenterPoint(self):
+        line = self.getLine()
+        centerX = (line.p1().x() + line.p2().x())/2
+        centerY = (line.p1().y() + line.p2().y())/2
+        return QtCore.QPointF(centerX, centerY)
+
+    def getEndPoint(self):
+        line = self.getLine()
+        ep = line.p2()
+        return QtCore.QPointF(ep.x(), ep.y())
+
+    def getEndItem(self):
+        return self.dest_item.parentItem()
+
+    def getStartItem(self):
+        return self.source_item.parentItem()
+
+    def shape(self):
+        """
+        Need to add some adjustments to the line to make is more selectable.
+        """
+        path = QtGui.QPainterPath()
+        stroker = QtGui.QPainterPathStroker()
+        stroker.setWidth(30)
+        line = self.getLine()
+        path.moveTo(line.p1())
+        path.lineTo(line.p2())
+        return stroker.createStroke(path)
+
+    def paint(self, painter, option, widget=None):
+        """
+        Draw the line and arrow.
+        """
+        self.is_selected = False
+        self.is_hover = False
+
+        if option.state & QtGui.QStyle.State_Selected:
+            self.is_selected = True 
+
+        if option.state & QtGui.QStyle.State_MouseOver:                 
+            self.is_hover = True 
+
+        self.setToolTip(str(self.dagnode.connection_name))
+        self.show_conn = False
+
+        #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+
+        line = self.getLine()
+        painter.setBrush(self.line_color)
+
+        epen = self.gline.pen()
+        epen.setColor(self.line_color)
+        painter.setPen(epen)
+
+        #self.cp.visible = False
+        draw_arrowhead = True
+
+        # get the bezier line center        
+        self.bezier_path = self.getBezierPath()
+
+        # calculate the arrowhead geometry
+        if line.length() > 0.0:
+            angle = math.acos(line.dx() / line.length())
+            if self.edge_type == 'bezier':
+                bline = QtCore.QLineF(self.bezier_path.pointAtPercent(0.47), self.bezier_path.pointAtPercent(0.53))  
+                angle = math.acos(bline.dx() / bline.length())
+
+            if line.dy() >= 0:
+                angle = (math.pi * 2.0) - angle
+
+            revArrow = -1
+
+            center_point = self.getCenterPoint()
+            end_point = self.getEndPoint()
+
+            arrow_p1 = center_point + QtCore.QPointF(math.sin(angle + math.pi / 3.0) * self.arrow_size * revArrow,
+                                        math.cos(angle + math.pi / 3.0) * self.arrow_size * revArrow)
+            arrow_p2 = center_point + QtCore.QPointF(math.sin(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow,
+                                        math.cos(angle + math.pi - math.pi / 3.0) * self.arrow_size * revArrow)
+
+            # build the arrowhead
+            arrowhead = QtGui.QPolygonF()
+
+            # set the polygon points
+            for point in [center_point, arrow_p1, arrow_p2]:
+                arrowhead.append(point)
+
+            if line:
+                if draw_arrowhead:
+                    painter.drawPolygon(arrowhead)    
+
+                painter.setBrush(QtCore.Qt.NoBrush)
+
+                if self.edge_type == 'bezier':
+                    painter.drawPath(self.bezier_path)
+
+                if self.edge_type == 'polygon':
+                    painter.drawLine(line)
+                
+                # translate the center point
+                #self.center_point.setPos(self.mapToScene(self.getCenterPoint()))
 
 
 class Connection(QtGui.QGraphicsObject):
@@ -789,7 +973,11 @@ class Connection(QtGui.QGraphicsObject):
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
 
     def __repr__(self):
-        return 'Connection("%s.%s")' % (self.dagnode.name, self.name)
+        return 'Connection("%s")' % self.connection_name
+
+    @property 
+    def connection_name(self):
+        return "%s.%s" % (self.dagnode.name, self.name)
 
     @property
     def node(self):
@@ -954,7 +1142,8 @@ class Connection(QtGui.QGraphicsObject):
         QGraphicsSceneHoverEvent.pos
         """
         if self.isSelected():
-            self.setSelected(False)
+            #self.setSelected(False)
+            pass
         QtGui.QGraphicsObject.hoverLeaveEvent(self, event)
 
     def boundingRect(self):

@@ -18,6 +18,7 @@ DATA_PARAMS = dict(
     p = 'private',
     h = 'hidden',
     u = 'user',
+    l = 'locked',
     )
 
 

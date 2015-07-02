@@ -51,7 +51,7 @@ class Graph(object):
         from SceneGraph.options import API_VERSION_AS_STRING
         self.network.graph['api_version'] = API_VERSION_AS_STRING
         self.network.graph['scene'] = scene
-        self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
+        self.network.graph['autosave'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
         self.network.graph['environment'] = 'command_line'
 
     def initializeNodeTypes(self):
@@ -99,7 +99,7 @@ class Graph(object):
     def updateGraph(self, dagnodes):
         """
         Update the networkx graph from the UI.
-        TODO: we need to store a weakref dict of dag nodes in the graph
+         *todo: we need to store a weakref dict of dag nodes in the graph
 
         params:
             dagnodes (list) - list of dag node objects.
@@ -325,6 +325,9 @@ class Graph(object):
     def getEdgeIDs(self):
         """
         Returns a list of all edges in the network.
+
+        returns:
+            (list) - list of edge ids.
         """
         ids = []
         for edge in self.network.edges(data=True):
@@ -337,7 +340,7 @@ class Graph(object):
         Return a dag edge.
 
         returns:
-            (obj)
+            (obj) - dag edge.
         """
         edges=[]
         for arg in args:
@@ -452,9 +455,11 @@ class Graph(object):
         dest_attr = kwargs.pop('dest_attr', 'input')
 
         if src is None or dest is None:
+            log.warning('none type passed.')
             return False
 
         if not src or not dest:
+            log.warning('please specify two nodes to connect.')
             return False
 
         # don't connect the same node
@@ -479,7 +484,7 @@ class Graph(object):
 
         # update the scene
         if self.manager is not None:
-            self.manager.addNodes([edge,])
+            self.manager.addNodes([edge,], edges=True)
         return edge
 
     def removeEdge(self, *args): 
@@ -646,9 +651,15 @@ class Graph(object):
             return
 
         UUID = self.getNodeID(old_name)
-        self.network.node[UUID]['name'] = new_name
-        
-        # TODO: node signal here
+
+        if UUID:
+            dagnodes = self.getNode(UUID)
+            self.network.node[UUID]['name'] = new_name
+            
+            if dagnodes:
+                # update the scene
+                if self.manager is not None:
+                    self.manager.renameNodes(dagnodes[0])
         return
 
     def copyNodes(self, nodes):
@@ -812,76 +823,69 @@ class Graph(object):
         params:
             filename - (str) file to read
         """
-        if os.path.exists(filename):
-            log.info('reading scene file "%s"' % filename)
-            raw_data = open(filename).read()
-            tmp_data = json.loads(raw_data, object_pairs_hook=dict)
-            self.network.clear()
-            graph_data = tmp_data.get('graph', [])
-            nodes = tmp_data.get('nodes', [])
-            edges = tmp_data.get('links', [])
+        if not os.path.exists(filename):
+            log.error('file %s does not exist.' % filename)
+            return False
+
+        log.info('reading scene file "%s"' % filename)
+        raw_data = open(filename).read()
+        tmp_data = json.loads(raw_data, object_pairs_hook=dict)
+        self.network.clear()
+
+        graph_data = tmp_data.get('graph', [])
+        nodes = tmp_data.get('nodes', [])
+        edges = tmp_data.get('links', [])
+        
+        # update graph attributes
+        for gdata in graph_data:
+            if len(gdata):
+                self.network.graph[gdata[0]]=gdata[1]
+
+        # build nodes from data
+        for node_attrs in nodes:
+            # get the node type
+            node_type = node_attrs.pop('node_type', 'default')
+
+            # add the dag node/widget
+            dag_node = self.addNode(node_type, **node_attrs)
+            log.info('building node "%s"' % node_attrs.get('name'))
+
+        for edge_attrs in edges:
+            edge_id = edge_attrs.get('id')
+            src_id = edge_attrs.get('src_id')
+            dest_id = edge_attrs.get('dest_id')
+
+            src_attr = edge_attrs.get('src_attr')
+            dest_attr = edge_attrs.get('dest_attr')
+
+            src_dag_nodes = self.getNode(src_id)
+            dest_dag_nodes = self.getNode(dest_id)
+
+            if not src_dag_nodes or not dest_dag_nodes:
+                log.warning('cannot parse nodes.')
+                return
+
+            src_dag_node = src_dag_nodes[0]
+            dest_dag_node = dest_dag_nodes[0]
+            src_string = '%s.%s' % (src_dag_node.name, src_attr)
+            dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
+
+            # TODO: need to get connection node here
+            log.info('connecting nodes: "%s" "%s"' % (src_string, dest_string))
             
-            # update graph attributes
-            for gdata in graph_data:
-                if len(gdata):
-                    self.network.graph[gdata[0]]=gdata[1]
+            dag_edge = self.addEdge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
 
-            # build nodes from data
-            for node_attrs in nodes:
-                # get the node type
-                node_type = node_attrs.pop('node_type', 'default')
-
-                '''
-                inputs  = None
-                outputs = None
-                if '_inputs' in node_attrs:
-                    print '# inputs:  ', node_attrs.get('_inputs')
-
-                if '_outputs' in node_attrs:
-                    print '# outputs: ', node_attrs.get('_outputs')
-                '''
-
-                # add the dag node/widget
-                dag_node = self.addNode(node_type, **node_attrs)
-                log.debug('building node "%s"' % node_attrs.get('name'))
-
-            for edge_attrs in edges:
-                edge_id = edge_attrs.get('id')
-                src_id = edge_attrs.get('src_id')
-                dest_id = edge_attrs.get('dest_id')
-
-                src_attr = edge_attrs.get('src_attr')
-                dest_attr = edge_attrs.get('dest_attr')
-
-                src_dag_nodes = self.getNode(src_id)
-                dest_dag_nodes = self.getNode(dest_id)
-
-                if not src_dag_nodes or not dest_dag_nodes:
-                    log.warning('cannot parse nodes.')
-                    return
-
-                src_dag_node = src_dag_nodes[0]
-                dest_dag_node = dest_dag_nodes[0]
-                src_string = '%s.%s' % (src_dag_node.name, src_attr)
-                dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
-
-                # TODO: need to get connection node here
-                log.debug('building edge: %s > %s' % (src_id, dest_id))
-                
-                dag_edge = self.addEdge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
-
-            """
-            if self.view:
+            if self.mode == 'ui':
                 scene_pos = self.network.graph.get('view_center', (0,0))
                 view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
-                self.view.resetTransform()
 
-                self.view.setCenterPoint(scene_pos)
-                self.view.scale(*view_scale)
-            """
+                if self.manager is not None:
+                    view = self.manager.scene.views()[0]
+                    view.resetTransform()
+                    view.setCenterPoint(scene_pos)
+                    view.scale(*view_scale)
 
-            return self.setScene(filename)
-        return 
+        return self.setScene(filename)
     
     @property
     def version(self):

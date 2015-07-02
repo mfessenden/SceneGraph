@@ -52,22 +52,21 @@ class SceneGraphUI(form_class, base_class):
     def __init__(self, parent=None, opengl=False, **kwargs):
         super(SceneGraphUI, self).__init__(parent)
 
-        self.setupUi(self)
-        
-        # allow docks to be nested
+        self.setupUi(self)        
         self.setDockNestingEnabled(True)
-
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.view             = None
         self.use_gl           = opengl
+        self.edge_type        = 'bezier'
+        self.viewport_mode    = 'smart'
         self.environment      = kwargs.get('env', 'standalone')  
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
 
         # temp file
-        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json') 
+        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_autosave.json') 
 
         # stash temp selections here
         self._selected_nodes  = []
@@ -168,14 +167,14 @@ class SceneGraphUI(form_class, base_class):
         """
         Initializes the fonts attribute
         """
-        family = 'Verdana'
+        family = 'Consolas'
         if options.PLATFORM == 'MacOSX':
             size = 11
             family = 'Menlo'
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
-        self.fonts["ui"].setFamily(family)
+        #self.fonts["ui"].setFamily(family)
         self.fonts["ui"].setPointSize(size)
 
         self.fonts["output"] = QtGui.QFont('Monospace')
@@ -188,24 +187,21 @@ class SceneGraphUI(form_class, base_class):
         # initialize the Graph
         self.graph = core.Graph()
         self.network = self.graph.network
-        self.network.graph['environment'] = self.environment
+        
 
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl)
+        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, edge_type=self.edge_type)
         self.gviewLayout.addWidget(self.view) 
-
-        # debugging signals
-        #self.view.scene().nodeAdded.connect(self.nodeAddedAction)
-        #self.view.scene().nodeChanged.connect(self.nodeChangedAction)
-        #self.view.scene().changed.connect(self.sceneChangedAction)
 
         self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
-
-        # maya online
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.view.scene().selectionChanged.connect(self.nodesSelectedAction)
 
+        self.network.graph['environment'] = self.environment
+        self.network.graph['edge_type'] = self.view.scene().edge_type
+        self.network.graph['viewport_mode'] = self.view.viewport_mode
+        self.network.graph['use_gl'] = self.use_gl
+        
     def connectSignals(self):
         """
         Setup signals & slots.
@@ -213,6 +209,11 @@ class SceneGraphUI(form_class, base_class):
         self.timer.timeout.connect(self.resetStatus)
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
         self.view.statusEvent.connect(self.updateConsole)
+
+        # window manager
+        self.view.scene().manager.widgetsUpdated.connect(self.nodesChangedAction)
+        self.view.scene().manager.nodesRenamed.connect(self.nodesChangedAction)
+        self.view.scene().selectionChanged.connect(self.nodesSelectedAction)
 
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
@@ -232,6 +233,7 @@ class SceneGraphUI(form_class, base_class):
 
         self.action_debug_mode.triggered.connect(self.toggleDebug)
         self.action_edge_type.triggered.connect(self.toggleEdgeTypes)
+        self.action_update_mode.triggered.connect(self.toggleViewMode)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -285,10 +287,17 @@ class SceneGraphUI(form_class, base_class):
         """
         Setup the ui menu before it is drawn.
         """
+        # GraphicsView mode
+        view_mode = 'full'
+        if self.view.viewport_mode == 'full':
+            view_mode = 'smart'
+
         global SCENEGRAPH_DEBUG
         db_label = 'Debug on'
         if SCENEGRAPH_DEBUG == '1':
             db_label = 'Debug off'
+
+        self.action_update_mode.setText('Set viewport mode: %s' % view_mode)
         self.action_debug_mode.setText(db_label)
 
     def initializeRecentFilesMenu(self):
@@ -481,6 +490,17 @@ class SceneGraphUI(form_class, base_class):
     def resetScale(self):
         self.view.resetMatrix()      
 
+    def toggleViewMode(self):
+        """
+        Update the GraphicsView update mode for performance.
+        """
+        mode = self.view.viewport_mode
+        if mode == 'full':
+            self.view.viewport_mode = 'smart'
+        else:
+            self.view.viewport_mode = 'full'
+
+
     def toggleDebug(self):
         """
         Set the debug environment variable and set widget
@@ -510,12 +530,18 @@ class SceneGraphUI(form_class, base_class):
         """
         Toggle the edge types.
         """
-        if self.view.scene().edge_type == 'bezier':
-            self.view.scene().edge_type = 'polygon'
+        scene = self.view.scene()
+        edge_type = scene.edge_type
 
-        elif self.view.scene().edge_type == 'polygon':
-            self.view.scene().edge_type = 'bezier'
-        self.view.scene().update()
+        if edge_type == 'bezier':
+            scene.edge_type = 'polygon'
+
+        elif edge_type == 'polygon':
+            scene.edge_type = 'bezier'
+
+        for edge in scene.getEdges():
+            edge.edge_type = scene.edge_type
+        scene.update()
 
     #- ACTIONS ----
     def nodesSelectedAction(self):
@@ -550,7 +576,7 @@ class SceneGraphUI(form_class, base_class):
                     ds_ids = self.graph.downstream(node.dagnode.name)
                     dagnodes = []
                     for nid in ds_ids:
-                        dnodes = self.graph.getDagNode(nnid)
+                        dnodes = self.graph.getNode(nid)
                         if dnodes:
                             dagnodes.append(dnodes[0])
 
@@ -565,6 +591,12 @@ class SceneGraphUI(form_class, base_class):
             self.removeAttributeEditorWidget()
 
     def getAttributeEditorWidget(self):
+        """
+        Returns the AttributeEditor widget (if it exists).
+
+        returns:
+            (QWidget) - AttributeEditor instance.
+        """
         return self.attrEditorWidget.findChild(QtGui.QWidget, 'AttributeEditor')
 
     def removeAttributeEditorWidget(self):
@@ -579,8 +611,10 @@ class SceneGraphUI(form_class, base_class):
     def updateAttributeEditor(self, dagnodes, **attrs):
         """
         Update the attribute editor with a selected node.
+
+        params:
+            dagnodes (list) - list of dag node objects.
         """
-        from SceneGraph.test import nodes
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]
 
@@ -616,22 +650,25 @@ class SceneGraphUI(form_class, base_class):
             edge = self.edgesModel.edges[idx.row()]
             edge.setSelected(True)
 
+    # todo: deprecated?
     def nodeAddedAction(self, node):
         """
         Action whenever a node is added to the graph.
         """
         self.updateOutput()
 
-    def nodeChangedAction(self, node):
+    def nodesChangedAction(self, nodes):
         """
-        node = NodeWidget
+        Runs whenever nodes are changed in the UI.
+
+        params:
+            nodes (list) - list of Node widgets.
         """
-        selected_nodes = self.view.scene().selectedNodes()
-        dagnodes = [x.dagnode for x in selected_nodes]
-        if selected_nodes:
-            self.updateAttributeEditor(dagnodes)
-        self.updateOutput()
-        self.saveTempFile()
+        attr_widget = self.getAttributeEditorWidget()
+
+        # update the AttributeEditor
+        if attr_widget:
+            attr_widget.updateChildEditors()
 
     # TODO: disabling this, causing lag
     def sceneChangedAction(self, event):
@@ -649,11 +686,13 @@ class SceneGraphUI(form_class, base_class):
         QtGui.QApplication.instance().removeEventFilter(self)
         return super(SceneGraphUI, self).closeEvent(event)
 
-
     #- Menus -----
     def createTabMenu(self, parent):
         """
         Build a context menu at the current pointer pos.
+
+        params:
+            parent (QWidget) - parent widget.
         """
         tab_menu = QtGui.QMenu(parent)
         tab_menu.clear()
@@ -694,6 +733,12 @@ class SceneGraphUI(form_class, base_class):
         self.restoreState(self.qtsettings.value("windowState"))
         self.qtsettings.endGroup()
 
+        self.qtsettings.beginGroup("Preferences")
+        self.viewport_mode = self.qtsettings.value("viewport_mode")
+        self.edge_type = self.qtsettings.value("edge_type")
+        self.use_gl = self.qtsettings.value("use_gl")
+        self.qtsettings.endGroup()
+
         # read the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
@@ -711,6 +756,13 @@ class SceneGraphUI(form_class, base_class):
         height = self.height()
         self.qtsettings.setValue("geometry", self.saveGeometry())
         self.qtsettings.setValue("windowState", self.saveState())
+        self.qtsettings.endGroup()
+
+        # general preferences
+        self.qtsettings.beginGroup('Preferences')
+        self.qtsettings.setValue("viewport_mode", self.view.viewport_mode)
+        self.qtsettings.setValue("edge_type", self.view.scene().edge_type)
+        self.qtsettings.setValue("use_gl", self.use_gl)
         self.qtsettings.endGroup()
 
         # write the dock settings
@@ -902,7 +954,6 @@ class SceneGraphUI(form_class, base_class):
         return False
 
 
-
 class Settings(QtCore.QSettings):
 
     def __init__(self, filename, frmt=QtCore.QSettings.IniFormat, parent=None, max_files=10):
@@ -925,6 +976,9 @@ class Settings(QtCore.QSettings):
             self.beginWriteArray('RecentFiles', 0)
             self.endArray()
 
+        if 'Preferences' not in self.childGroups():
+            pass
+
     def save(self, key='default'):
         """
         Save, with optional category.
@@ -944,6 +998,7 @@ class Settings(QtCore.QSettings):
         log.info('deleting settings: "%s"' % self.fileName())
         return os.remove(self.fileName())
 
+    #- Recent Files ----
     @property
     def recent_files(self):
         """
