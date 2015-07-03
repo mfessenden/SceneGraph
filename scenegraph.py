@@ -36,7 +36,10 @@ def loadUiType(uiFile):
 
         pysideuic.compileUi(f, o, indent=0)
         pyc = compile(o.getvalue(), '<string>', 'exec')
-        exec pyc in frame
+        try:
+            exec pyc in frame
+        except:
+            pass
 
         #Fetch the base_class and form class based on their type in the xml from designer
         form_class = frame['Ui_%s'%form_class]
@@ -49,7 +52,7 @@ form_class, base_class = loadUiType(SCENEGRAPH_UI)
 
 
 class SceneGraphUI(form_class, base_class):
-    def __init__(self, parent=None, opengl=False, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         super(SceneGraphUI, self).__init__(parent)
 
         self.setupUi(self)        
@@ -58,15 +61,19 @@ class SceneGraphUI(form_class, base_class):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.view             = None
-        self.use_gl           = opengl
+
+        # preferences
+        self.debug            = kwargs.get('debug', False)
+        self.use_gl           = kwargs.get('opengl', False)
+
         self.edge_type        = 'bezier'
         self.viewport_mode    = 'smart'
-        self.environment      = kwargs.get('env', 'standalone')  
+        self.render_fx        = True
+        self.antialiasing     = 2
+        self.environment      = kwargs.get('env', 'standalone')
+
         self._startdir        = kwargs.get('start', os.getenv('HOME'))
         self.timer            = QtCore.QTimer()
-
-        # temp file
-        self.temp_scene       = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json') 
 
         # stash temp selections here
         self._selected_nodes  = []
@@ -89,16 +96,25 @@ class SceneGraphUI(form_class, base_class):
         self.tableView.setModel(self.tableModel)
         self.tableSelectionModel = self.tableView.selectionModel()
 
+        # nodes list model
         self.nodesModel = ui.NodesListModel()
         self.nodeStatsList.setModel(self.nodesModel)
         self.nodeListSelModel = self.nodeStatsList.selectionModel()
 
+        # edges list 
         self.edgesModel = ui.EdgesListModel()
         self.edgeStatsList.setModel(self.edgesModel)
         self.edgeListSelModel = self.edgeStatsList.selectionModel()
 
-        self.initializeUI()
-        self.readSettings()       
+        self.readSettings()
+
+        """
+        print '# OpenGL mode:   ', self.use_gl
+        print '# Edge type:     ', self.edge_type
+        print '# Viewport mode: ', self.viewport_mode
+        """
+
+        self.initializeUI()              
         self.connectSignals()
 
         self.resetStatus()        
@@ -122,7 +138,8 @@ class SceneGraphUI(form_class, base_class):
     def initializeUI(self):
         """
         Set up the main UI
-        """        
+        """
+        self.initializePreferencesUI()
         # build the graph
         self.initializeGraphicsView()
 
@@ -189,18 +206,14 @@ class SceneGraphUI(form_class, base_class):
         self.network = self.graph.network
         
 
-        # add our custom GraphicsView object
+        # add our custom GraphicsView object (gview is defined in the ui file)
         self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, edge_type=self.edge_type)
         self.gviewLayout.addWidget(self.view) 
 
         self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-
         self.network.graph['environment'] = self.environment
-        self.network.graph['edge_type'] = self.view.scene().edge_type
-        self.network.graph['viewport_mode'] = self.view.viewport_mode
-        self.network.graph['use_gl'] = self.use_gl
         
     def connectSignals(self):
         """
@@ -212,8 +225,7 @@ class SceneGraphUI(form_class, base_class):
 
         # window manager
         self.view.scene().manager.widgetsUpdated.connect(self.nodesChangedAction)
-        self.view.scene().manager.nodesRenamed.connect(self.nodesChangedAction)
-        self.view.scene().selectionChanged.connect(self.nodesSelectedAction)
+        self.view.selectionChanged.connect(self.nodesSelectedAction)
 
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
@@ -231,9 +243,13 @@ class SceneGraphUI(form_class, base_class):
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
 
+        # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
-        self.action_edge_type.triggered.connect(self.toggleEdgeTypes)
-        self.action_update_mode.triggered.connect(self.toggleViewMode)
+        self.edge_type_menu.currentIndexChanged.connect(self.toggleEdgeTypes)
+        self.viewport_mode_menu.currentIndexChanged.connect(self.toggleViewMode)
+        self.check_use_gl.toggled.connect(self.toggleOpenGLMode)
+        self.logging_level_menu.currentIndexChanged.connect(self.toggleLoggingLevel)
+        self.check_render_fx.toggled.connect(self.toggleEffectsRendering)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -249,9 +265,7 @@ class SceneGraphUI(form_class, base_class):
         # table view
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
         self.nodeListSelModel.selectionChanged.connect(self.nodesModelChangedAction)
-        self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)
-
-        self.view.selectionChanged.connect(self.nodesSelectedAction)
+        self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)        
 
     def initializeFileMenu(self):
         """
@@ -287,17 +301,11 @@ class SceneGraphUI(form_class, base_class):
         """
         Setup the ui menu before it is drawn.
         """
-        # GraphicsView mode
-        view_mode = 'full'
-        if self.view.update_mode == 'full':
-            view_mode = 'smart'
-
         global SCENEGRAPH_DEBUG
         db_label = 'Debug on'
         if SCENEGRAPH_DEBUG == '1':
             db_label = 'Debug off'
 
-        self.action_update_mode.setText('Set viewport mode: %s' % view_mode)
         self.action_debug_mode.setText(db_label)
 
     def initializeRecentFilesMenu(self):
@@ -318,6 +326,60 @@ class SceneGraphUI(form_class, base_class):
                         self.menu_recent_files.addAction(file_action)
                         i+=1
             self.menu_recent_files.setEnabled(True)
+
+    def initializePreferencesUI(self):
+        """
+        Setup the preferences area.
+        """
+        edge_types = ['bezier', 'polygon']
+        view_modes = dict(
+                        full = 'QtGui.QGraphicsView.FullViewportUpdate',
+                        smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
+                        minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate'
+                        )
+
+        self.edge_type_menu.blockSignals(True)
+        self.viewport_mode_menu.blockSignals(True)
+        self.check_use_gl.blockSignals(True)
+        self.logging_level_menu.blockSignals(True)
+        self.check_render_fx.blockSignals(True)
+
+        self.edge_type_menu.clear()
+        self.viewport_mode_menu.clear()
+        self.logging_level_menu.clear()
+
+        # edge type menu
+        self.edge_type_menu.addItems(edge_types)
+        self.edge_type_menu.setCurrentIndex(self.edge_type_menu.findText(self.edge_type))
+
+        # render FX
+        self.check_render_fx.setChecked(self.render_fx)
+
+        # build the viewport menu
+        for item in view_modes.items():
+            label, mode = item[0], item[1]
+            self.viewport_mode_menu.addItem(label, str(mode))
+        self.viewport_mode_menu.setCurrentIndex(self.viewport_mode_menu.findText(self.viewport_mode))
+
+        # OpenGL check
+        GL_MODE = self.use_gl
+        if GL_MODE is None:
+            GL_MODE = False
+
+        self.check_use_gl.setChecked(GL_MODE)
+
+        # logging level
+        current_log_level = [x[0] for x in options.LOGGING_LEVELS.items() if x[1] == log.level][0]
+        for item in options.LOGGING_LEVELS.items():
+            label, mode = item[0], item[1]
+            self.logging_level_menu.addItem(label.lower(), mode)            
+        self.logging_level_menu.setCurrentIndex(self.logging_level_menu.findText(current_log_level.lower()))
+    
+        self.edge_type_menu.blockSignals(False)
+        self.viewport_mode_menu.blockSignals(False)
+        self.check_use_gl.blockSignals(False)
+        self.logging_level_menu.blockSignals(False)
+        self.check_render_fx.blockSignals(False)
 
     def buildWindowTitle(self):
         """
@@ -421,9 +483,9 @@ class SceneGraphUI(form_class, base_class):
         """
         Save a temp file when the graph changes.
         """
-        temp_scene = self.temp_scene
-        if 'temp_scene' not in self.graph.network.graph:
-            self.graph.network.graph['temp_scene'] = self.temp_scene
+        temp_scene = self.graph.temp_scene
+        if 'autosave' not in self.graph.network.graph:
+            self.graph.network.graph['autosave'] = self.graph.temp_scene
         self.graph.write(temp_scene)
         return temp_scene
 
@@ -445,7 +507,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.read(filename)
         self.action_save_graph.setEnabled(True)
 
-        if filename != self.temp_scene:
+        if filename != self.graph.temp_scene:
             self.graph.setScene(filename)
             self.qtsettings.addRecentFile(filename)
             log.debug('adding recent file: "%s"' % filename)
@@ -494,11 +556,49 @@ class SceneGraphUI(form_class, base_class):
         """
         Update the GraphicsView update mode for performance.
         """
-        mode = self.view.update_mode
-        if mode == 'full':
-            self.view.update_mode = 'smart'
-        if mode == 'smart':
-            self.view.update_mode = 'full'
+        mode = self.viewport_mode_menu.currentText()        
+        qmode = self.viewport_mode_menu.itemData(self.viewport_mode_menu.currentIndex())
+        self.view.viewport_mode = eval(qmode)
+        self.view.scene().update()
+        self.viewport_mode = mode
+
+    def toggleOpenGLMode(self, val):
+        """
+        Toggle OpenGL mode and swap out viewports.
+        """
+        self.use_gl = val
+
+        widget = self.view.viewport()
+        widget.deleteLater()
+
+        if self.use_gl:
+            from PySide import QtOpenGL
+            self.view.setViewport(QtOpenGL.QGLWidget())
+            log.info('initializing OpenGL renderer.')
+        else:
+            self.view.setViewport(QtGui.QWidget())
+        self.initializeStylesheet()
+        self.view.scene().update()
+
+    def toggleEffectsRendering(self, val):
+        """
+        Toggle rendering of node effects.
+
+         * todo: this probably belongs in GraphicsView/Scene.
+        """
+        self.render_fx = val
+        log.info('toggling effects %s' % ('on' if val else 'off'))
+        for node in self.view.scene().scenenodes.values():
+            if hasattr(node, '_render_effects'):
+                node._render_effects = self.render_fx 
+                node.update()
+        self.view.scene().update()
+
+    def toggleLoggingLevel(self):
+        """
+        Toggle the logging level.
+        """
+        log.level = self.logging_level_menu.itemData(self.logging_level_menu.currentIndex())        
 
     def toggleDebug(self):
         """
@@ -529,18 +629,13 @@ class SceneGraphUI(form_class, base_class):
         """
         Toggle the edge types.
         """
-        scene = self.view.scene()
-        edge_type = scene.edge_type
+        edge_type = self.edge_type_menu.currentText()
+        if edge_type:
+            self.edge_type = edge_type
 
-        if edge_type == 'bezier':
-            scene.edge_type = 'polygon'
-
-        elif edge_type == 'polygon':
-            scene.edge_type = 'bezier'
-
-        for edge in scene.getEdges():
-            edge.edge_type = scene.edge_type
-        scene.update()
+        for edge in self.view.scene().getEdges():
+            edge.edge_type = self.edge_type
+        self.view.scene().update()
 
     #- ACTIONS ----
     def nodesSelectedAction(self):
@@ -733,9 +828,39 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.endGroup()
 
         self.qtsettings.beginGroup("Preferences")
-        self.viewport_mode = self.qtsettings.value("viewport_mode")
-        self.edge_type = self.qtsettings.value("edge_type")
-        self.use_gl = self.qtsettings.value("use_gl")
+
+        # viewport mode (global?)   
+        viewport_mode = self.qtsettings.value("viewport_mode")
+        if viewport_mode is not None:
+            self.viewport_mode = viewport_mode
+
+        # render fx (scene?)
+        render_fx = self.qtsettings.value("render_fx")
+        if render_fx is not None:
+            if render_fx == 'false':
+                self.render_fx =False
+            if render_fx == 'true':
+                self.render_fx =True
+
+        # edge type (scene)
+        edge_type = self.qtsettings.value("edge_type")
+        if edge_type is not None:
+            self.edge_type = edge_type
+
+        # OpenGL mode (global)
+        use_gl = self.qtsettings.value("use_gl")
+        if use_gl is not None:
+            if use_gl == 'false':
+                self.use_gl =False
+            if use_gl == 'true':
+                self.use_gl =True
+
+        #logging level (global)
+        logging_level = self.qtsettings.value("logging_level")
+        if logging_level is None:
+            logging_level = 30 # warning
+
+        log.setLevel(int(logging_level))
         self.qtsettings.endGroup()
 
         # read the dock settings
@@ -759,15 +884,18 @@ class SceneGraphUI(form_class, base_class):
 
         # general preferences
         self.qtsettings.beginGroup('Preferences')
-        self.qtsettings.setValue("viewport_mode", self.view.viewport_mode)
-        self.qtsettings.setValue("edge_type", self.view.scene().edge_type)
+        self.qtsettings.setValue("viewport_mode", self.viewport_mode)
+        self.qtsettings.setValue("render_fx", self.render_fx)
+        self.qtsettings.setValue("edge_type", self.edge_type)
         self.qtsettings.setValue("use_gl", self.use_gl)
+        self.qtsettings.setValue("logging_level", log.level)
         self.qtsettings.endGroup()
 
         # write the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
             no_default = False
+
             # this is the first launch
             if dock_name not in self.qtsettings.childGroups():
                 no_default = True
@@ -809,7 +937,10 @@ class SceneGraphUI(form_class, base_class):
         bar = self.outputTextBrowser.verticalScrollBar()
         posy = bar.value()
 
-        self.outputTextBrowser.clear()
+        self.outputTextBrowser.clear()        
+
+        # update graph attributes
+        self.graph.updateNetworkAttributes()
         #graph_data = nxj.adjacency_data(self.graph.network)
         graph_data = nxj.node_link_data(self.graph.network)
         html_data = self.formatOutputHtml(graph_data)
@@ -900,11 +1031,10 @@ class SceneGraphUI(form_class, base_class):
         self.nodesModel.addNodes(nodes)
         self.edgesModel.addEdges(edges)
 
-        self.group_nodes.setTitle('Nodes: (%d)' % len(nodes))
-        self.group_edges.setTitle('Edges: (%d)' % len(edges))
-
-
     def refreshGraph(self):
+        """
+        Refresh the current graph.
+        """
         self.graph.evaluate()
         self.view.scene().update()
 
@@ -953,7 +1083,6 @@ class SceneGraphUI(form_class, base_class):
         return False
 
 
-
 class Settings(QtCore.QSettings):
 
     def __init__(self, filename, frmt=QtCore.QSettings.IniFormat, parent=None, max_files=10):
@@ -961,9 +1090,10 @@ class Settings(QtCore.QSettings):
 
         self._max_files     = max_files
         self._parent        = parent
-        self._initialize()
+        self._groups        = ['MainWindow', 'RecentFiles', 'Preferences']
+        self.initialize()
 
-    def _initialize(self):
+    def initialize(self):
         """
         Setup the file for the first time.
         """
@@ -975,6 +1105,42 @@ class Settings(QtCore.QSettings):
         if 'RecentFiles' not in self.childGroups():
             self.beginWriteArray('RecentFiles', 0)
             self.endArray()
+
+        self.initializePreferences()
+
+    def initializePreferences(self):
+        """
+        Set up the default preferences from global options.
+        """
+        if 'Preferences' not in self.childGroups():
+            self.beginGroup("Preferences")
+            # query the defauls from options.
+            for option in options.SCENEGRAPH_PREFERENCES:
+                if 'default' in options.SCENEGRAPH_PREFERENCES.get(option):
+                    self.setValue('Preferences/default/%s' % option, options.SCENEGRAPH_PREFERENCES.get(option).get('default'))
+            self.endGroup()
+
+    def getDefaultValue(self, group, key):
+        """
+        Return the default values for a group.
+        """
+        result = None
+        if group not in self.childGroups():
+            log.warning('no settings saved for group "%s".' % group)
+            return
+
+        self.beginGroup(group)
+        if not 'default' in self.childGroups():
+            log.warning('default settings for group "%s" do not exist.' % group)
+            return
+
+        self.beginGroup('default')
+        if key not in self.childKeys():
+            log.warning('key "%s" does not exist in "%s/default".' % (key, group))
+            return
+        result = self.value(key)
+        self.endGroup()
+        return result
 
     def save(self, key='default'):
         """
@@ -988,13 +1154,14 @@ class Settings(QtCore.QSettings):
         self.setValue("windowState", self._parent.saveState())
         self.endGroup()
 
-    def load(self, key='default'):
-        pass
-
     def deleteFile(self):
+        """
+        Delete the preferences file on disk.
+        """
         log.info('deleting settings: "%s"' % self.fileName())
         return os.remove(self.fileName())
 
+    #- Recent Files ----
     @property
     def recent_files(self):
         """

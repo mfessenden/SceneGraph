@@ -8,7 +8,7 @@ class WindowManager(QtCore.QObject):
     nodesAdded      = QtCore.Signal(list)
     nodesRemoved    = QtCore.Signal(list)
     nodesUpdated    = QtCore.Signal(list)
-    nodesRenamed    = QtCore.Signal(list)
+    graphNodesRenamed    = QtCore.Signal(list)
     # scene -> graph
     widgetsUpdated  = QtCore.Signal(list)
     dagNodesUpdated = QtCore.Signal(list)
@@ -23,7 +23,9 @@ class WindowManager(QtCore.QObject):
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self, parent)
         
+
         self.scene = parent
+        self.ui    = parent.ui 
         self.graph = None
 
         if parent is not None:
@@ -58,15 +60,31 @@ class WindowManager(QtCore.QObject):
         Setup widget signals.
         """
         log.info('WindowManager: connecting WindowManager to Scene.') 
+        # connect scene functions
         self.nodesAdded.connect(self.scene.addNodes)
-        self.dagNodesUpdated.connect(self.graph.updateGraph)
         self.nodesUpdated.connect(self.scene.updateNodesAction)
+        self.nodesRemoved.connect(self.scene.removeDagNodes)
+
+        # connect graph functions
+        self.dagNodesUpdated.connect(self.graph.updateNetwork)
 
     def evaluate(self):
         """
         Do cool shit here.
         """
         pass
+
+    def updateNetworkAttributes(self):
+        """
+        Update the Graph.network with UI attributes.
+        """
+        preferences = dict()
+        preferences.update(edge_type=self.ui.edge_type)
+        preferences.update(use_gl=self.ui.use_gl)
+        preferences.update(viewport_mode=self.ui.viewport_mode)
+        preferences.update(render_fx=self.ui.render_fx)
+        preferences.update(antialiasing=self.ui.antialiasing)
+        return preferences
 
     #- Graph to Scene ----    
     def addNodes(self, dagnodes, edges=False):
@@ -90,6 +108,7 @@ class WindowManager(QtCore.QObject):
         """
         Signal Graph -> GraphicsScene.
         """
+        log.info('WindowManager: removing %d nodes...' % len(dagnodes))
         self.nodesRemoved.emit(dagnodes)
 
     def updateNodes(self, dagnodes):
@@ -104,7 +123,7 @@ class WindowManager(QtCore.QObject):
         Signal Graph -> GraphicsScene.
         """
         log.info('WindowManager: renaming %d nodes...' % len(dagnodes))
-        self.nodesRenamed.emit(dagnodes)
+        self.graphNodesRenamed.emit(dagnodes)
 
     #- Scene to Graph ----
     def widgetsUpdatedAction(self, nodes):

@@ -100,7 +100,6 @@ class Container(MutableMapping):
         return base_classes
 
 
-
 class NodeBase(MutableMapping):
     reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes', '_metadata']
     def __init__(self, *args, **kwargs):
@@ -459,7 +458,7 @@ class NodeBase(MutableMapping):
 class DagEdge(MutableMapping):
     """
     Notes:
-        - needs a refernce to source node, dest node.
+        - needs a reference to source node, dest node.
         - needs to be able to query either at any time.
     """
 

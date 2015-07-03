@@ -42,6 +42,7 @@ QWidget{
 }
 
 QDockWidget{
+    /* affects dock widget title bar */
     font-weight: bold;
     /*font-size: 9pt;*/
 }
@@ -59,7 +60,7 @@ QDockWidget::title{
 }
 
 QTabBar{
-    font-weight: bold;
+    /*font-weight: bold;*/
     /*font-size: 11;*/
 }
 
@@ -257,6 +258,11 @@ QTabWidget::tab-bar {
     left: 5px; /* move the tab right 5px */
 }
 
+QTabBar::tab::top.sub-tab{
+    font-size: 36pt;
+    background-color: #f3766f;
+}
+
 /* Style the tab using the tab sub-control. Note that
     it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {    
@@ -309,4 +315,17 @@ QGroupBox::title {
 
 QGroupBox::title:flat {
     font-style: italic;
+}
+
+QListView {
+    alternate-background-color: yellow;
+}
+
+QHeaderView {
+    border: none;
+    border-radius: 10px;
+}
+
+TableView{
+    border: none;
 }

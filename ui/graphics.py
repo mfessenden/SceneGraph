@@ -26,8 +26,9 @@ class GraphicsView(QtGui.QGraphicsView):
         self._scale              = 1
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
 
-        self.initializeSceneGraph(ui.graph, opengl=opengl, debug=debug)
-
+        self.initializeSceneGraph(ui.graph, ui, opengl=opengl, debug=debug)
+        self.viewport_mode       = self._parent.viewport_mode
+        
         # Mouse Interaction
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
@@ -49,27 +50,23 @@ class GraphicsView(QtGui.QGraphicsView):
         self.customContextMenuRequested.connect(self.showContextMenu)
         self.connectSignals()
 
-    def initializeSceneGraph(self, graph, opengl=False, **kwargs):
+    def initializeSceneGraph(self, graph, ui, **kwargs):
         """
         Setup the GraphicsScene.
 
         params:
-            graph (Graph) - graph instance.
-            opengl (bool) - render scene with OpenGL (beta).
-            debug (bool)  - activate debug mode.
+            graph (Graph)       - graph instance.
+            ui    (QMainWindow) - parent window.
         """
-        debug = kwargs.get('debug', False)
-        edge_type = kwargs.get('edge_type', 'bezier')
-        if opengl:
+        if ui.use_gl:
             from PySide import QtOpenGL
             self.setViewport(QtOpenGL.QGLWidget())
             log.info('initializing OpenGL renderer.')
 
         # pass the Graph instance to the GraphicsScene 
-        scene = GraphicsScene(self, graph=graph, debug=debug, edge_type=edge_type)
+        scene = GraphicsScene(self, graph=graph, ui=ui)
         scene.setSceneRect(-5000, -5000, 10000, 10000)
         self.setScene(scene)
-        #self.update_mode = 'full'
 
     @property
     def viewport_mode(self):
@@ -79,30 +76,33 @@ class GraphicsView(QtGui.QGraphicsView):
         return:
             (str) - update mode.
         """
-        result = None
         mode = self.viewportUpdateMode()
         if mode == QtGui.QGraphicsView.ViewportUpdateMode.FullViewportUpdate:
-            result = 'full'
-        elif mode == QtGui.QGraphicsView.ViewportUpdateMode.SmartViewportUpdate:
-            result = 'smart'
-        return result
+            return 'full'
+        if mode == QtGui.QGraphicsView.ViewportUpdateMode.SmartViewportUpdate:
+            return 'smart'
+        if mode == QtGui.QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate:
+            return 'minimal'
+        return
 
     @viewport_mode.setter
-    def viewport_mode(self, mode='full'):
+    def viewport_mode(self, mode):
         """
         Set the viewport update mode.
 
         params:
-            full (bool) - use full update mode (slower).
+            mode (str) - viewport level (full is slower).
         """
         if mode == 'full':
-            self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
+            mode = QtGui.QGraphicsView.ViewportUpdateMode.FullViewportUpdate
 
-        elif mode == 'smart':
-            self.setViewportUpdateMode(QtGui.QGraphicsView.SmartViewportUpdate)
-        else:
-            log.error('unknown mode "%s"' % mode)      
+        if mode == 'smart':
+            mode = QtGui.QGraphicsView.ViewportUpdateMode.SmartViewportUpdate
 
+        if mode == 'minimal':
+            mode = QtGui.QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate
+        self.setViewportUpdateMode(mode)
+    
     def updateGraphViewAttributes(self):
         """
         Update networkx graph attributes from the current UI.
@@ -111,7 +111,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         self.scene().network.graph['view_scale']=self.getScaleFactor()
         self.scene().network.graph['view_center']=self.getCenterPoint()
-        self.scene().network.graph['scene_size']=self.scene().sceneRect().getCoords()
+        self.scene().network.graph['scene_size']=self.getSceneCoordinates()
 
     def connectSignals(self):
         """
@@ -146,12 +146,16 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         self.centerOn(pos[0],pos[1])
 
-    def getSceneSize(self):
+    def getSceneCoordinates(self):
         """
         Returns the scene size.
+
+        returns:
+            (tuple) - coordinates of current scene. (-x, -y, x, y)
         """
-        srect = self.scene().sceneRect()
-        return [srect.width(), srect.height()]
+        if self.scene():
+            return self.scene().sceneRect().getCoords()
+        return (0, 0, 0, 0)
 
     def getTranslation(self):
         """
@@ -167,7 +171,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def updateStatus(self, event):
         """
-        Update the parent UI with the view status.
+        Update the parent console widget with the view status.
 
         params:
             event - (QEvent) event object
@@ -176,7 +180,7 @@ class GraphicsView(QtGui.QGraphicsView):
         # provide debug feedback
         status = dict(
             view_size = self.getContentsSize(),
-            scene_size = self.getSceneSize(),
+            scene_size = self.getSceneCoordinates(),
             zoom_level = self.getScaleFactor(),
             )
  
@@ -218,6 +222,10 @@ class GraphicsView(QtGui.QGraphicsView):
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
         else:
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
+
+        if event.button() == QtCore.Qt.RightButton:
+            print 'building context menu...'
+            self.showContextMenu(event.pos())
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
     def event(self, event):
@@ -247,7 +255,9 @@ class GraphicsView(QtGui.QGraphicsView):
 
         # delete nodes & edges...
         elif event.key() == QtCore.Qt.Key_Delete:
+            print 'deleting...'
             if selected_nodes:
+                print 'nodes: ', len(selected_nodes)
                 self.scene().removeNodes(selected_nodes)
 
         # disable selected nodes
@@ -287,7 +297,7 @@ class GraphicsView(QtGui.QGraphicsView):
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        menuActions = []
+        menuActions = ['add attribute']
         for action in menuActions:
             #action.setData((action.data()[0], self.mapToScene(pos)))
             menu.addAction(action)
@@ -328,15 +338,20 @@ class GraphicsScene(QtGui.QGraphicsScene):
     self.itemsBoundingRect() - returns the maximum boundingbox for all nodes
 
     """
-    def __init__(self, parent=None, graph=None, **kwargs):
+    def __init__(self, parent=None, graph=None, ui=None, **kwargs):
         QtGui.QGraphicsScene.__init__(self, parent)
 
+        self.ui          = ui
+        self.debug       = ui.debug
+        self.edge_type   = ui.edge_type
+
+        # graph
         self.graph       = graph
         self.network     = graph.network
-        self.debug       = kwargs.get('debug', False)
 
-        self.line        = None    # temp line
-        self.edge_type   = kwargs.get('edge_type', 'bezier')
+        # temp line for drawing edges
+        self.line        = None        
+
         self.manager     = manager.WindowManager(self)
         self.scenenodes  = dict()
 
@@ -364,15 +379,16 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if isinstance(dag, core.NodeBase):              
                 if dag.id not in self.scenenodes:
                     widget = node_widgets.Node(dag)
+                    widget._render_effects = self.ui.render_fx
 
                     # set the debug mode
                     widget.setDebug(self.debug)
                     self.scenenodes[dag.id]=widget
                     self.addItem(widget)
                     widgets.append(widget)
-
                     widget.nodeChanged.connect(self.nodeChangedEvent)
 
+            # adding an edge
             elif isinstance(dag, core.DagEdge):              
                 if dag.id not in self.scenenodes:
                     # get the source connection node
@@ -385,12 +401,16 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     dest_conn_widget = dest_widget.getInputConnection(dag.dest_attr)
 
                     widget = node_widgets.Edge(dag, src_conn_widget, dest_conn_widget)
+                    widget._render_effects = self.ui.render_fx
 
-                    # set the debug mode
-                    widget.setDebug(self.debug)
-                    self.scenenodes[dag.id]=widget
-                    self.addItem(widget)
-                    widgets.append(widget)
+                    # check that connection is valid.
+                    if widget.connect(src_conn_widget) and widget.connect(dest_conn_widget):
+
+                        # set the debug mode
+                        widget.setDebug(self.debug)
+                        self.scenenodes[dag.id]=widget
+                        self.addItem(widget)
+                        widgets.append(widget)
 
             else:
                 log.warning('unknown node type: "%s"' % dag.__class__.__name__)
@@ -407,7 +427,47 @@ class GraphicsScene(QtGui.QGraphicsScene):
             nodes = [nodes,]
             
         for node in nodes:
-            print 'Removing node: ', node.dagnode.name
+            print '# Scene.removeNodes: ', node
+            if isinstance(node, node_widgets.Node):
+                print '# signalling graph...'
+                self.graph.removeNode(node.dagnode.id)
+
+            if isinstance(node, node_widgets.Edge):
+                print 'edge!'
+                self.graph.removeEdge(node.dagnode.id)
+
+    def removeDagNodes(self, dagnodes):
+        """
+        Remove node widgets from the scene.
+
+         * Called from manager: 
+            Graph.removeNodes -> GraphicsScene.removeDagNodes
+
+        params:
+            dagnodes (list) - list of node dagnodes.
+        """
+        if type(dagnodes) not in [list, tuple]:
+            dagnodes = [dagnodes,]
+
+        widgets = []
+        for dag in dagnodes:
+
+            if isinstance(dag, core.NodeBase):
+                # we're dealing with a node
+                node_widget = self.getNode(dag.id)
+                if node_widget:
+                    widgets.append(node_widget)
+
+            if isinstance(dag, core.DagEdge):
+                # we're dealing with an edge
+                edge_widgets = self.getEdge(dag.id)
+                if edge_widgets:
+                    widgets.extend(edge_widgets)
+        if widgets:
+            for w in widgets:
+                self.removeItem(w)
+        self.update()
+
 
     def getNodes(self):
         """
@@ -481,8 +541,21 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 edges.append(item)
         return edges
 
-    def getEdge(self, edge):
-        return
+    def getEdge(self, *args):
+        """
+        Return a named edge.
+        """
+        edges = []
+        for edge in self.getEdges():
+            if edge.name in args:
+                edges.append(edge)
+            if edge.source_connection in args:
+                if edge.dest_connection in args:
+                    edges.append(edge)
+        for arg in args:
+            if arg in self.scenenodes:
+                edges.append(self.scenenodes.get(arg))
+        return edges
 
     def popNode(self, node):
         """
@@ -516,9 +589,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         item = self.itemAt(event.scenePos())
 
         if event.button() == QtCore.Qt.LeftButton:
-            if isinstance(item, node_widgets.Connection):
 
-                print 'Connection: "%s"' % item.connection_name
+            if isinstance(item, node_widgets.Connection):
                 if item.isOutputConnection():
                     crect = item.boundingRect()
                     self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
@@ -529,10 +601,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 if item.isInputConnection():
                     # query the edge
                     edges = item.connections.values()
-                    print 'edges: ', item.is_connected
                     if edges and len(edges) == 1:
                         connected_edge = edges[0]
-                        self.graph.removeEdge(connected_edge.UUID)
+                        # todo: manager call here
+                        self.graph.removeEdge(connected_edge.dagnode.id)
                         edge_line = connected_edge.getLine()
                         p1 = edge_line.p1()
 
@@ -582,13 +654,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 source_conn = source_items[0]
                 dest_conn = dest_items[0]
 
-                print '# connecting "%s" -> "%s"' % (source_conn.connection_name, dest_conn.connection_name)
+                # if we're not dealing with two connections, return without
+                # doing anything.
+                if not isinstance(source_conn, node_widgets.Connection) or not isinstance(dest_conn, node_widgets.Connection):
+                    return
 
                 if self.validateConnection(source_conn, dest_conn):
-                    print 'Connection is valid...'
                     src_dag = source_conn.dagnode
-                    dest_dag = dest_conn.dagnode
-                 
+                    dest_dag = dest_conn.dagnode                 
                     edge = self.graph.addEdge(src_dag, dest_dag, src_attr=source_conn.name, dest_attr=dest_conn.name)
 
         self.line = None

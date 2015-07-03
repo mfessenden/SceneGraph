@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>675</height>
+    <width>984</width>
+    <height>789</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -112,7 +112,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>984</width>
      <height>25</height>
     </rect>
    </property>
@@ -146,7 +146,6 @@
     <addaction name="separator"/>
     <addaction name="action_show_all_attributes"/>
     <addaction name="separator"/>
-    <addaction name="action_edge_type"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menu_nodes">
@@ -174,7 +173,6 @@
     <addaction name="separator"/>
     <addaction name="action_reset_ui"/>
     <addaction name="action_debug_mode"/>
-    <addaction name="action_update_mode"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
@@ -251,7 +249,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>Graph</string>
+    <string>Dependencies</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -346,7 +344,7 @@
               <x>0</x>
               <y>0</y>
               <width>361</width>
-              <height>234</height>
+              <height>348</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -362,8 +360,32 @@
              <property name="margin">
               <number>1</number>
              </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="viewRectLabel">
+               <property name="text">
+                <string>View Size:</string>
+               </property>
+              </widget>
+             </item>
              <item row="0" column="1">
               <widget class="QLineEdit" name="viewRectLineEdit"/>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="sceneRectLabel">
+               <property name="text">
+                <string>Scene Rect:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="sceneRectLineEdit"/>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="zoomLevelLabel">
+               <property name="text">
+                <string>Zoom Level:</string>
+               </property>
+              </widget>
              </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="zoomLevelLineEdit"/>
@@ -446,30 +468,6 @@
                </layout>
               </widget>
              </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="sceneRectLabel">
-               <property name="text">
-                <string>Scene Rect:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="viewRectLabel">
-               <property name="text">
-                <string>View Size:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="zoomLevelLabel">
-               <property name="text">
-                <string>Zoom Level:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="sceneRectLineEdit"/>
-             </item>
             </layout>
            </widget>
           </widget>
@@ -478,15 +476,9 @@
        </widget>
        <widget class="QWidget" name="tab_nodes">
         <attribute name="title">
-         <string>Node Stats</string>
+         <string>Scene Stats</string>
         </attribute>
-        <layout class="QVBoxLayout" name="tabNodesLayout">
-         <property name="spacing">
-          <number>2</number>
-         </property>
-         <property name="margin">
-          <number>2</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
           <widget class="QScrollArea" name="nodesScrollArea">
            <property name="frameShape">
@@ -500,11 +492,11 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>248</height>
+              <width>361</width>
+              <height>348</height>
              </rect>
             </property>
-            <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0,0">
+            <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
              <property name="spacing">
               <number>4</number>
              </property>
@@ -512,46 +504,153 @@
               <number>1</number>
              </property>
              <item>
-              <widget class="QGroupBox" name="group_nodes">
-               <property name="title">
-                <string>Nodes</string>
+              <widget class="QTabWidget" name="statsTabWidget">
+               <property name="currentIndex">
+                <number>0</number>
                </property>
-               <property name="flat">
-                <bool>true</bool>
+               <property name="class" stdset="0">
+                <string>sub-tab</string>
                </property>
-               <layout class="QVBoxLayout" name="groupNodesLayout">
-                <property name="spacing">
-                 <number>3</number>
+               <widget class="QWidget" name="tab_stats_nodes">
+                <property name="class" stdset="0">
+                 <string>sub-tab-widget</string>
                 </property>
-                <property name="margin">
-                 <number>3</number>
+                <attribute name="title">
+                 <string>Nodes</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="statsNodesLayout">
+                 <property name="spacing">
+                  <number>3</number>
+                 </property>
+                 <property name="margin">
+                  <number>3</number>
+                 </property>
+                 <item>
+                  <widget class="QListView" name="nodeStatsList"/>
+                 </item>
+                </layout>
+               </widget>
+               <widget class="QWidget" name="tab_stats_edges">
+                <property name="class" stdset="0">
+                 <string>sub-tab-widget</string>
                 </property>
-                <item>
-                 <widget class="QListView" name="nodeStatsList"/>
-                </item>
-               </layout>
+                <attribute name="title">
+                 <string>Edges</string>
+                </attribute>
+                <layout class="QVBoxLayout" name="statsEdgesLayout">
+                 <property name="spacing">
+                  <number>3</number>
+                 </property>
+                 <property name="margin">
+                  <number>3</number>
+                 </property>
+                 <item>
+                  <widget class="QListView" name="edgeStatsList"/>
+                 </item>
+                </layout>
+               </widget>
               </widget>
              </item>
-             <item>
-              <widget class="QGroupBox" name="group_edges">
-               <property name="title">
-                <string>Edges</string>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_preferences">
+        <attribute name="title">
+         <string>Preferences</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="tabPreferencesLayout">
+         <property name="spacing">
+          <number>3</number>
+         </property>
+         <property name="margin">
+          <number>3</number>
+         </property>
+         <item>
+          <widget class="QScrollArea" name="preferencesScrollArea">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="preferencesScrollAreaContents">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>373</width>
+              <height>360</height>
+             </rect>
+            </property>
+            <layout class="QFormLayout" name="preferencesScrollAreaLayout">
+             <property name="fieldGrowthPolicy">
+              <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+             </property>
+             <property name="horizontalSpacing">
+              <number>3</number>
+             </property>
+             <property name="verticalSpacing">
+              <number>3</number>
+             </property>
+             <property name="margin">
+              <number>3</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="viewport_mode_label">
+               <property name="text">
+                <string>Viewport Mode:</string>
                </property>
-               <property name="flat">
-                <bool>true</bool>
-               </property>
-               <layout class="QVBoxLayout" name="groupEdgesLayout">
-                <property name="spacing">
-                 <number>3</number>
-                </property>
-                <property name="margin">
-                 <number>3</number>
-                </property>
-                <item>
-                 <widget class="QListView" name="edgeStatsList"/>
-                </item>
-               </layout>
               </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="viewport_mode_menu"/>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="edge_type_label">
+               <property name="text">
+                <string>Edge type:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="edge_type_menu"/>
+             </item>
+             <item row="3" column="1">
+              <widget class="QCheckBox" name="check_render_fx">
+               <property name="text">
+                <string>render FX</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QCheckBox" name="check_use_gl">
+               <property name="text">
+                <string>Use OpenGL</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="logging_level_label">
+               <property name="text">
+                <string>Logging level:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QComboBox" name="logging_level_menu"/>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="antialiasing_label">
+               <property name="text">
+                <string>Antialiasing:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="antialiasing_menu"/>
              </item>
             </layout>
            </widget>
@@ -704,6 +803,8 @@
   <tabstop>button_clear</tabstop>
   <tabstop>outputTextBrowser</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="scenegraph.qrc"/>
+ </resources>
  <connections/>
 </ui>

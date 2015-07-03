@@ -4,7 +4,7 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 API_VERSION                 = 0.61
-API_REVISION                = 0
+API_REVISION                = 1
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
 PLATFORM                    = None
 
@@ -19,23 +19,23 @@ SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
 
 
 
-def get_platform():
+def setup_platform_defaults():
     """
-    Returns the current platform (OS) variation.
-
-    returns:
-        (str) - platform (Linux, MacOSX or Windows)
+    Setup globals for a specific platform.
     """
     import sys
+    PLATFORM = 'Windows'
     if 'linux' in sys.platform:
-        return 'Linux'
+        PLATFORM = 'Linux'
+
     if sys.platform == 'darwin':
-        return 'MacOSX'
-    return 'Windows'
+        PLATFORM = 'MacOSX'
+
+    #print '[%s]: INFO: initializing platform globals for "%s"' % (PACKAGE, PLATFORM)
 
 
 # initialize the platform variable
-PLATFORM = get_platform()
+setup_platform_defaults()
 
 
 
@@ -80,4 +80,27 @@ SCENEGRAPH_COLORS = {
     'gravel':[181, 182, 185, 255],
     'pebble':[217, 212, 206, 255],
     'sand':[185, 172, 151, 255],
-}
+    }
+
+
+LOGGING_LEVELS = {
+    'CRITICAL':50,
+    'ERROR': 40,
+    'WARNING':30,
+    'INFO': 20,
+    'DEBUG':10,
+    'NOTSET':0
+    }
+
+
+# Default preferences
+SCENEGRAPH_PREFERENCES = {
+    'use_gl' : {'default':False, 'desc':'Render graph with OpenGL.'},
+    'edge_type' : {'default':'bezier', 'desc':'Draw edges with bezier paths.'},
+    'render_fx' : {'default': True, 'desc':'Render node drop shadows and effects.'},
+    'antialiasing' : {'default': 2, 'desc':'Antialiasing level.'},
+    'logging_level' : {'default':30, 'desc':'Verbosity level.'},
+    'font_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.'},
+    'font_mono' : {'default':'Menlo', 'desc':'Monospace font for UI.'},
+    'font_nodes' : {'default':'Menlo', 'desc':'Font for node labels.'},
+    }

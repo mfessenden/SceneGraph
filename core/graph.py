@@ -5,8 +5,9 @@ import weakref
 import simplejson as json
 import networkx as nx
 from functools import partial
+import inspect
 
-
+from SceneGraph import options
 from SceneGraph.core import log, NodeBase, DagEdge
 
 
@@ -27,12 +28,13 @@ class Graph(object):
         # attributes for current nodes/dynamically loaded nodes
         self._node_types     = dict() 
         self.dagnodes        = dict()
+        self.temp_scene      = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
 
         # setup node types
         self.initializeNodeTypes()
 
-        # initialize the NetworkX graph
-        self.initializeGraph()
+        # initialize the NetworkX graph attributes
+        self.initializeNetworkAttributes()
 
         for arg in args:
             if os.path.exists(arg):
@@ -44,15 +46,34 @@ class Graph(object):
         graph_data = nxj.node_link_data(self.network)
         return json.dumps(graph_data, indent=5)
 
-    def initializeGraph(self, scene=None):
+    def initializeNetworkAttributes(self, scene=None):
         """
         Add default attributes to the networkx graph.
         """
-        from SceneGraph.options import API_VERSION_AS_STRING
-        self.network.graph['api_version'] = API_VERSION_AS_STRING
+        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
         self.network.graph['scene'] = scene
-        self.network.graph['temp_scene'] = os.path.join(os.getenv('TMPDIR'), 'scenegraph_temp.json')
-        self.network.graph['environment'] = 'command_line'
+        self.network.graph['autosave'] = self.temp_scene
+        self.network.graph['environment'] = self.mode
+        self.network.graph['preferences'] = dict()
+
+    def updateNetworkAttributes(self):
+        """
+        Update the network attributes.
+        """
+        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
+        self.network.graph['scene'] = self.getScene()
+        self.network.graph['autosave'] = self.temp_scene
+        self.network.graph['environment'] = self.mode
+        self.network.graph['preferences'] = dict()
+
+        if self.manager is not None:
+            self.network.graph.get('preferences').update(self.manager.updateNetworkAttributes())
+
+    def getNetworkPrefernces(self, key=None):
+        """
+        Return the network preferences.
+        """
+        return self.network.graph.get('preferences', {})
 
     def initializeNodeTypes(self):
         """
@@ -96,7 +117,7 @@ class Graph(object):
                         log.warning('cannot find "%s" metadata %s' % (node_name, node_data))
         return nodes
 
-    def updateGraph(self, dagnodes):
+    def updateNetwork(self, dagnodes):
         """
         Update the networkx graph from the UI.
          *todo: we need to store a weakref dict of dag nodes in the graph
@@ -435,7 +456,8 @@ class Graph(object):
             if self.manager is not None:
                 self.manager.removeNodes(nodes)
             return True
-
+        else:
+            print 'no nodes??'
         return False
 
     def addEdge(self, src, dest, **kwargs):
@@ -520,7 +542,6 @@ class Graph(object):
                 if not dag:
                     continue
                 edges.append(dag[0])
-
                 continue
 
         if not edges:
@@ -528,9 +549,14 @@ class Graph(object):
             return False
 
         for edge in edges:
+            print 'edge: ', edge
             try:
                 self.network.remove_edge(edge.src_id, edge.dest_id)
                 log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
+                # update the scene
+                if self.manager is not None:
+                    self.manager.removeNodes([edge])
+
             except Exception, err:
                 log.error(err)
                 return False
@@ -603,8 +629,8 @@ class Graph(object):
         """
         if type(nodes) not in [list, tuple]:
             nodes = [nodes,]
-        result = self.network.in_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True)
-        result.extend(self.network.out_edges(nbunch=[self.getNodeID(n) for n in nodes], data=True))
+        result = self.network.in_edges(nbunch=[self.getNodeID(n.name) for n in nodes], data=True)
+        result.extend(self.network.out_edges(nbunch=[self.getNodeID(n.name) for n in nodes], data=True))
         return result
 
     def in_edges(self, nodes):
@@ -800,6 +826,7 @@ class Graph(object):
         import networkx.readwrite.json_graph as nxj
         graph_data = nxj.node_link_data(self.network)
         #graph_data = nxj.adjacency_data(self.network)
+        self.updateNetworkAttributes()
         fn = open(filename, 'w')
         json.dump(graph_data, fn, indent=4)
         fn.close()

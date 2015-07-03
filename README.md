@@ -2,7 +2,7 @@
 
 ##### Usage:
 
-###### Maya:
+###### UI:
 
     from SceneGraph import scenegraph
     sgui = scenegraph.SceneGraphUI()
@@ -29,6 +29,20 @@
         
     # set arbitrary attributes
     dagnode.setNodeAttributes(env='maya', version='2014')
+
+    # querying widgets
+
+    # get an output connection widget
+    c_output=n1.getConnection('output')
+
+    # query an edge 
+    e1=scene.getEdge('node1.output', 'node2.input')[0]
+
+    # get edge source item (Connection)
+    e1.source_item
+
+    # get connected nodes from an edge
+    e1.listConnections()
 
 
 ###### API:
@@ -75,6 +89,12 @@
     attr.value = 'houdini'
 
 
+###### Maya:
+    from SceneGraph import scenegraph_maya
+    scenegraph_maya.main()
+
+
+
 ####### To Do:
 ###### API:
 - Node defaults, private attributes not yet re-implemented in new API
@@ -85,3 +105,7 @@
 - simplejson
 - NetworkX 1.9.1
 - matplotlib
+
+
+####### Admin:
+pyside-rcc ~/git/SceneGraph/ui/scenegraph.qrc -o ~/git/SceneGraph/ui/icons_rc.py
