@@ -1,7 +1,7 @@
 from . import graphics
 from . import node_widgets
 from . import models
-from . import manager
+from . import handlers
 from . import attributes
 from . import commands
 
@@ -9,7 +9,7 @@ from . import commands
 reload(graphics)
 reload(node_widgets)
 reload(models)
-reload(manager)
+reload(handlers)
 reload(attributes)
 reload(commands)
 
@@ -23,7 +23,7 @@ GraphTableModel         = models.GraphTableModel
 TableView               = models.TableView
 NodesListModel          = models.NodesListModel
 EdgesListModel          = models.EdgesListModel
-WindowManager           = manager.WindowManager
+SceneHandler            = handlers.SceneHandler
 
 AttributeEditor         = attributes.AttributeEditor
 QFloat2Editor           = attributes.QFloat2Editor

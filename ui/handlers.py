@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 from PySide import QtCore
-from SceneGraph.core import log
+from SceneGraph import core
+
+log = core.log
 
 
-class WindowManager(QtCore.QObject):
+class SceneHandler(QtCore.QObject):
     # graph -> scene
-    nodesAdded      = QtCore.Signal(list)
-    nodesRemoved    = QtCore.Signal(list)
-    nodesUpdated    = QtCore.Signal(list)
-    graphNodesRenamed    = QtCore.Signal(list)
+    nodesAdded        = QtCore.Signal(list)
+    nodesRemoved      = QtCore.Signal(list)   # remove??
+    nodesUpdated      = QtCore.Signal(list)
+    graphNodesRenamed = QtCore.Signal(list)
+    
     # scene -> graph
-    widgetsUpdated  = QtCore.Signal(list)
-    dagNodesUpdated = QtCore.Signal(list)
+    sceneNodesUpdated    = QtCore.Signal(list)
+    dagNodesUpdated   = QtCore.Signal(list)
     
     """
-    WindowManager class:
+    SceneHandler class:
         - Signal the scene that nodes have been
           updated in the Graph.
         - Update the Graph when nodes are
@@ -23,8 +26,6 @@ class WindowManager(QtCore.QObject):
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self, parent)
         
-
-        self.scene = parent
         self.ui    = parent.ui 
         self.graph = None
 
@@ -32,6 +33,10 @@ class WindowManager(QtCore.QObject):
             if self.connectGraph(parent):
                 self.connectSignals()
     
+    @property 
+    def scene(self):
+        return self.parentItem()
+
     def connectGraph(self, scene):
         """
         Connect the parent scenes' Graph object.
@@ -47,11 +52,11 @@ class WindowManager(QtCore.QObject):
             if graph.mode == 'standalone':
                 self.graph = graph
 
-                # make sure the graph doesn't have a manager instance.
-                if not getattr(graph, 'manager'):
-                    self.graph.manager=self
+                # make sure the graph doesn't have a handler instance.
+                if not getattr(graph, 'handler'):
+                    self.graph.handler=self
                     self.graph.mode = 'ui'
-                    log.info('WindowManager: connecting Graph...')
+                    log.info('SceneHandler: connecting Graph...')
                     return True
         return False
 
@@ -59,11 +64,10 @@ class WindowManager(QtCore.QObject):
         """
         Setup widget signals.
         """
-        log.info('WindowManager: connecting WindowManager to Scene.') 
+        log.info('SceneHandler: connecting SceneHandler to Scene.') 
         # connect scene functions
         self.nodesAdded.connect(self.scene.addNodes)
         self.nodesUpdated.connect(self.scene.updateNodesAction)
-        self.nodesRemoved.connect(self.scene.removeDagNodes)
 
         # connect graph functions
         self.dagNodesUpdated.connect(self.graph.updateNetwork)
@@ -72,7 +76,7 @@ class WindowManager(QtCore.QObject):
         """
         Do cool shit here.
         """
-        pass
+        return self.graph.evaluate()
 
     def updateNetworkAttributes(self):
         """
@@ -87,55 +91,89 @@ class WindowManager(QtCore.QObject):
         return preferences
 
     #- Graph to Scene ----    
-    def addNodes(self, dagnodes, edges=False):
+    def addNodes(self, dagids):
         """
         Signal Graph -> GraphicsScene.
 
         params:
             dagnodes (list) - list of dagnode objects.
         """
-        num_nodes = len(dagnodes)
-        node_type = 'node'
-        if edges:
-            node_type = 'edge'
-
+        num_nodes = len(dagids)
         if num_nodes > 1:
             node_type = '%ss' % node_type
-        log.debug('WindowManager: sending %d %s to scene...' % (num_nodes, node_type))
-        self.nodesAdded.emit(dagnodes)
+        log.debug('SceneHandler: sending %d %s to scene...' % (num_nodes, node_type))
+        self.nodesAdded.emit(dagids)
 
-    def removeNodes(self, dagnodes):
+    def dagNodesRemoved(self, dagids):
         """
         Signal Graph -> GraphicsScene.
         """
-        log.info('WindowManager: removing %d nodes...' % len(dagnodes))
-        self.nodesRemoved.emit(dagnodes)
+        nodes_to_remove = []
+        for id in dagids:
+            if id in self.scene.scenenodes:
+                widget = self.scene.scenenodes.pop(id)
+
+        for w in widgets:
+            self.scene.removeItem(w)
 
     def updateNodes(self, dagnodes):
         """
         Signal Graph -> GraphicsScene.
         """
-        log.info('WindowManager: updating %d nodes...' % len(dagnodes))
+        log.info('SceneHandler: updating %d nodes...' % len(dagnodes))
         self.nodesUpdated.emit(dagnodes)
 
     def renameNodes(self, dagnodes):
         """
         Signal Graph -> GraphicsScene.
         """
-        log.info('WindowManager: renaming %d nodes...' % len(dagnodes))
+        log.info('SceneHandler: renaming %d nodes...' % len(dagnodes))
         self.graphNodesRenamed.emit(dagnodes)
 
     #- Scene to Graph ----
-    def widgetsUpdatedAction(self, nodes):
+    def removeSceneNodes(self, nodes):
+        """
+        Signal GraphicsScene -> Graph.
+
+        params:
+            nodes (list) - list of node/edge widgets.
+        """
+        # connect to Graph        
+        if not nodes:
+            print '# no nodes passed.'
+            return False
+
+        items_to_remove = []
+        for node in nodes:
+            dagnode = node.dagnode
+            if issubclass(type(dagnode), core.DagNode):
+                # for nodes, query any connected edges from the networkx graph
+                connected_edges = self.graph.connectedDagEdges(dagnode)
+
+            if issubclass(type(dagnode), core.DagEdge):
+                # for edges, we need to remove the edge widgets from 
+                if node.breakConnections():
+                    print '# breaking edge connections'
+
+        for dtr in dagnodes_to_remove:
+            if issubclass(type(dtr), core.DagNode):
+                nname = dtr.name
+
+            if issubclass(type(dtr), core.DagEdge):
+                eid = dtr.id
+                if self.graph.removeEdge(dtr):
+                    print '# removing dag edge: %s' % eid
+
+    def sceneNodesUpdatedAction(self, nodes):
         """
         Signal GraphicsScene -> Graph.
         """
-        # connect to main UI
-        self.widgetsUpdated.emit(nodes)
+        # Signal GraphicsScene -> SceneGraphUI.
+        self.sceneNodesUpdated.emit(nodes)
 
         # connect to Graph
         dagnodes = [x.dagnode for x in nodes]
-        self.dagNodesUpdated.emit(dagnodes)
+        self.dagNodesUpdatedAction(dagnodes)
 
     #- Atribute Editor ----
     def dagNodesUpdatedAction(self, dagnodes):

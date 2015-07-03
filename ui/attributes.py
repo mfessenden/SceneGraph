@@ -14,7 +14,7 @@ class AttributeEditor(QtGui.QWidget):
         self._nodes         = []
         self._parser        = DataParser()
         self._show_private  = False
-        self._manager       = kwargs.get('manager', None)
+        self._handler       = kwargs.get('handler', None)
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -145,7 +145,7 @@ class AttributeEditor(QtGui.QWidget):
                     updated_nodes.append(node)
         
         # update graph
-        self.manager.dagNodesUpdatedAction(updated_nodes)
+        self.handler.dagNodesUpdatedAction(updated_nodes)
         return updated_nodes
 
     @property
@@ -169,8 +169,8 @@ class AttributeEditor(QtGui.QWidget):
         return node_values
 
     @property
-    def manager(self):
-        return self._manager
+    def handler(self):
+        return self._handler
     
     @property
     def parser(self):

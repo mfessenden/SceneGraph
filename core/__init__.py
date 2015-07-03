@@ -16,7 +16,7 @@ reload(metadata)
 
 
 # nodes
-NodeBase            = nodes.NodeBase
+DagNode             = nodes.DagNode
 DagEdge             = nodes.DagEdge
 Connection          = nodes.Connection
 

@@ -1,11 +1,11 @@
 # Building Custom Nodes:
 
-from SceneGraph core import NodeBase
+from SceneGraph core import DagNode
 
 
-class MyNode(NodeBase):
+class MyNode(DagNode):
 	reserved = ["_data", "_class"]
 	def __init__(self, *args, **kwargs):
 		super(MyNode, self).__init__(*args, **kwargs)
 
-		self._class = kwargs.get("class", "NodeBase")
+		self._class = kwargs.get("class", "DagNode")

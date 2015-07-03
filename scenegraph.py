@@ -223,8 +223,8 @@ class SceneGraphUI(form_class, base_class):
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
         self.view.statusEvent.connect(self.updateConsole)
 
-        # window manager
-        self.view.scene().manager.widgetsUpdated.connect(self.nodesChangedAction)
+        # Scene handler
+        self.view.scene().handler.sceneNodesUpdated.connect(self.nodesChangedAction)
         self.view.selectionChanged.connect(self.nodesSelectedAction)
 
         # file & ui menu
@@ -644,7 +644,7 @@ class SceneGraphUI(form_class, base_class):
         """
         from SceneGraph import ui
         # get a list of selected node widgets
-        selected_nodes = self.view.scene().selectedNodes()
+        selected_nodes = self.view.scene().selectedNodes(nodes_only=True)
 
         # clear the list view
         self.tableModel.clear()
@@ -654,7 +654,10 @@ class SceneGraphUI(form_class, base_class):
             node = selected_nodes[0]
 
             node_selection_changed = False
+
             for n in selected_nodes:
+                # edges: 65538, nodes: 65537
+
                 if n not in self._selected_nodes:
                     node_selection_changed = True
 
@@ -715,7 +718,7 @@ class SceneGraphUI(form_class, base_class):
         attr_widget = self.getAttributeEditorWidget()
                 
         if not attr_widget:
-            attr_widget = ui.AttributeEditor(self.attrEditorWidget, manager=self.view.scene().manager)                
+            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler)                
             self.attributeScrollAreaLayout.addWidget(attr_widget)
         attr_widget.setNodes(dagnodes)
 

@@ -67,6 +67,9 @@ class Container(MutableMapping):
         except KeyError as e:
             raise AttributeError(e.args[0])
 
+    def __contains__(self):
+        return self._data.keys()
+
     __setattr__ = __setitem__
     __delattr__ = __delitem__
 
@@ -100,8 +103,10 @@ class Container(MutableMapping):
         return base_classes
 
 
-class NodeBase(MutableMapping):
+class DagNode(MutableMapping):
+
     reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes', '_metadata']
+
     def __init__(self, *args, **kwargs):
 
         self._data              = dict()
@@ -147,7 +152,7 @@ class NodeBase(MutableMapping):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return 'NodeBase("%s")' % self.name
+        return self.name
 
     def __getitem__(self, key, default=None):
         try:
@@ -161,7 +166,7 @@ class NodeBase(MutableMapping):
 
     def __setitem__(self, key, value):
         if key in self.reserved:
-            super(NodeBase, self).__setattr__(key, value)
+            super(DagNode, self).__setattr__(key, value)
 
         elif key in self._attributes:
             attr = self._attributes.get(key)
@@ -183,6 +188,9 @@ class NodeBase(MutableMapping):
             return self.__getitem__(key, default)
         except KeyError as e:
             raise AttributeError(e.args[0])
+
+    def __contains__(self):
+        return self._data.keys()
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -484,13 +492,13 @@ class DagEdge(MutableMapping):
         self.update(**kwargs)
 
         if len(args):
-            if isinstance(args[0], NodeBase):
+            if isinstance(args[0], DagNode):
                 source_node = args[0]
                 self.src_id = source_node.id
                 self._source[source_node.id] = source_node
 
             if len(args) > 1:
-                if isinstance(args[1], NodeBase):
+                if isinstance(args[1], DagNode):
                     dest_node = args[1]
                     self.dest_id = dest_node.id
                     self._dest[dest_node.id] = dest_node
@@ -500,7 +508,7 @@ class DagEdge(MutableMapping):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return 'DagEdge("%s")' %  self.type
+        return '("%s, "%s")' %  (self._source[self.src_id].name, self._dest[self.dest_id].name)
 
     def __getitem__(self, key, default=None):
         try:
@@ -528,6 +536,9 @@ class DagEdge(MutableMapping):
             return self.__getitem__(key, default)
         except KeyError as e:
             raise AttributeError(e.args[0])
+
+    def __contains__(self):
+        return self._data.keys()
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -568,7 +579,7 @@ class Connection(MutableMapping):
             self.max_connections = 1
 
         for arg in args:
-            if isinstance(arg, NodeBase):
+            if isinstance(arg, DagNode):
                 self._node = arg
 
         self.update(**kwargs)
@@ -605,6 +616,9 @@ class Connection(MutableMapping):
             return self.__getitem__(key, default)
         except KeyError as e:
             raise AttributeError(e.args[0])
+
+    def __contains__(self):
+        return self._data.keys()
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -688,7 +702,7 @@ class Connection(MutableMapping):
         Return the parent node object.
 
         returns:
-            (NodeBase) - parent node object.
+            (DagNode) - parent node object.
         """
         return self._node
 

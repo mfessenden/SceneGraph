@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from SceneGraph.core.nodes import NodeBase
+from SceneGraph.core.nodes import DagNode
 
 
-class ModelNode(NodeBase):
+class ModelNode(DagNode):
 
     def __init__(self, **kwargs):
         nodetype = "model"

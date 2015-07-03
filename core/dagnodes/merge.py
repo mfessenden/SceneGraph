@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from SceneGraph.core.nodes import NodeBase
+from SceneGraph.core.nodes import DagNode
 
 
-class MergeNode(NodeBase):
+class MergeNode(DagNode):
 
     def __init__(self, **kwargs):
         nodetype = "merge"
