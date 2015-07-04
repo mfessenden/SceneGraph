@@ -926,7 +926,7 @@ class Graph(object):
 
             # add the dag node/widget
             dag_node = self.add_node(node_type, **node_attrs)
-            log.info('building node "%s"' % node_attrs.get('name'))
+            log.debug('building node "%s"' % node_attrs.get('name'))
 
         for edge_attrs in edges:
             edge_id = edge_attrs.get('id')
@@ -949,7 +949,7 @@ class Graph(object):
             dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
 
             # TODO: need to get connection node here
-            log.info('connecting nodes: "%s" "%s"' % (src_string, dest_string))
+            log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))
             
             dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
 
