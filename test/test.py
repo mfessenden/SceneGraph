@@ -92,7 +92,7 @@ class TestGraph(form_class, base_class):
         """
         Add a node to the Graph object.
         """
-        dag=self.graph.addNode(nodetype)
+        dag=self.graph.add_node(nodetype)
 
         # get the node's widget.
         node = dag._widget

@@ -375,8 +375,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
         log.debug('GraphicsScene: adding %d nodes.' % len(dagids))
         widgets = []
         for dag_id in dagids:
-           if dag_id in self.graph.dagnodes:
-                dag = self.graph.get(dag_id)
+            #print 'dag id: ', dag_id
+            if dag_id in self.graph.dagnodes:
+                dag = self.graph.dagnodes.get(dag_id)
                 if isinstance(dag, core.DagNode):              
                     if dag_id not in self.scenenodes:
                         widget = node_widgets.Node(dag)
@@ -433,11 +434,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
             print '# Scene.removeNodes: ', node
             if isinstance(node, node_widgets.Node):
                 print '# signalling graph...'
-                self.graph.removeNode(node.dagnode.id)
+                self.graph.remove_node(node.dagnode.id)
 
             if isinstance(node, node_widgets.Edge):
                 print 'edge!'
-                self.graph.removeEdge(node.dagnode.id)
+                self.graph.remove_edge(node.dagnode.id)
 
     def getNodes(self):
         """
@@ -578,7 +579,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                             if conn_edge.disconnect_terminal(item):
 
                                 # todo: call manage?
-                                self.graph.removeEdge(conn_edge.dagnode.id)
+                                self.graph.remove_edge(conn_edge.dagnode.id)
 
                                 edge_line = conn_edge.getLine()
                                 p1 = edge_line.p1()
@@ -637,7 +638,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 if self.validateConnection(source_conn, dest_conn):
                     src_dag = source_conn.dagnode
                     dest_dag = dest_conn.dagnode                 
-                    edge = self.graph.addEdge(src_dag, dest_dag, src_attr=source_conn.name, dest_attr=dest_conn.name)
+                    edge = self.graph.add_edge(src_dag, dest_dag, src_attr=source_conn.name, dest_attr=dest_conn.name)
 
         self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
@@ -720,7 +721,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     for edge in edges:
                         log.warning('forcing edge removal: "%s"' % edge.name)
                         edge_id = str(edge.dagnode.id)
-                        if self.graph.removeEdge(edge_id):
+                        if self.graph.remove_edge(edge_id):
                             continue
                         log.warning('edge removal failed: "%s"' % edge.name)
                     return True

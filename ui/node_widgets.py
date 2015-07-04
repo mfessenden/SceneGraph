@@ -80,11 +80,6 @@ class Node(QtGui.QGraphicsObject):
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, self.dagnode.name)
 
-    def __del__(self):
-        print 'Edge.__del__()'
-        self.nodeDeleted.emit(self)
-        super(Node, self).__del__()
-
     #- Attributes ----
     @property
     def name(self):
@@ -625,11 +620,6 @@ class Edge(QtGui.QGraphicsObject):
 
     def __repr__(self):
         return 'Edge("%s")' % self.name
-
-    def __del__(self):
-        print 'Edge.__del__()'
-        self.nodeDeleted.emit(self)
-        super(Edge, self).__del__()
 
     def setDebug(self, val):
         """

@@ -54,15 +54,6 @@ class Graph(object):
         graph_data = nxj.node_link_data(self.network)
         return json.dumps(graph_data, indent=5)
 
-    #- Attributes ----
-    @property 
-    def nodes(self):
-        return self.getNodes()
-
-    @property 
-    def edges(self):
-        return self.getEdges()
-
     def initializeNetworkAttributes(self, scene=None):
         """
         Add default attributes to the networkx graph.
@@ -246,8 +237,8 @@ class Graph(object):
                 name = data.get('name')
                 node_names.append(name)
         return node_names
-    
-    def getNodes(self):
+
+    def nodes(self):
         """
         Returns a list of all dag nodes.
 
@@ -260,6 +251,21 @@ class Graph(object):
             if UUID in self.dagnodes:
                 nodes.append(self.dagnodes.get(UUID))
         return nodes
+
+    def edges(self):
+        """
+        Returns a list of all dag edges.
+
+        returns:
+            (list) - list of DagEdge objects.
+        """
+        edges = []
+        for edge in  self.network.edges(data=True):
+            src_id, dest_id, attrs = edge
+            UUID = attrs.get('id')
+            if UUID in self.dagnodes:
+                edges.append(self.dagnodes.get(UUID))
+        return edges
 
     def getNodeNames(self):
         """
@@ -290,21 +296,6 @@ class Graph(object):
                         nodes.append(node)
         return nodes
 
-    def getEdges(self):
-        """
-        Returns a list of all dag edges.
-
-        returns:
-            (list) - list of DagEdge objects.
-        """
-        edges = []
-        for edge in  self.network.edges(data=True):
-            src_id, dest_id, attrs = edge
-            UUID = attrs.get('id')
-            if UUID in self.dagnodes:
-                edges.append(self.dagnodes.get(UUID))
-        return edges
-
     def allNodes(self):
         """
         Returns a list of all dag connection strings.
@@ -314,7 +305,7 @@ class Graph(object):
         """
         return [node.name for node in self.getNodes()]
 
-    def allConnections(self):
+    def connections(self):
         """
         Returns a list of human-readable edge
         connections.
@@ -323,7 +314,7 @@ class Graph(object):
             (list) - list of connection strings. 
         """
         connections = []
-        for edge in self.getEdges():
+        for edge in self.edges():
 
             src_attr = edge.get('src_attr')
             dest_attr = edge.get('dest_attr')
@@ -405,14 +396,15 @@ class Graph(object):
             if not src_attr and dest_attr:
                 continue
 
-            src_name = src_nodes[0].name
-            dest_name = dest_nodes[0].name
-            conn_str = '%s.%s,%s.%s' % (src_name, src_attr, dest_name, dest_attr)
-            if conn_str in args:
-                edges.append(self.dagnodes.get(edge_id))
+            if src_nodes and dest_nodes:
+                src_name = src_nodes[0].name
+                dest_name = dest_nodes[0].name
+                conn_str = '%s.%s,%s.%s' % (src_name, src_attr, dest_name, dest_attr)
+                if conn_str in args:
+                    edges.append(self.dagnodes.get(edge_id))
         return edges
 
-    def addNode(self, node_type='default', **kwargs):
+    def add_node(self, node_type='default', **kwargs):
         """
         Creates a node in the parent graph
 
@@ -447,10 +439,10 @@ class Graph(object):
 
         # update the scene
         if self.handler is not None:
-            self.handler.addNodes([dag,])
+            self.handler.addNodes([dag.id,])
         return dag
 
-    def removeNode(self, *args):
+    def remove_node(self, *args):
         """
         Removes a node from the graph
 
@@ -461,31 +453,28 @@ class Graph(object):
             (bool) - node was removed.
         """
         node_ids = []
-
         nodes = self.getNode(*args)
-        # stash a copy of the current edges
-        # [('A', 'B'), ('B', 'C'), ('C', 'D')]
-        edges_copy = list(self.network.edges())
 
         # iterate through the nodes
         for node in nodes:
-            print 'removing: ', node.name
             dag_id = node.id
             # remove from networkx
             if dag_id in self.network.nodes():
-                print '# removing from network: ', self.network.node[dag_id]
                 self.network.remove_node(dag_id)
 
             # remove from dagnodes
             if dag_id in self.dagnodes:
                 dn = self.dagnodes.get(dag_id)
                 if self.dagnodes.pop(dag_id):
-                    print '# removing dagnodes: ', dn.name
                     node_ids.append(dag_id)
 
-        for edge in edges_copy:
-            if edge not in self.network.edges():
-                print 'invalid edge: ', edge
+        # todo: check that method appears to be getting called twice
+        for edge_id, edge in self.dagnodes.iteritems():
+            if issubclass(type(edge), DagEdge):
+                ptr = (edge.src_id, edge.dest_id)
+                if ptr not in self.network.edges():
+                    if edge_id not in node_ids:
+                        node_ids.append(edge_id)
 
         if node_ids:
             # update the scene
@@ -494,7 +483,7 @@ class Graph(object):
             return True
         return False
 
-    def addEdge(self, src, dest, **kwargs):
+    def add_edge(self, src, dest, **kwargs):
         """
         Add an edge connecting two nodes.
 
@@ -529,7 +518,7 @@ class Graph(object):
         conn_str = self.parseEdgeName(edge)
         log.debug('parsing edge: "%s"' % conn_str)
 
-        if conn_str in self.allConnections():
+        if conn_str in self.connections():
             log.warning('connection already exists: %s' % conn_str)
             return 
 
@@ -540,10 +529,10 @@ class Graph(object):
 
         # update the scene
         if self.handler is not None:
-            self.handler.addNodes([edge,], edges=True)
+            self.handler.addNodes([edge.id,])
         return edge
 
-    def removeEdge(self, *args): 
+    def remove_edge(self, *args): 
         """
         Removes an edge from the graph
 
@@ -568,7 +557,7 @@ class Graph(object):
                 continue
 
             # arg is a connection str
-            if arg in self.allConnections():
+            if arg in self.connections():
                 UUID = self.getEdgeID(arg)
                 if not UUID:
                     continue
@@ -585,10 +574,12 @@ class Graph(object):
         edge_ids = []
         for edge in dagedges:
             edge_ids.append(edge.id)
-            if edge_id in self.dagnodes:
-                self.dagnodes.pop(edge_id)
-            self.network.remove_edge(edge.src_id, edge.dest_id)
-            log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
+            if edge.id in self.dagnodes:
+                self.dagnodes.pop(edge.id)
+
+            if (edge.src_id, edge.dest_id) in self.network.edges():
+                self.network.remove_edge(edge.src_id, edge.dest_id)
+                log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
 
         # update the scene
         if self.handler is not None:
@@ -798,7 +789,7 @@ class Graph(object):
                 return False
 
             # add the edge
-            return self.addEdge(src_node, dest_node, src_attr=src_attr, dest_attr=dest_attr)
+            return self.add_edge(src_node, dest_node, src_attr=src_attr, dest_attr=dest_attr)
         return False
 
     def reset(self):
@@ -934,7 +925,7 @@ class Graph(object):
             node_type = node_attrs.pop('node_type', 'default')
 
             # add the dag node/widget
-            dag_node = self.addNode(node_type, **node_attrs)
+            dag_node = self.add_node(node_type, **node_attrs)
             log.info('building node "%s"' % node_attrs.get('name'))
 
         for edge_attrs in edges:
@@ -960,7 +951,7 @@ class Graph(object):
             # TODO: need to get connection node here
             log.info('connecting nodes: "%s" "%s"' % (src_string, dest_string))
             
-            dag_edge = self.addEdge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
+            dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
 
             if self.mode == 'ui':
                 scene_pos = self.network.graph.get('view_center', (0,0))

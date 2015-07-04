@@ -67,8 +67,8 @@ class Container(MutableMapping):
         except KeyError as e:
             raise AttributeError(e.args[0])
 
-    def __contains__(self):
-        return self._data.keys()
+    def __contains__(self, key):
+        return key in self._data
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -189,8 +189,8 @@ class DagNode(MutableMapping):
         except KeyError as e:
             raise AttributeError(e.args[0])
 
-    def __contains__(self):
-        return self._data.keys()
+    def __contains__(self, key):
+        return key in self._data
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -537,8 +537,8 @@ class DagEdge(MutableMapping):
         except KeyError as e:
             raise AttributeError(e.args[0])
 
-    def __contains__(self):
-        return self._data.keys()
+    def __contains__(self, key):
+        return key in self._data
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
@@ -617,8 +617,8 @@ class Connection(MutableMapping):
         except KeyError as e:
             raise AttributeError(e.args[0])
 
-    def __contains__(self):
-        return self._data.keys()
+    def __contains__(self, key):
+        return key in self._data
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
