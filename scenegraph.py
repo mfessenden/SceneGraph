@@ -295,7 +295,7 @@ class SceneGraphUI(form_class, base_class):
         for node in self.graph.node_types():
             node_action = self.menu_add_node.addAction(node)
             # add the node at the scene pos
-            node_action.triggered.connect(partial(self.graph.addNode, node_type=node))
+            node_action.triggered.connect(partial(self.graph.add_node, node_type=node))
 
     def initializeUIMenu(self):
         """
@@ -802,7 +802,7 @@ class SceneGraphUI(form_class, base_class):
         for node in self.graph.node_types():
             node_action = add_menu.addAction(node)
             # add the node at the scene pos
-            node_action.triggered.connect(partial(self.graph.addNode, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
+            node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
 
         # haxx: stylesheet should work here
         ssf = QtCore.QFile(self.stylesheet)

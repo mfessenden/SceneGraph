@@ -55,11 +55,11 @@
     node_types = g.node_types()
 
     # add some default nodes
-    n1 = g.addNode('default', name='node1')
-    n2 = g.addNode('default', name='node2')
+    n1 = g.add_node('default', name='node1')
+    n2 = g.add_node('default', name='node2')
 
     # connect the nodes (default output/inputs assumed)
-    e1 = g.addEdge(n1, n2)
+    e1 = g.add_edge(n1, n2)
 
     # connect with a connection string
     e1 = g.connectNodes('node1.output', 'node2.input')
@@ -74,7 +74,7 @@
     print g.allNodes()
 
     # query all connections
-    print g.allConnections()
+    print g.connections()
 
 
 ####### Advanced API:

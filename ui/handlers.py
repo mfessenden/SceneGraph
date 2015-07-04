@@ -35,7 +35,7 @@ class SceneHandler(QtCore.QObject):
     
     @property 
     def scene(self):
-        return self.parentItem()
+        return self.parent()
 
     def connectGraph(self, scene):
         """
@@ -98,10 +98,6 @@ class SceneHandler(QtCore.QObject):
         params:
             dagnodes (list) - list of dagnode objects.
         """
-        num_nodes = len(dagids)
-        if num_nodes > 1:
-            node_type = '%ss' % node_type
-        log.debug('SceneHandler: sending %d %s to scene...' % (num_nodes, node_type))
         self.nodesAdded.emit(dagids)
 
     def dagNodesRemoved(self, dagids):
@@ -112,9 +108,12 @@ class SceneHandler(QtCore.QObject):
         for id in dagids:
             if id in self.scene.scenenodes:
                 widget = self.scene.scenenodes.pop(id)
+                log.info('removing "%s"' % widget.name)
+                if widget and widget not in nodes_to_remove:
+                    nodes_to_remove.append(widget)
 
-        for w in widgets:
-            self.scene.removeItem(w)
+        for node in nodes_to_remove:
+            self.scene.removeItem(node)
 
     def updateNodes(self, dagnodes):
         """
@@ -140,29 +139,19 @@ class SceneHandler(QtCore.QObject):
         """
         # connect to Graph        
         if not nodes:
-            print '# no nodes passed.'
+            log.error('no nodes specified.')
             return False
 
-        items_to_remove = []
         for node in nodes:
-            dagnode = node.dagnode
-            if issubclass(type(dagnode), core.DagNode):
-                # for nodes, query any connected edges from the networkx graph
-                connected_edges = self.graph.connectedDagEdges(dagnode)
+            dag = node.dagnode
+            nid = dag.id
 
-            if issubclass(type(dagnode), core.DagEdge):
-                # for edges, we need to remove the edge widgets from 
-                if node.breakConnections():
-                    print '# breaking edge connections'
-
-        for dtr in dagnodes_to_remove:
-            if issubclass(type(dtr), core.DagNode):
-                nname = dtr.name
-
-            if issubclass(type(dtr), core.DagEdge):
-                eid = dtr.id
-                if self.graph.removeEdge(dtr):
-                    print '# removing dag edge: %s' % eid
+            if issubclass(type(dag), core.DagNode):
+                if self.graph.remove_node(nid):
+                    log.debug('removing dag node: %s' % nid)
+            if issubclass(type(dag), core.DagEdge):
+                if self.graph.remove_edge(nid):
+                    log.debug('removing dag edge: %s' % nid)
 
     def sceneNodesUpdatedAction(self, nodes):
         """
