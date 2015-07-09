@@ -23,6 +23,7 @@ class GraphicsView(QtGui.QGraphicsView):
     tabPressed        = QtCore.Signal()
     statusEvent       = QtCore.Signal(dict)
     selectionChanged  = QtCore.Signal()
+    nodesChanged      = QtCore.Signal(list)
 
     def __init__(self, parent=None, ui=None, opengl=False, debug=False, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
@@ -109,16 +110,6 @@ class GraphicsView(QtGui.QGraphicsView):
         if mode == 'minimal':
             mode = QtGui.QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate
         self.setViewportUpdateMode(mode)
-    
-    def updateGraphViewAttributes(self):
-        """
-        Update networkx graph attributes from the current UI.
-
-        TODO: check speed hit on this one
-        """
-        self.scene().network.graph['view_scale']=self.getScaleFactor()
-        self.scene().network.graph['view_center']=self.getCenterPoint()
-        self.scene().network.graph['scene_size']=self.getSceneCoordinates()
 
     def connectSignals(self):
         """
@@ -139,6 +130,9 @@ class GraphicsView(QtGui.QGraphicsView):
     def getCenterPoint(self):
         """
         Returns the correct center point of the current view.
+
+        returns:
+            (QPointF) - current view center point.
         """
         # maps center to a QPointF
         center_point = self.mapToScene(self.viewport().rect().center())
@@ -167,6 +161,9 @@ class GraphicsView(QtGui.QGraphicsView):
     def getTranslation(self):
         """
         Returns the current scrollbar positions.
+
+        returns:
+            (tuple) - scroll bar coordinates (h, v)
         """
         return [self.horizontalScrollBar().value(), self.verticalScrollBar().value()]
 
@@ -175,6 +172,29 @@ class GraphicsView(QtGui.QGraphicsView):
         Returns the current scale factor.
         """
         return [self.transform().m11(), self.transform().m22()]
+
+    def getSceneAttributes(self):
+        """
+        Returns a dictionary of scene attributes.
+
+        returns:
+            (dict) - view position, scale, size.
+        """
+        scene_attributes = dict()
+        scene_attributes.update(view_scale=self.getScaleFactor())
+        scene_attributes.update(view_center=self.getCenterPoint())
+        scene_attributes.update(view_size=self.getContentsSize())
+        scene_attributes.update(scene_size=self.getSceneCoordinates())
+        return scene_attributes
+
+    def updateSceneAttributes(self):
+        """
+        Update networkx graph attributes from the current UI.
+
+         *todo: check speed hit on this one
+        """
+        scene_attributes = self.getSceneAttributes()
+        self.scene().network.graph.update(**scene_attributes)
 
     def updateStatus(self, event):
         """
@@ -207,7 +227,6 @@ class GraphicsView(QtGui.QGraphicsView):
         factor = 1.41 ** ((event.delta()*.5) / 240.0)
         self.scale(factor, factor)
         self._scale = factor
-        self.updateGraphViewAttributes()
 
     def viewportEvent(self, event):
         self.updateStatus(event)
@@ -271,13 +290,12 @@ class GraphicsView(QtGui.QGraphicsView):
                     node.is_enabled = not node.is_enabled
 
 
-        self.updateGraphViewAttributes()
         self.scene().update()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def get_scroll_state(self):
         """
-        Returns a tuple of scene extents percentages
+        Returns a tuple of scene extents percentages.
         """
         centerPoint = self.mapToScene(self.viewport().width()/2,
                                       self.viewport().height()/2)
@@ -309,6 +327,7 @@ class GraphicsView(QtGui.QGraphicsView):
         selected_nodes = self.selected_nodes()
         self.blockSignals(True)
         for node in selected_nodes:
+            print 'updating node: ', node.name
             node.dagnode.update(**data)
         self.blockSignals(False)
     
@@ -317,11 +336,11 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Runs when the scene has changed in some manner.
         """
-        pass
+        self.updateSceneAttributes()
         
     def sceneRectChangedAction(self, *args):
         #print '# GraphicsView: scene rect changed'
-        pass
+        self.updateSceneAttributes()
         
     def sceneSelectionChangedAction(self):
         """
@@ -361,6 +380,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         self.scenenodes=dict()
         self.clear()
+
+    @property 
+    def undo_stack(self):
+        return self.ui.undo_stack
+
+    def restoreNodes(self, data):
+        self.graph.restore(data)
 
     def addNodes(self, dagids):
         """
@@ -679,7 +705,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
     def updateNodesAction(self, dagnodes):
         print 'GraphicsScene: updating %d dag nodes' % len(dagnodes)
-
+    
     def validateConnection(self, src, dest, force=True):
         """
         When the mouse is released, validate the two connections.

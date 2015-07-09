@@ -4,9 +4,10 @@ import re
 import weakref
 import simplejson as json
 import networkx as nx
+import networkx.readwrite.json_graph as nxj
 from functools import partial
 import inspect
-
+from collections import OrderedDict as dict
 from SceneGraph import options
 from SceneGraph.core import log, DagNode, DagEdge
 
@@ -44,6 +45,7 @@ class Graph(object):
         # initialize the NetworkX graph attributes
         self.initializeNetworkAttributes()
 
+        # if scene file is passed as an argument, read it
         for arg in args:
             if os.path.exists(arg):
                 self.read(arg)
@@ -64,20 +66,7 @@ class Graph(object):
         self.network.graph['environment'] = self.mode
         self.network.graph['preferences'] = dict()
 
-    def updateNetworkAttributes(self):
-        """
-        Update the network attributes.
-        """
-        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
-        self.network.graph['scene'] = self.getScene()
-        self.network.graph['autosave'] = self.temp_scene
-        self.network.graph['environment'] = self.mode
-        self.network.graph['preferences'] = dict()
-
-        if self.handler is not None:
-            self.network.graph.get('preferences').update(self.handler.updateNetworkAttributes())
-
-    def getNetworkPrefernces(self, key=None):
+    def getNetworkPreferences(self, key=None):
         """
         Return the network preferences.
         """
@@ -125,10 +114,22 @@ class Graph(object):
                         log.warning('cannot find "%s" metadata %s' % (node_name, node_data))
         return nodes
 
-    def updateNetwork(self, dagnodes):
+    def updateGraphAttributes(self):
         """
-        Update the networkx graph from the UI.
-         *todo: we need to store a weakref dict of dag nodes in the graph
+        Update the network graph attributes.
+        """
+        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
+        self.network.graph['scene'] = self.getScene()
+        self.network.graph['autosave'] = self.temp_scene
+        self.network.graph['environment'] = self.mode
+        self.network.graph['preferences'] = dict()
+
+        if self.handler is not None:
+            self.network.graph.get('preferences').update(self.handler.updateGraphAttributes())
+
+    def updateDagNodes(self, dagnodes):
+        """
+        Update the networkx nodes and links attributes from scene values.
 
         params:
             dagnodes (list) - list of dag node objects.
@@ -142,18 +143,19 @@ class Graph(object):
             if nid in self.network.nodes():
                 self.network.node[nid].update(json.loads(str(dag)))
 
-    def evaluate(self, verbose=False):
+    def evaluate(self, dagnodes=[], verbose=False):
         """
         Evalute the Graph, updating networkx graph.
         """
         result = True
-        allnodes = self.dagnodes.values()
-        self.updateNetwork(allnodes)
+        if not dagnodes:
+            dagnodes = self.dagnodes.values()
 
+        self.updateDagNodes(dagnodes)
         edge_ids = self.getEdgeIDs()
         node_ids = []
 
-        for node in allnodes:
+        for node in dagnodes:
             if issubclass(type(node), DagNode):
                 if node.id not in node_ids:
                     node_ids.append(node.id)
@@ -274,7 +276,7 @@ class Graph(object):
         returns:
             (list)
         """
-        return [n.name for n in self.getNodes()]
+        return [n.name for n in self.nodes()]
 
     def getNode(self, *args):
         """
@@ -296,14 +298,14 @@ class Graph(object):
                         nodes.append(node)
         return nodes
 
-    def allNodes(self):
+    def node_names(self):
         """
         Returns a list of all dag connection strings.
 
         returns:
             (list)
         """
-        return [node.name for node in self.getNodes()]
+        return [node.name for node in self.nodes()]
 
     def connections(self):
         """
@@ -866,18 +868,74 @@ class Graph(object):
         print '# Graph: node changed: ', UUID
         print kwargs
         
-    #- Reading & Writing -----
-    
+    #- Snapshots, Reading & Writing -----
+    def snapshot(self):
+        """
+        Returns a snapshot dictionary for writing scenes 
+        and updating undo stack.
+
+         * todo: look into nxj.adjacency_data() method.
+        """
+        if not self.evaluate():
+            log.warning('graph did not evaluate correctly.')
+        graph_data = nxj.node_link_data(self.network)
+        return graph_data
+
+    def graph_snapshot(self):
+        """
+        Returns a snapshot of just the graph.
+
+        returns:
+            (dict) - dictionary of graph data.
+        """
+        data = self.snapshot()
+        for d in ['nodes', 'links']:
+            if d in data:
+                data.pop(d)
+        return data
+
+    def node_snapshot(self, nodes=[]):
+        """
+        Returns a snapshot of just the graph.
+
+        params:
+            dagnodes (list) - list of dag node names.
+
+        return:
+            (dict) - dictionary of nodes & connected edges.
+        """
+        if nodes:
+            if type(nodes) not in [list, tuple]:
+                nodes = [nodes,]
+
+        self.evaluate()
+        data = self.snapshot()
+        result = dict()
+        node_data = data.get('nodes', dict())
+
+        # filter just the nodes we're querying.
+        node_data_filtered = []
+        link_data_filtered = []
+        for node in node_data:
+
+            # filter nodes
+            if nodes:
+                if node.get('name') not in nodes:
+                    continue
+
+            dagnode = self.getNode(node.get('name'))
+            node_data_filtered.append(node)
+            link_data_filtered.extend(self.connectedEdges(dagnode))
+
+        result.update(nodes=node_data_filtered)
+        result.update(links=link_data_filtered)
+        return result
+
     def write(self, filename):
         """
         Write the graph to scene file
-        """
-        import networkx.readwrite.json_graph as nxj
-        graph_data = nxj.node_link_data(self.network)
-        #graph_data = nxj.adjacency_data(self.network)
-        self.updateNetworkAttributes()
-        if not self.evaluate():
-            log.warning('graph did not evaluate correctly.')
+        """  
+        graph_data = self.snapshot()
         fn = open(filename, 'w')
         json.dump(graph_data, fn, indent=4)
         fn.close()
@@ -894,25 +952,15 @@ class Graph(object):
         log.info('saving current scene: "%s"' % self.getScene())
         return self.write(self.getScene())
 
-    def read(self, filename):
+    def restore(self, data):
         """
-        Read a graph from a saved scene.
-
-        params:
-            filename - (str) file to read
+        Restore current DAG state.
         """
-        if not os.path.exists(filename):
-            log.error('file %s does not exist.' % filename)
-            return False
-
-        log.info('reading scene file "%s"' % filename)
-        raw_data = open(filename).read()
-        tmp_data = json.loads(raw_data, object_pairs_hook=dict)
         self.network.clear()
 
-        graph_data = tmp_data.get('graph', [])
-        nodes = tmp_data.get('nodes', [])
-        edges = tmp_data.get('links', [])
+        graph_data = data.get('graph', [])
+        nodes = data.get('nodes', [])
+        edges = data.get('links', [])
         
         # update graph attributes
         for gdata in graph_data:
@@ -953,7 +1001,9 @@ class Graph(object):
             
             dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
 
+            # update the UI
             if self.mode == 'ui':
+                #self.handler.scene.clear()
                 scene_pos = self.network.graph.get('view_center', (0,0))
                 view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
 
@@ -963,6 +1013,23 @@ class Graph(object):
                     view.setCenterPoint(scene_pos)
                     view.scale(*view_scale)
 
+    def read(self, filename):
+        """
+        Read a graph from a saved scene.
+
+        params:
+            filename - (str) file to read
+        """
+        if not os.path.exists(filename):
+            log.error('file %s does not exist.' % filename)
+            return False
+
+        log.info('reading scene file "%s"' % filename)
+        raw_data = open(filename).read()
+        graph_data = json.loads(raw_data, object_pairs_hook=dict)
+        
+        # restore from state.
+        self.restore(graph_data)
         return self.setScene(filename)
     
     @property

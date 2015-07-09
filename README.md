@@ -16,10 +16,10 @@
 
     # get all of the node widgets from the GraphicsScene
     scene = sgui.view.scene()
-    nodes = scene.getNodes()
+    nodes = scene.nodes()
 
     # query all of the current dag nodes
-    dags = graph.getNodes()
+    dags = graph.nodes()
 
     # return a named dag node
     dagnode = graph.getNode('node1')
@@ -68,7 +68,7 @@
     g.write('~/graphs/my_graph.json')
 
     # query all nodes in the graph
-    print g.getNodes()
+    print g.nodes()
 
     # query all node names
     print g.node_names()
@@ -108,4 +108,4 @@
 
 
 ####### Admin:
-pyside-rcc ~/git/SceneGraph/ui/scenegraph.qrc -o ~/git/SceneGraph/ui/icons_rc.py
+pyside-rcc ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/scenegraph_rc.py
