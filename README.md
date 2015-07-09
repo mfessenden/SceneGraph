@@ -12,7 +12,7 @@
     graph = sgui.graph
 
     # list all node names
-    node_names = graph.listNodeNames()
+    node_names = graph.node_names()
 
     # get all of the node widgets from the GraphicsScene
     scene = sgui.view.scene()
@@ -71,7 +71,7 @@
     print g.getNodes()
 
     # query all node names
-    print g.allNodes()
+    print g.node_names()
 
     # query all connections
     print g.connections()

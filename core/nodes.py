@@ -136,6 +136,13 @@ class DagNode(MutableMapping):
         input_connections       = kwargs.pop('_inputs', {'input':{}})
         output_connections      = kwargs.pop('_outputs', {'output':{}})
 
+
+        if type(input_connections) in [list, tuple]:
+            input_connections = {'inputs':{k:None for k in input_connections}}
+
+        if type(output_connections) in [list, tuple]:
+            output_connections = {'inputs':{k:None for k in output_connections}}
+
         # add input & output connections
         for input_name, input_attrs in input_connections.iteritems():
             self.addInput(name=input_name, **input_attrs)
@@ -508,7 +515,7 @@ class DagEdge(MutableMapping):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return '("%s, "%s")' %  (self._source[self.src_id].name, self._dest[self.dest_id].name)
+        return self.id
 
     def __getitem__(self, key, default=None):
         try:
