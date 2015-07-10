@@ -487,6 +487,9 @@ class Node(QtGui.QGraphicsObject):
         """
         Paint the widget container and all of the child widgets.
         """
+        if not self.label or not self.background:
+            return
+
         self.is_selected = False
         self.is_hover = False
 
@@ -497,7 +500,7 @@ class Node(QtGui.QGraphicsObject):
             self.is_hover = True
 
         # translate the label
-        self.label.setPos(self.label_pos)
+        self.label.setPos(self.label_pos)        
         self.updateConnections()
 
         if self._render_effects:
@@ -514,10 +517,12 @@ class Node(QtGui.QGraphicsObject):
             self.lblshd.setColor(self.shadow_color)
             self.lblshd.setOffset(4,4)
             self.label.setGraphicsEffect(self.lblshd)
+
         else:
             if self.background.graphicsEffect():
                 self.background.graphicsEffect().deleteLater()
                 self.bgshd = QtGui.QGraphicsDropShadowEffect()
+
             if self.label.graphicsEffect():
                 self.label.graphicsEffect().deleteLater()
                 self.lblshd = QtGui.QGraphicsDropShadowEffect()
@@ -1235,7 +1240,10 @@ class NodeLabel(QtGui.QGraphicsObject):
         return self.parentItem()
 
     def boundingRect(self):
-        return self.label.boundingRect()
+        try:
+            return self.label.boundingRect()
+        except:
+            return QtCore.QRectF(0, 0, 0, 0)
 
     @property
     def text(self):

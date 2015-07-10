@@ -24,7 +24,8 @@ class AttributeEditor(QtGui.QWidget):
         #self.mainGroup.setFlat(True)
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
-
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        
         # setup the main interface
         self.initializeUI()
         self.connectSignals()
@@ -73,6 +74,22 @@ class AttributeEditor(QtGui.QWidget):
 
     def connectSignals(self):
         pass
+
+    def createContextMenu(self, parent):
+        """
+        Build a context menu at the current pointer pos.
+
+        params:
+            parent (QWidget) - parent widget.
+        """
+        popup_menu = QtGui.QMenu(parent)
+        popup_menu.clear()
+
+        add_action = QtGui.QAction('Add attribute', self) 
+        add_action.triggered.connect(self.launchAddAttributeDialog)
+
+        popup_menu.addAction(add_action)
+        popup_menu.exec_(qcurs.pos())
 
     def buildLayout(self):
         """
@@ -147,6 +164,9 @@ class AttributeEditor(QtGui.QWidget):
         # update graph
         self.handler.dagNodesUpdatedAction(updated_nodes)
         return updated_nodes
+
+    def launchAddAttributeDialog(self):
+        print 'launching menu'
 
     @property
     def nodes(self):

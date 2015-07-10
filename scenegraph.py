@@ -156,6 +156,8 @@ class SceneGraphUI(form_class, base_class):
         """
         Set up the main UI
         """
+        self.setupFonts()
+        self.setFont(self.fonts.get("ui"))
         self.initializePreferencesUI()
         # build the graph
         self.initializeGraphicsView()
@@ -186,7 +188,6 @@ class SceneGraphUI(form_class, base_class):
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
         self.toggleDebug()
-        self.setFont(self.fonts.get("ui"))
 
     def initializeStylesheet(self):
         """
@@ -198,7 +199,7 @@ class SceneGraphUI(form_class, base_class):
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
-    def setupFonts(self, font='SansSerif', size=9):
+    def setupFonts(self, font='SansSerif', size=8):
         """
         Initializes the fonts attribute
         """
@@ -215,6 +216,9 @@ class SceneGraphUI(form_class, base_class):
         self.fonts["output"] = QtGui.QFont('Monospace')
         self.fonts["output"].setPointSize(size)
 
+        self.fonts["console"] = QtGui.QFont('Monospace')
+        self.fonts["console"].setPointSize(size-1)
+
     def initializeGraphicsView(self, filter=False):
         """
         Initialize the graphics view/scen and graph objects.
@@ -227,7 +231,6 @@ class SceneGraphUI(form_class, base_class):
         self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, edge_type=self.edge_type)
         self.gviewLayout.addWidget(self.view) 
 
-        self.setupFonts()
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.network.graph['environment'] = self.environment
@@ -287,6 +290,7 @@ class SceneGraphUI(form_class, base_class):
         # undo tab
         self.undo_stack.cleanChanged.connect(self.buildWindowTitle)
         self.button_undo_clean.clicked.connect(self.clearUndoStack)
+        self.button_console_clear.clicked.connect(self.consoleTextEdit.clear)
 
     def initializeFileMenu(self):
         """
@@ -404,9 +408,10 @@ class SceneGraphUI(form_class, base_class):
 
         # undo viewer
         self.undoView = QtGui.QUndoView(self.tab_undo)
-        self.undoLayout.insertWidget(0,self.undoView)
+        self.undoTabLayout.insertWidget(0,self.undoView)
         self.undoView.setStack(self.undo_stack)
         self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
+        self.consoleTextEdit.setFont(self.fonts.get("console"))
 
     def buildWindowTitle(self):
         """
@@ -443,7 +448,8 @@ class SceneGraphUI(form_class, base_class):
         if level == 'warning':
             self.statusBar().showMessage(self._getWarningStatus(val))
             log.warning(val)
-        self.timer.start(4000)        
+        self.timer.start(4000)
+        self.statusBar().setFont(self.fonts.get("output"))     
 
     def resetStatus(self):
         """
@@ -479,12 +485,9 @@ class SceneGraphUI(form_class, base_class):
             if not fext:
                 filename = '%s.json' % basename
 
-
+        self.undo_stack.clear()
         filename = str(os.path.normpath(filename))
         self.updateStatus('saving current graph "%s"' % filename)
-
-        # update the graph attributes
-        #root_node.addNodeAttributes(**{'sceneName':filename})
 
         self.graph.write(filename)
         #self.action_save_graph.setEnabled(True)
@@ -508,6 +511,7 @@ class SceneGraphUI(form_class, base_class):
             else:
                 return
 
+        self.undo_stack.clear()
         filename = self.graph.getScene()
         self.updateStatus('saving current graph "%s"' % filename)
         self.graph.write(filename)
@@ -768,12 +772,17 @@ class SceneGraphUI(form_class, base_class):
 
     def tableSelectionChangedAction(self):
         """
-        Update the attribute editor when a node is selected in the graph list.
+        Update the attribute editor when a node is selected in the dependencies list.
         """
         if self.tableSelectionModel.selectedRows():
             idx = self.tableSelectionModel.selectedRows()[0]
             dagnode = self.tableModel.nodes[idx.row()]
             self.updateAttributeEditor(dagnode)
+
+            # can't do this, else model updates
+            #self.view.scene().clearSelection()
+            #node = self.view.scene().getNode(dagnode.name)
+            #node.setSelected(True)
 
     def nodesModelChangedAction(self):
         self.view.scene().clearSelection()
@@ -1107,7 +1116,9 @@ class SceneGraphUI(form_class, base_class):
         """
         Refresh the current graph.
         """
-        self.graph.evaluate()
+        self.view.scene().handler.updateConsole('refreshing graph...', clear=True)
+        data = self.graph.snapshot()
+        self.graph.restore(data, graph=False)
         self.view.scene().update()
 
     def drawGraph(self, filename=None):

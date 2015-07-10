@@ -265,7 +265,10 @@ class EdgesListModel(QtCore.QAbstractListModel):
         edge = self.edges[row]
 
         if role == QtCore.Qt.DisplayRole:
-            return edge.name
+            try:
+                return edge.name
+            except:
+                return "Invalid"
 
     def flags(self, index):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

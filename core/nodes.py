@@ -6,7 +6,7 @@ from collections import MutableMapping
 import copy
 import sys
 from SceneGraph.core import log
-from SceneGraph.options import SCENEGRAPH_NODE_PATH
+from SceneGraph.options import SCENEGRAPH_PLUGIN_PATH
 
 
 """
@@ -16,6 +16,7 @@ Goals:
  - query connections easily
  - can be cleanly mapped to and from json & new instances
 """
+
 
 class Container(MutableMapping):
     """
@@ -113,7 +114,7 @@ class DagNode(MutableMapping):
         self._inputs            = dict()
         self._outputs           = dict()
         self._attributes        = dict()
-        self._metadata          = os.path.join(SCENEGRAPH_NODE_PATH, 'default.mtd')
+        self._metadata          = kwargs.pop('_metadata', None)
         
         self.name               = kwargs.pop('name', 'node1')
         self.node_type          = kwargs.pop('node_type', 'default')
@@ -201,6 +202,12 @@ class DagNode(MutableMapping):
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
+
+    def evaluate(self):
+        """
+        Virtual method.
+        """
+        return False
 
     @property
     def data(self):
@@ -468,6 +475,19 @@ class DagNode(MutableMapping):
         attr = self.getAttr(name)
         attr._node = None
         return self._attributes.pop(name)
+
+    @classmethod
+    def ParentClasses(cls, p=None):
+        """
+        Return all subclasses.
+        """
+        base_classes = []
+        cl = p if p is not None else cls.__class__
+        for b in cl.__bases__:
+            if b.__name__ != "object":
+                base_classes.append(b.__name__)
+                base_classes.extend(cls.ParentClasses(b))
+        return base_classes
 
 
 class DagEdge(MutableMapping):
