@@ -7,14 +7,14 @@ log = core.log
 
 class SceneHandler(QtCore.QObject):
     # graph -> scene
-    nodesAdded        = QtCore.Signal(list)
-    nodesRemoved      = QtCore.Signal(list)   # remove??
-    nodesUpdated      = QtCore.Signal(list)
-    graphNodesRenamed = QtCore.Signal(list)
+    nodesAdded          = QtCore.Signal(list)
+    nodesRemoved        = QtCore.Signal(list)   # remove??
+    nodesUpdated        = QtCore.Signal(list)
+    graphNodesRenamed   = QtCore.Signal(list)
     
     # scene -> graph
-    sceneNodesUpdated    = QtCore.Signal(list)
-    dagNodesUpdated   = QtCore.Signal(list)
+    sceneNodesUpdated   = QtCore.Signal(list)
+    dagNodesUpdated     = QtCore.Signal(list)
     
     """
     SceneHandler class:
@@ -70,17 +70,17 @@ class SceneHandler(QtCore.QObject):
         self.nodesUpdated.connect(self.scene.updateNodesAction)
 
         # connect graph functions
-        self.dagNodesUpdated.connect(self.graph.updateNetwork)
+        self.dagNodesUpdated.connect(self.graph.updateDagNodes)
 
-    def evaluate(self):
+    def evaluate(self, dagnodes=[]):
         """
         Do cool shit here.
         """
-        return self.graph.evaluate()
+        return self.graph.evaluate(dagnodes=dagnodes)
 
-    def updateNetworkAttributes(self):
+    def updateGraphAttributes(self):
         """
-        Update the Graph.network with UI attributes.
+        Returns a dictionary of current UI preferences.
         """
         preferences = dict()
         preferences.update(edge_type=self.ui.edge_type)

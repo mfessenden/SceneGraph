@@ -125,12 +125,12 @@
       <string>Recent files...</string>
      </property>
     </widget>
+    <addaction name="action_read_graph"/>
+    <addaction name="separator"/>
     <addaction name="action_save_graph"/>
     <addaction name="action_save_graph_as"/>
     <addaction name="separator"/>
-    <addaction name="action_read_graph"/>
     <addaction name="action_revert"/>
-    <addaction name="separator"/>
     <addaction name="menu_recent_files"/>
     <addaction name="separator"/>
     <addaction name="action_exit"/>
@@ -227,7 +227,7 @@
           <x>0</x>
           <y>0</y>
           <width>379</width>
-          <height>119</height>
+          <height>146</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -276,7 +276,7 @@
           <x>0</x>
           <y>0</y>
           <width>379</width>
-          <height>119</height>
+          <height>146</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -344,7 +344,7 @@
               <x>0</x>
               <y>0</y>
               <width>361</width>
-              <height>348</height>
+              <height>294</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -493,7 +493,7 @@
               <x>0</x>
               <y>0</y>
               <width>361</width>
-              <height>348</height>
+              <height>294</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -582,7 +582,7 @@
               <x>0</x>
               <y>0</y>
               <width>373</width>
-              <height>360</height>
+              <height>306</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -658,6 +658,45 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="tab_undo">
+        <attribute name="title">
+         <string>Undo</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="undoLayout">
+         <property name="spacing">
+          <number>3</number>
+         </property>
+         <property name="margin">
+          <number>3</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="undoButtonsLayout">
+           <property name="spacing">
+            <number>3</number>
+           </property>
+           <item>
+            <widget class="QToolButton" name="button_undo_clean">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>90</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Clean</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -665,7 +704,11 @@
   </widget>
   <action name="action_save_graph">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../icn/scenegraph.qrc">
+     <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">
     <string>Save graph...</string>
@@ -684,7 +727,10 @@
   </action>
   <action name="action_read_graph">
    <property name="text">
-    <string>Read graph...</string>
+    <string>Open graph...</string>
+   </property>
+   <property name="toolTip">
+    <string>Read graph file from disk</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -804,7 +850,7 @@
   <tabstop>outputTextBrowser</tabstop>
  </tabstops>
  <resources>
-  <include location="scenegraph.qrc"/>
+  <include location="../icn/scenegraph.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -38,8 +38,8 @@ def loadUiType(uiFile):
         pyc = compile(o.getvalue(), '<string>', 'exec')
         try:
             exec pyc in frame
-        except:
-            pass
+        except ImportError as err:
+            log.warning('loadUi error: %s' % err)              
 
         #Fetch the base_class and form class based on their type in the xml from designer
         form_class = frame['Ui_%s'%form_class]
@@ -59,7 +59,9 @@ class SceneGraphUI(form_class, base_class):
         self.setDockNestingEnabled(True)
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        from SceneGraph.icn import icons
 
+        self.icons            = icons.ICONS  
         self.view             = None
 
         # preferences
@@ -72,7 +74,8 @@ class SceneGraphUI(form_class, base_class):
         self.antialiasing     = 2
         self.environment      = kwargs.get('env', 'standalone')
 
-        self._startdir        = kwargs.get('start', os.getenv('HOME'))
+        # setup default user path
+        self._work_path       = kwargs.get('start', options.SCENEGRAPH_USER_WORK_PATH)
         self.timer            = QtCore.QTimer()
 
         # stash temp selections here
@@ -106,13 +109,9 @@ class SceneGraphUI(form_class, base_class):
         self.edgeStatsList.setModel(self.edgesModel)
         self.edgeListSelModel = self.edgeStatsList.selectionModel()
 
+        # setup
+        self.initializeWorkPath(self._work_path)
         self.readSettings()
-
-        """
-        print '# OpenGL mode:   ', self.use_gl
-        print '# Edge type:     ', self.edge_type
-        print '# Viewport mode: ', self.viewport_mode
-        """
 
         self.initializeUI()              
         self.connectSignals()
@@ -135,6 +134,24 @@ class SceneGraphUI(form_class, base_class):
         else:
             return super(SceneGraphUI, self).eventFilter(obj, event)
 
+    def initializeWorkPath(self, path=None):
+        """
+        Setup the user work directory.
+
+        params:
+            path (str) - user work path.
+        """
+        if not path:
+            path = options.SCENEGRAPH_USER_WORK_PATH
+        if os.path.exists(path):
+            os.chdir(path)
+            return path
+        else:
+            if os.makedirs(path):
+                os.chdir(path)
+                return path
+        return
+
     def initializeUI(self):
         """
         Set up the main UI
@@ -152,9 +169,10 @@ class SceneGraphUI(form_class, base_class):
         self.tabWidget.removeTab(2)
 
         # setup undo/redo
-        undo_action = self.undo_stack.createUndoAction(self, "&Undo")
+        undo_action = self.view.scene().undo_stack.createUndoAction(self, "&Undo")
         undo_action.setShortcuts(QtGui.QKeySequence.Undo)
-        redo_action = self.undo_stack.createRedoAction(self, "&Redo")
+        
+        redo_action = self.view.scene().undo_stack.createRedoAction(self, "&Redo")
         redo_action.setShortcuts(QtGui.QKeySequence.Redo)
 
         self.menu_edit.addAction(undo_action)
@@ -203,8 +221,7 @@ class SceneGraphUI(form_class, base_class):
         """
         # initialize the Graph
         self.graph = core.Graph()
-        self.network = self.graph.network
-        
+        self.network = self.graph.network        
 
         # add our custom GraphicsView object (gview is defined in the ui file)
         self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, edge_type=self.edge_type)
@@ -265,7 +282,11 @@ class SceneGraphUI(form_class, base_class):
         # table view
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChangedAction)
         self.nodeListSelModel.selectionChanged.connect(self.nodesModelChangedAction)
-        self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)        
+        self.edgeListSelModel.selectionChanged.connect(self.edgesModelChangedAction)
+
+        # undo tab
+        self.undo_stack.cleanChanged.connect(self.buildWindowTitle)
+        self.button_undo_clean.clicked.connect(self.clearUndoStack)
 
     def initializeFileMenu(self):
         """
@@ -273,7 +294,7 @@ class SceneGraphUI(form_class, base_class):
         """
         current_scene = self.graph.getScene()
         if not current_scene:
-            self.action_save_graph.setEnabled(False)
+            #self.action_save_graph.setEnabled(False)
             self.action_revert.setEnabled(False)
 
         # create the recent files menu
@@ -381,6 +402,12 @@ class SceneGraphUI(form_class, base_class):
         self.logging_level_menu.blockSignals(False)
         self.check_render_fx.blockSignals(False)
 
+        # undo viewer
+        self.undoView = QtGui.QUndoView(self.tab_undo)
+        self.undoLayout.insertWidget(0,self.undoView)
+        self.undoView.setStack(self.undo_stack)
+        self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
+
     def buildWindowTitle(self):
         """
         Build the window title
@@ -388,7 +415,13 @@ class SceneGraphUI(form_class, base_class):
         title_str = 'Scene Graph'
         if self.graph.getScene():
             title_str = '%s - %s' % (title_str, self.graph.getScene())
+
+        # add an asterisk if the current stack is dirty (scene is changed)
+        if not self.undo_stack.isClean():
+            title_str = '%s*' % title_str
         self.setWindowTitle(title_str)
+        # haxx: check speed hit
+        self.initializeStylesheet()
 
     def sizeHint(self):
         return QtCore.QSize(800, 675)
@@ -454,7 +487,7 @@ class SceneGraphUI(form_class, base_class):
         #root_node.addNodeAttributes(**{'sceneName':filename})
 
         self.graph.write(filename)
-        self.action_save_graph.setEnabled(True)
+        #self.action_save_graph.setEnabled(True)
         self.action_revert.setEnabled(True)
         self.buildWindowTitle()
 
@@ -469,13 +502,18 @@ class SceneGraphUI(form_class, base_class):
         Save the current graph file
         """
         if not self.graph.getScene():
-            return
+            filename = self.saveDialog()
+            if filename:
+                self.graph.setScene(filename)
+            else:
+                return
 
-        self.updateStatus('saving current graph "%s"' % self.graph.getScene())
-        self.graph.write(self.graph.getScene())
+        filename = self.graph.getScene()
+        self.updateStatus('saving current graph "%s"' % filename)
+        self.graph.write(filename)
         self.buildWindowTitle()
 
-        self.qtsettings.addRecentFile(self.graph.getScene())
+        self.qtsettings.addRecentFile(filename)
         self.initializeRecentFilesMenu()
         return self.graph.getScene()      
 
@@ -494,7 +532,7 @@ class SceneGraphUI(form_class, base_class):
         Read the current graph from a json file
         """
         if filename is None:
-            filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._startdir, "JSON files (*.json)")
+            filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._work_path, "JSON files (*.json)")
             if filename == "":
                 return
 
@@ -505,7 +543,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
-        self.action_save_graph.setEnabled(True)
+        #self.action_save_graph.setEnabled(True)
 
         if filename != self.graph.temp_scene:
             self.graph.setScene(filename)
@@ -523,7 +561,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
-        self.action_save_graph.setEnabled(True)
+        #self.action_save_graph.setEnabled(True)
         self.graph.setScene(filename)
         self.qtsettings.addRecentFile(filename)
         self.buildWindowTitle()
@@ -545,12 +583,18 @@ class SceneGraphUI(form_class, base_class):
         """
         self.view.scene().initialize()
         self.graph.reset()
-        self.action_save_graph.setEnabled(False)
+        #self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
         self.updateOutput()
 
     def resetScale(self):
         self.view.resetMatrix()      
+
+    def clearUndoStack(self):
+        """
+        Reset the undo stack.
+        """
+        self.undo_stack.clear()
 
     def toggleViewMode(self):
         """
@@ -754,7 +798,7 @@ class SceneGraphUI(form_class, base_class):
         """
         self.updateOutput()
 
-    def nodesChangedAction(self, nodes):
+    def nodesChangedAction(self, dagnodes):
         """
         Runs whenever nodes are changed in the UI.
 
@@ -773,13 +817,38 @@ class SceneGraphUI(form_class, base_class):
     
     def createCreateMenuActions(self):
         pass
-    
+
+    def promptDialog(self, msg):
+        """
+        Simple Qt prompt dialog.
+        """
+        result = QtGui.QMessageBox.question(self, 'Prompt', msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
+        if (result == QtGui.QMessageBox.Yes):
+            return True
+        return False
+
+    def saveDialog(self):
+        """
+        Simple Qt file dialog.
+        """
+        filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
+        if not filename:
+            return
+        return filename
+
     #- Events ----
     def closeEvent(self, event):
         """
         Write window prefs when UI is closed
         """
         self.writeSettings()
+
+        save_action = False
+        if not self.undo_stack.isClean():
+            save_action = self.promptDialog("Scene has been modified, save?")
+
+        if save_action:
+            self.graph.save()
         QtGui.QApplication.instance().removeEventFilter(self)
         return super(SceneGraphUI, self).closeEvent(event)
 
@@ -943,7 +1012,7 @@ class SceneGraphUI(form_class, base_class):
         self.outputTextBrowser.clear()        
 
         # update graph attributes
-        self.graph.updateNetworkAttributes()
+        self.graph.updateGraphAttributes()
         #graph_data = nxj.adjacency_data(self.graph.network)
         graph_data = nxj.node_link_data(self.graph.network)
         html_data = self.formatOutputHtml(graph_data)

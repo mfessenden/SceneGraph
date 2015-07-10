@@ -35,5 +35,5 @@ QFloatLineEdit          = attributes.QFloatLineEdit
 QIntLineEdit            = attributes.QIntLineEdit
 ColorPicker             = attributes.ColorPicker
 
-NodeDataCommand         = commands.NodeDataCommand
-CommandMove             = commands.CommandMove
+SceneNodesCommand       = commands.SceneNodesCommand
+SceneChangedCommand     = commands.SceneChangedCommand

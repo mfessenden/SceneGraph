@@ -4,7 +4,7 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 API_VERSION                 = 0.61
-API_REVISION                = 3
+API_REVISION                = 4
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
 PLATFORM                    = None
 
@@ -16,7 +16,7 @@ SCENEGRAPH_ICON_PATH        = os.path.join(SCENEGRAPH_PATH, 'icn')
 SCENEGRAPH_STYLESHEET_PATH  = os.path.join(SCENEGRAPH_PATH, 'css')
 SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE)
 SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
-
+SCENEGRAPH_USER_WORK_PATH   = os.path.join(os.getenv('HOME'), 'graphs')
 
 
 def setup_platform_defaults():

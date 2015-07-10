@@ -4,6 +4,7 @@ import math
 from PySide import QtCore, QtGui
 from SceneGraph.core import log
 from SceneGraph import options
+from . import commands
 
 
 class Node(QtGui.QGraphicsObject):
@@ -51,6 +52,11 @@ class Node(QtGui.QGraphicsObject):
         self.connections     = dict(input  = dict(),
                                     output = dict(),
                                     )
+
+        # undo/redo snapshots
+        self._current_pos    = QtCore.QPointF(0,0)
+        self._data_snapshot  = None
+        self._pos_snapshot   = None
 
         self.setHandlesChildEvents(False)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
@@ -185,6 +191,26 @@ class Node(QtGui.QGraphicsObject):
         QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
         self.update()
 
+    def mousePressEvent(self, event):
+        """
+        Help manage mouse movement undo/redos.
+        """
+        QtGui.QGraphicsItem.mousePressEvent(self, event)
+        # store the node's current position
+        self._current_pos  = self.pos()
+        # store the node's current data
+        self.scene().handler.evaluate()
+        self._data_snapshot = self.scene().graph.snapshot()        
+
+    def mouseReleaseEvent(self, event):
+        """
+        Help manage mouse movement undo/redos.
+        """
+        # Don't register undos for selections without moves
+        if self.pos() != self._current_pos:
+            snapshot = self.scene().graph.snapshot()
+            self.scene().undo_stack.push(commands.SceneNodesCommand(self._data_snapshot, snapshot, self.scene()))
+        QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
 
     def boundingRect(self):
         """
