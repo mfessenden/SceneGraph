@@ -1,0 +1,12 @@
+[transform]
+pos: short2: 0,0;
+width: int8: 100: -p;
+height: int8: 15: -p;
+height_expanded: int8: 120: -p;
+height_collapsed: int8: 20: -p;
+[attributes]
+id: str: -p;
+name: str: node1;
+node_type: str: default: -p;
+color: color: 0,0,0;
+enabled: bool: true;

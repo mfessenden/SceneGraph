@@ -9,7 +9,7 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, DagNode, DagEdge
+from SceneGraph.core import log, DagNode, DagEdge, PluginManager
 
 
 class Graph(object):
@@ -33,14 +33,12 @@ class Graph(object):
         self.mode           = 'standalone'
         self.grid           = Grid(5, 5)
         self.handler        = None
+        self.pmanager       = PluginManager()
 
         # attributes for current nodes/dynamically loaded nodes
         self._node_types     = dict() 
         self.dagnodes        = dict()
         self.temp_scene      = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
-
-        # setup node types
-        self.initializeNodeTypes()
 
         # initialize the NetworkX graph attributes
         self.initializeNetworkAttributes()
@@ -59,6 +57,9 @@ class Graph(object):
     def initializeNetworkAttributes(self, scene=None):
         """
         Add default attributes to the networkx graph.
+
+        params:
+            scene (str) - name of scene file.
         """
         self.network.graph['api_version'] = options.API_VERSION_AS_STRING
         self.network.graph['scene'] = scene
@@ -71,20 +72,6 @@ class Graph(object):
         Return the network preferences.
         """
         return self.network.graph.get('preferences', {})
-
-    def initializeNodeTypes(self):
-        """
-        Scan the dag nodes directory for node types.
-        """
-        from SceneGraph.options import SCENEGRAPH_NODE_PATH
-        self._node_types = self.scanNodeTypes(SCENEGRAPH_NODE_PATH)
-
-        if 'SCENEGRAPH_EXT_NODES' in os.environ:
-            ext_node_path = os.getenv('SCENEGRAPH_EXT_NODES')
-            if os.path.exists(ext_node_path):
-
-                self._node_types.update(**self.scanNodeTypes(ext_node_path))
-        return self._node_types
 
     def scanNodeTypes(self, path):
         """
@@ -186,7 +173,7 @@ class Graph(object):
         """
         Returns a list of node types.
         """
-        return self._node_types.keys()
+        return self.pmanager.node_types
 
     #-- NetworkX Stuff -----
     def getScene(self):
@@ -428,7 +415,9 @@ class Graph(object):
 
         if not self.validNodeName(name):
             name = self.getValidNodeName(name)
-        dag = DagNode(node_type=node_type, name=name, pos=pos, **kwargs)
+
+        # get the dag node from the PluginManager
+        dag = self.pmanager.get_dagnode(node_type=node_type, name=name, pos=pos, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()
@@ -441,7 +430,7 @@ class Graph(object):
 
         # update the scene
         if self.handler is not None:
-            self.handler.addNodes([dag.id,])
+            self.handler.dagNodesAdded([dag.id,])
         return dag
 
     def remove_node(self, *args):
@@ -531,7 +520,7 @@ class Graph(object):
 
         # update the scene
         if self.handler is not None:
-            self.handler.addNodes([edge.id,])
+            self.handler.dagNodesAdded([edge.id,])
         return edge
 
     def remove_edge(self, *args): 
@@ -802,6 +791,9 @@ class Graph(object):
         self.network.clear()
         self.dagnodes = dict()
 
+        if self.handler is not None:
+            self.handler.resetScene()
+
     def downstream(self, node):
         """
         Return downstream nodes from the given node.
@@ -952,66 +944,75 @@ class Graph(object):
         log.info('saving current scene: "%s"' % self.getScene())
         return self.write(self.getScene())
 
-    def restore(self, data):
+    def restore(self, data, nodes=True, graph=True):
         """
-        Restore current DAG state.
+        Restore current DAG state from data.
+
+        params:
+            data  (dict) - dictionary of scene graph data.
+            nodes (bool) - restore nodes/edges.
+            graph (bool) - restore scene attributes/preferences.
         """
-        self.network.clear()
+        self.reset()
 
         graph_data = data.get('graph', [])
         nodes = data.get('nodes', [])
         edges = data.get('links', [])
         
+        self.updateConsole(msg='restoring %d nodes' % len(nodes))
+
         # update graph attributes
-        for gdata in graph_data:
-            if len(gdata):
-                self.network.graph[gdata[0]]=gdata[1]
+        if graph:
+            for gdata in graph_data:
+                if len(gdata):
+                    self.network.graph[gdata[0]]=gdata[1]
 
         # build nodes from data
-        for node_attrs in nodes:
-            # get the node type
-            node_type = node_attrs.pop('node_type', 'default')
+        if nodes:
+            for node_attrs in nodes:
+                # get the node type
+                node_type = node_attrs.pop('node_type', 'default')
 
-            # add the dag node/widget
-            dag_node = self.add_node(node_type, **node_attrs)
-            log.debug('building node "%s"' % node_attrs.get('name'))
+                # add the dag node/widget
+                dag_node = self.add_node(node_type, **node_attrs)
+                log.debug('building node "%s"' % node_attrs.get('name'))
 
-        for edge_attrs in edges:
-            edge_id = edge_attrs.get('id')
-            src_id = edge_attrs.get('src_id')
-            dest_id = edge_attrs.get('dest_id')
+            for edge_attrs in edges:
+                edge_id = edge_attrs.get('id')
+                src_id = edge_attrs.get('src_id')
+                dest_id = edge_attrs.get('dest_id')
 
-            src_attr = edge_attrs.get('src_attr')
-            dest_attr = edge_attrs.get('dest_attr')
+                src_attr = edge_attrs.get('src_attr')
+                dest_attr = edge_attrs.get('dest_attr')
 
-            src_dag_nodes = self.getNode(src_id)
-            dest_dag_nodes = self.getNode(dest_id)
+                src_dag_nodes = self.getNode(src_id)
+                dest_dag_nodes = self.getNode(dest_id)
 
-            if not src_dag_nodes or not dest_dag_nodes:
-                log.warning('cannot parse nodes.')
-                return
+                if not src_dag_nodes or not dest_dag_nodes:
+                    log.warning('cannot parse nodes.')
+                    return
 
-            src_dag_node = src_dag_nodes[0]
-            dest_dag_node = dest_dag_nodes[0]
-            src_string = '%s.%s' % (src_dag_node.name, src_attr)
-            dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
+                src_dag_node = src_dag_nodes[0]
+                dest_dag_node = dest_dag_nodes[0]
+                src_string = '%s.%s' % (src_dag_node.name, src_attr)
+                dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
 
-            # TODO: need to get connection node here
-            log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))
-            
-            dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
+                # TODO: need to get connection node here
+                log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))            
+                dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
 
-            # update the UI
-            if self.mode == 'ui':
+
                 #self.handler.scene.clear()
                 scene_pos = self.network.graph.get('view_center', (0,0))
                 view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
 
+                # update the UI.
                 if self.handler is not None:
-                    view = self.handler.scene.views()[0]
-                    view.resetTransform()
-                    view.setCenterPoint(scene_pos)
-                    view.scale(*view_scale)
+                    if graph:
+                        view = self.handler.scene.views()[0]
+                        view.resetTransform()
+                        view.setCenterPoint(scene_pos)
+                        view.scale(*view_scale)
 
     def read(self, filename):
         """
@@ -1046,6 +1047,14 @@ class Graph(object):
         """        
         self.network.graph['version'] = str(val)
         return self.version
+
+    #- Scene Handler ----
+    def updateConsole(self, msg, clear=False):
+        """
+        Send a message through the SceneHandler.
+        """
+        if self.handler is not None:
+            self.handler.updateConsole(msg, clear=clear, graph=True)
 
     #- Virtual ----
     def is_connected(self, node1, node2):

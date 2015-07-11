@@ -217,7 +217,6 @@ class GraphicsView(QtGui.QGraphicsView):
             status['view_cursor'] = (epos.x(), epos.y())            
             status['scene_cursor'] = (spos.x(), spos.y())
             status['scene_pos'] = self.getCenterPoint()
-
         self.statusEvent.emit(status)
 
     def wheelEvent(self, event):
@@ -227,10 +226,6 @@ class GraphicsView(QtGui.QGraphicsView):
         factor = 1.41 ** ((event.delta()*.5) / 240.0)
         self.scale(factor, factor)
         self._scale = factor
-
-    def viewportEvent(self, event):
-        self.updateStatus(event)
-        return QtGui.QGraphicsView.viewportEvent(self, event) 
 
     def mouseMoveEvent(self, event):
         self.updateStatus(event)
@@ -250,8 +245,8 @@ class GraphicsView(QtGui.QGraphicsView):
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
 
         if event.button() == QtCore.Qt.RightButton:
-            print 'building context menu...'
             self.showContextMenu(event.pos())
+            
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
     def event(self, event):
@@ -319,17 +314,6 @@ class GraphicsView(QtGui.QGraphicsView):
             #action.setData((action.data()[0], self.mapToScene(pos)))
             menu.addAction(action)
         menu.exec_(self.mapToGlobal(pos))
-
-    def restoreNodes(self, data):
-        """
-        Undo command.
-        """
-        selected_nodes = self.selected_nodes()
-        self.blockSignals(True)
-        for node in selected_nodes:
-            print 'updating node: ', node.name
-            node.dagnode.update(**data)
-        self.blockSignals(False)
     
     #- Actions -----
     def sceneChangedAction(self, *args):
@@ -385,8 +369,38 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def undo_stack(self):
         return self.ui.undo_stack
 
+    def updateNodes(self, data):
+        """
+        Update nodes with arbitrary data.
+
+        params:
+            data (dict) - node graph data.
+        """
+        selected_nodes = self.selected_nodes()
+        self.blockSignals(True)
+        for node in selected_nodes:
+            print 'updating node: ', node.name
+            node.dagnode.update(**data)
+        self.blockSignals(False)
+
     def restoreNodes(self, data):
-        self.graph.restore(data)
+        """
+        Restore a working version of the scene.
+
+         *todo: need to rework the scene file format to not blow away the scene.
+
+        params:
+            data (dict) - node graph data.
+
+        """
+        # haxx
+        current_scene = self.graph.getScene()
+        self.initialize()
+        self.blockSignals(True)
+        self.graph.restore(data, graph=False)
+        self.blockSignals(False)
+        self.update()
+        self.graph.setScene(current_scene)
 
     def addNodes(self, dagids):
         """

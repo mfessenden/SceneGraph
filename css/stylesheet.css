@@ -245,10 +245,16 @@ QLabel.ListHeader{
 }
 
 QTextBrowser.Output{
-    font: "Monospace";
+    font-family: "Monospace";
     /*font-size: medium;*/
-    background-color: #252525;
+    background-color: #222222;
 }
+
+/*
+##################
+TABS
+##################
+*/
 
 QTabWidget::pane { /* The tab widget frame */
     border-top: 1px solid #292929;
@@ -258,22 +264,19 @@ QTabWidget::tab-bar {
     left: 5px; /* move the tab right 5px */
 }
 
-QTabBar::tab::top.sub-tab{
-    font-size: 36pt;
-    background-color: #f3766f;
-}
-
 /* Style the tab using the tab sub-control. Note that
     it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {    
     border: 1px solid #292929;
     border-bottom-color: #323232; /* same as the pane color */
-    min-width: 12ex;
-    min-height: 2ex;
+    min-width: 8ex;
+    /*min-height: 2ex;*/
     /*font-size: 9pt;*/
     /*padding: 2px;*/
-    padding-left: 6px;
-    padding-right: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    color: #b5b5b5; /* tab title text color */
+
 }
 
 QTabBar::tab::top{
@@ -282,6 +285,7 @@ QTabBar::tab::top{
     border-top-right-radius: 6px;
     padding-top: 3px;
 }
+
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #343434, stop: 1.0 #434343);
@@ -289,6 +293,18 @@ QTabBar::tab::bottom{
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
 }
+
+QTabBar::tab::top.subtab{
+    color: #f4ff75;
+    background: #657682;
+}
+
+/* tab inverted (for nested dock widgets) */
+QTabBar::tab::bottom.subtab{
+    color: #f4ff75;
+    background: #658269;
+}
+
 
 QTabBar::tab:selected, QTabBar::tab:hover {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #707070, stop: 1.0 #646464);
@@ -326,6 +342,11 @@ QHeaderView {
     border-radius: 10px;
 }
 
-TableView{
+TableView {
     border: none;
+}
+
+QPlainTextEdit.Console {
+    font-family: "Monospace";
+    background-color: #222222;
 }

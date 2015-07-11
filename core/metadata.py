@@ -47,20 +47,21 @@ class DataParser(object):
         """
         Read a template file.
         """
-        if os.path.exists(filename):
-            data = open(filename).read()
-            log.debug('reading metadata file "%s".' % filename)
-            current_category = None
-            for line in data.split('\n'):
-                val = self._parse_line(line)
-                #print json.dumps(val, indent=5)
-                if val:
-                    if 'group_name' in val:
-                        current_category = val.get('group_name')
-                        if current_category not in self._data:
-                            self._data[current_category]=dict()
-                    else:
-                        self._data.get(current_category).update(val)
+        if filename is not None:
+            if os.path.exists(filename):
+                data = open(filename).read()
+                log.debug('reading metadata file "%s".' % filename)
+                current_category = None
+                for line in data.split('\n'):
+                    val = self._parse_line(line)
+                    #print json.dumps(val, indent=5)
+                    if val:
+                        if 'group_name' in val:
+                            current_category = val.get('group_name')
+                            if current_category not in self._data:
+                                self._data[current_category]=dict()
+                        else:
+                            self._data.get(current_category).update(val)
 
     def _parse_line(self, l):
         """

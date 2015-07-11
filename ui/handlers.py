@@ -76,7 +76,30 @@ class SceneHandler(QtCore.QObject):
         """
         Do cool shit here.
         """
+        self.updateConsole('evaluating...')
         return self.graph.evaluate(dagnodes=dagnodes)
+
+    def updateConsole(self, msg, clear=False, graph=False):
+        """
+        Send output to the console.
+
+        params:
+            msg (str) - message to send.
+        """
+        if clear:
+            self.ui.consoleTextEdit.clear()
+        handler = 'SceneHandler'
+        if graph:
+            handler = 'Graph'
+        console_msg = '# [%s]: %s\n' % (handler, msg)
+        self.ui.consoleTextEdit.insertPlainText(console_msg)
+
+    def resetScene(self):
+        """
+        Resets the current scene.
+        """
+        self.updateConsole('resetting Scene...')
+        self.scene.initialize()
 
     def updateGraphAttributes(self):
         """
@@ -91,13 +114,14 @@ class SceneHandler(QtCore.QObject):
         return preferences
 
     #- Graph to Scene ----    
-    def addNodes(self, dagids):
+    def dagNodesAdded(self, dagids):
         """
         Signal Graph -> GraphicsScene.
 
         params:
             dagnodes (list) - list of dagnode objects.
         """
+        self.updateConsole('adding %d nodes' % len(dagids))
         self.nodesAdded.emit(dagids)
 
     def dagNodesRemoved(self, dagids):
@@ -109,6 +133,7 @@ class SceneHandler(QtCore.QObject):
             if id in self.scene.scenenodes:
                 widget = self.scene.scenenodes.pop(id)
                 log.info('removing "%s"' % widget.name)
+                self.updateConsole('removing "%s"' % widget.name)
                 if widget and widget not in nodes_to_remove:
                     nodes_to_remove.append(widget)
 
@@ -119,6 +144,7 @@ class SceneHandler(QtCore.QObject):
         """
         Signal Graph -> GraphicsScene.
         """
+        self.updateConsole('updating %d nodes...' % len(dagnodes))
         log.info('SceneHandler: updating %d nodes...' % len(dagnodes))
         self.nodesUpdated.emit(dagnodes)
 

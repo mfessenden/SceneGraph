@@ -9,6 +9,7 @@ from . import manager
 from . import metadata
 
 
+
 #reload(nodes)
 reload(attributes)
 reload(manager)
@@ -27,6 +28,11 @@ Attribute           = attributes.Attribute
 NodeManager         = manager.NodeManager
 DataParser          = metadata.DataParser 
 
+
+# Plugin Manager
+from . import plugins
+reload(plugins)
+PluginManager       = plugins.PluginManager
 
 from . import graph
 reload(graph)
