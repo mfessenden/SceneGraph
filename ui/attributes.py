@@ -15,6 +15,7 @@ class AttributeEditor(QtGui.QWidget):
         self._parser        = DataParser()
         self._show_private  = False
         self._handler       = kwargs.get('handler', None)
+        self._add_dialog    = None
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -24,7 +25,10 @@ class AttributeEditor(QtGui.QWidget):
         #self.mainGroup.setFlat(True)
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
+
+        # context menu
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.createContextMenu)
         
         # setup the main interface
         self.initializeUI()
@@ -75,16 +79,16 @@ class AttributeEditor(QtGui.QWidget):
     def connectSignals(self):
         pass
 
-    def createContextMenu(self, parent):
+    def createContextMenu(self):
         """
         Build a context menu at the current pointer pos.
 
         params:
             parent (QWidget) - parent widget.
         """
-        popup_menu = QtGui.QMenu(parent)
+        popup_menu = QtGui.QMenu(self)
         popup_menu.clear()
-
+        qcurs = QtGui.QCursor()
         add_action = QtGui.QAction('Add attribute', self) 
         add_action.triggered.connect(self.launchAddAttributeDialog)
 
@@ -166,7 +170,14 @@ class AttributeEditor(QtGui.QWidget):
         return updated_nodes
 
     def launchAddAttributeDialog(self):
-        print 'launching menu'
+        """
+        Launch the add attribute dialog.
+        """
+        try:
+            self._add_dialog.close()
+        except:
+            self._add_dialog = AddAttributeDialog(self, nodes=self._nodes)
+            self._add_dialog.show()
 
     @property
     def nodes(self):
@@ -253,6 +264,93 @@ class AttributeEditor(QtGui.QWidget):
                 child.widget().deleteLater()
             elif child.layout() is not None:
                 self.clearLayout(child.layout())
+
+
+class AddAttributeDialog(QtGui.QDialog):
+
+    def __init__(self, parent=None, nodes=[]):
+        QtGui.QDialog.__init__(self, parent)
+
+        self._nodes     = nodes
+
+        self.mainLayout = QtGui.QVBoxLayout(self)
+        self.mainLayout.setObjectName("mainLayout")
+        
+        self.groupBox = QtGui.QGroupBox(self)
+        self.groupBox.setObjectName("groupBox")
+        self.groupBoxLayout = QtGui.QFormLayout(self.groupBox)
+        self.groupBoxLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.groupBoxLayout.setObjectName("groupBoxLayout")
+        
+        # name editor
+        self.nameLabel = QtGui.QLabel(self.groupBox)
+        self.nameLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.nameLabel.setObjectName("nameLabel")
+        self.groupBoxLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.nameLabel)
+        self.nameLineEdit = QtGui.QLineEdit(self.groupBox)
+        self.nameLineEdit.setObjectName("nameLineEdit")
+        self.groupBoxLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.nameLineEdit)
+        
+        # id editor
+        self.iDLabel = QtGui.QLabel(self.groupBox)
+        self.iDLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.iDLabel.setObjectName("iDLabel")
+        self.groupBoxLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.iDLabel)
+        self.iDLineEdit = QtGui.QLineEdit(self.groupBox)
+        self.iDLineEdit.setObjectName("iDLineEdit")
+        self.groupBoxLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.iDLineEdit)
+        
+        # type menu
+        self.typeLabel = QtGui.QLabel(self.groupBox)
+        self.typeLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.typeLabel.setObjectName("typeLabel")
+        self.groupBoxLayout.setWidget(2, QtGui.QFormLayout.LabelRole, self.typeLabel)
+        self.typeComboBox = QtGui.QComboBox(self.groupBox)
+        self.typeComboBox.setObjectName("typeComboBox")
+        self.groupBoxLayout.setWidget(2, QtGui.QFormLayout.FieldRole, self.typeComboBox)
+        self.mainLayout.addWidget(self.groupBox)
+        self.buttonBox = QtGui.QDialogButtonBox(self)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.mainLayout.addWidget(self.buttonBox)
+
+        self.buttonBox.accepted.connect(self.acceptedAction)
+        self.buttonBox.rejected.connect(self.close)
+        self.initializeUI()
+
+    def initializeUI(self):
+        """
+        Set up the main UI.
+        """
+        self.setWindowTitle("Add Node Attribute")
+        self.groupBox.setTitle("Create Attribute")
+        self.nameLabel.setText("Name:")
+        self.iDLabel.setText("ID:")
+        self.typeLabel.setText("Type:")
+
+        self.typeComboBox.clear()
+        self.typeComboBox.addItems(WIDGET_MAPPER.keys())
+
+    def acceptedAction(self):
+        """
+        Runs when the OK button is clicked.
+        """
+        attr_name = self.nameLineEdit.text()
+        attr_type = self.typeComboBox.currentText()
+        def_value = ATTRIBUTE_DEFAULTS.get(attr_type)
+
+        if attr_name:
+            for node in self._nodes:
+                log.info('adding "%s" to node "%s"' % (attr_name, node.name))
+                node.addAttr(attr_name, value=def_value)
+
+        self.parent().updateChildEditors([attr_name])
+        self.parent().handler.dagNodesUpdatedAction(self._nodes)
+        self.close()
+
+    def sizeHint(self):
+        return QtCore.QSize(315, 190)
 
 # -sub widgets ---
 
@@ -1112,6 +1210,120 @@ class StringEditor(QtGui.QWidget):
             self.valueChanged.emit(self)
 
 
+class FileEditor(QtGui.QWidget):
+
+    attr_type       = 'file'
+    valueChanged    = QtCore.Signal(object)
+
+    def __init__(self, parent=None, **kwargs):
+        super(FileEditor, self).__init__(parent)
+
+        self._ui            = kwargs.get('ui', None)
+        self._attribute     = kwargs.get('file', '')
+        self._default_value = ""
+        self._current_value = None
+
+        self.mainLayout = QtGui.QHBoxLayout(self)
+        self.mainLayout.setSpacing(3)
+        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setObjectName("mainLayout")
+        
+        self.file_edit = QtGui.QLineEdit(self)
+        self.file_edit.setObjectName("file_edit")
+        self.mainLayout.addWidget(self.file_edit)
+        self.button_browse = QtGui.QToolButton(self)
+        self.button_browse.setObjectName("button_browse")
+        self.mainLayout.addWidget(self.button_browse)
+
+        self.button_browse.clicked.connect(self.browseAction)
+
+    def browseAction(self):
+        """
+        Open a file dialog.
+        """
+        filename, filters = QtGui.QFileDialog.getOpenFileName(self, caption='Open file...', filter="All Files (*.*)")
+        if not filename:
+            return
+
+        self.file_edit.setText(filename)
+        self.valueUpdatedAction()
+
+    @property
+    def attribute(self):
+        return self._attribute
+    
+    @property
+    def nodes(self):
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
+    
+    @property
+    def values(self):
+        """
+        Returns a list of the current node values.
+
+        returns:
+            (list) - list of node values for the editor's attribute.
+        """
+        if self._ui is not None:
+            if hasattr(self._ui, 'nodeValues'):
+                return self._ui.nodeValues(self.attribute)
+        return []
+    
+    @property
+    def default_value(self):
+        return self._default_value
+
+    @default_value.setter
+    def default_value(self, val):
+        if val != self._default_value:
+            self._default_value = val
+            return True
+        return False
+
+    @property
+    def value(self):
+        """
+        Get the current editor value.
+        """
+        return str(self.file_edit.text())
+
+    def initializeEditor(self):
+        """
+        Set the widgets nodes values.
+        """
+        if not self.nodes or not self.attribute:
+            return
+
+        editor_value = self.default_value
+
+        node_values = self.values
+        if node_values:
+            if len(node_values) > 1:
+                pass
+
+            elif len(node_values) == 1:
+                if node_values[0]:
+                    editor_value = node_values[0]
+
+                # set the editor value
+                self.file_edit.blockSignals(True)
+
+                # set the current node values.
+                self.file_edit.setText(str(editor_value))
+                self.file_edit.blockSignals(False)                
+
+    def valueUpdatedAction(self):
+        """
+        Update the current nodes with the revised value.
+        """
+        if self.value != self._current_value:
+            self._current_value = self.value
+            self.valueChanged.emit(self)
+
+
 class ColorPicker(QtGui.QWidget):
     """ 
     Color picker widget, expects an RGB value as an argument.
@@ -1480,6 +1692,7 @@ WIDGET_MAPPER = dict(
     float3  = QFloat3Editor,
     bool    = QBoolEditor,
     str     = StringEditor,
+    file    = FileEditor,
     int     = QIntEditor,
     int2    = QInt2Editor,
     int3    = QInt3Editor,
@@ -1488,6 +1701,21 @@ WIDGET_MAPPER = dict(
     short2  = QFloat2Editor,
     )
 
+
+ATTRIBUTE_DEFAULTS = dict(
+    float   = 0.0,
+    float2  = [0.0, 0.0],
+    float3  = [0.0, 0.0, 0.0],
+    bool    = False,
+    str     = "",
+    file    = "",
+    int     = 0,
+    int2    = [0,0],
+    int3    = [0,0,0],
+    int8    = 0,
+    color   = [172, 172, 172, 255],
+    short2  = [0.0, 0.0],
+    )
 
 
 def map_widget(typ, parent, name, ui):
