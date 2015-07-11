@@ -45,12 +45,15 @@ class Attribute(MutableMapping):
         """
         String representation of the object, for printing.
         """
-        tmp = self.data
-        data = {self.name:tmp}
+        data = self.data
+        #data = {self.name:data}
         return json.dumps(data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return '{"%s":"%s"}' % (self.name, self.value)
+        valstr = '"%s"' % self.value
+        if self.type in ['float2', 'int2', 'float3', 'int3']:
+            valstr = str(self.value)
+        return '{"value":%s, "type":"%s"}' % (valstr, self.type)
 
     def __getitem__(self, key, default=None):
         try:
@@ -118,6 +121,7 @@ class Attribute(MutableMapping):
         to reduce saved file size.
         """
         data = copy.deepcopy(self._data)
+        data.update(type=self.type)
         return {k: data[k] for k in data.keys() if data[k] or k in ['value']}
 
     @property

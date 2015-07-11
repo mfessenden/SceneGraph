@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>312</width>
-    <height>190</height>
+    <width>313</width>
+    <height>216</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -70,6 +70,13 @@
       </item>
       <item row="2" column="1">
        <widget class="QComboBox" name="typeComboBox"/>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="checkbox_connectable">
+        <property name="text">
+         <string>Connectable</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

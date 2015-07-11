@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>icons/folder-horizontal-open.png</file>
     <file>icons/arrow-curve-000-double.png</file>
     <file>icons/arrow-curve-000-left.png</file>
     <file>icons/arrow-curve-090-left.png</file>

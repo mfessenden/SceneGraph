@@ -11,4 +11,17 @@ class Dot(DagNode):
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
         DagNode.__init__(self, *args, **kwargs)
 
-        self.color     = [172, 172, 172, 255] 
+        self.width              = 10.0
+        self.height_collapsed   = 10.0
+        self.height_expanded    = 10.0
+        
+        self.color              = [172, 172, 172, 255]
+        self.orientation        = 'dot'
+
+    @property
+    def height(self):
+        return 10.0
+
+    @property
+    def width(self):
+        return 10.0

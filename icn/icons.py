@@ -4,6 +4,7 @@ import scenegraph_rc
 
 
 ICONS = dict(    
+    folder_horizontal_open          = QtGui.QIcon(":/icons/icons/folder-horizontal-open.png"),
     arrow_curve_000_double          = QtGui.QIcon(":/icons/icons/arrow-curve-000-double.png"),
     arrow_curve_000_left            = QtGui.QIcon(":/icons/icons/arrow-curve-000-left.png"),
     arrow_curve_090_left            = QtGui.QIcon(":/icons/icons/arrow-curve-090-left.png"),

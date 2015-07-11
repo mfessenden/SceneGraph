@@ -109,3 +109,4 @@
 
 ####### Admin:
 pyside-rcc ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/scenegraph_rc.py
+icn_build -f ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/icons.py

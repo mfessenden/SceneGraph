@@ -141,7 +141,8 @@ class AttributeEditor(QtGui.QWidget):
                         # signal here when editor changes
                         editor.valueChanged.connect(self.nodeAttributeChanged)
                         editor.setEnabled(not locked)
-                        row += 1     
+                        row += 1 
+
             
             self.mainGroupLayout.addWidget(group)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
@@ -305,7 +306,8 @@ class AddAttributeDialog(QtGui.QDialog):
 
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
-        
+
+        # main group
         self.groupBox = QtGui.QGroupBox(self)
         self.groupBox.setObjectName("groupBox")
         self.groupBoxLayout = QtGui.QFormLayout(self.groupBox)
@@ -330,7 +332,7 @@ class AddAttributeDialog(QtGui.QDialog):
         self.iDLineEdit.setObjectName("iDLineEdit")
         self.groupBoxLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.iDLineEdit)
         
-        # type menu
+        # type editor
         self.typeLabel = QtGui.QLabel(self.groupBox)
         self.typeLabel.setMinimumSize(QtCore.QSize(100, 0))
         self.typeLabel.setObjectName("typeLabel")
@@ -338,10 +340,15 @@ class AddAttributeDialog(QtGui.QDialog):
         self.typeComboBox = QtGui.QComboBox(self.groupBox)
         self.typeComboBox.setObjectName("typeComboBox")
         self.groupBoxLayout.setWidget(2, QtGui.QFormLayout.FieldRole, self.typeComboBox)
+        
+        # connectable
+        self.checkbox_connectable = QtGui.QCheckBox(self.groupBox)
+        self.checkbox_connectable.setObjectName("checkbox_connectable")
+        self.groupBoxLayout.setWidget(3, QtGui.QFormLayout.FieldRole, self.checkbox_connectable)
         self.mainLayout.addWidget(self.groupBox)
         self.buttonBox = QtGui.QDialogButtonBox(self)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel | QtGui.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.mainLayout.addWidget(self.buttonBox)
 
@@ -358,9 +365,9 @@ class AddAttributeDialog(QtGui.QDialog):
         self.nameLabel.setText("Name:")
         self.iDLabel.setText("ID:")
         self.typeLabel.setText("Type:")
-
+        self.checkbox_connectable.setText('Connectable:')
         self.typeComboBox.clear()
-        self.typeComboBox.addItems(WIDGET_MAPPER.keys())
+        self.typeComboBox.addItems(sorted(WIDGET_MAPPER.keys()))
 
     def acceptedAction(self):
         """
@@ -369,13 +376,14 @@ class AddAttributeDialog(QtGui.QDialog):
         attr_name = self.nameLineEdit.text()
         attr_type = self.typeComboBox.currentText()
         def_value = ATTRIBUTE_DEFAULTS.get(attr_type)
-
+        connectable = self.checkbox_connectable.isChecked()
         if attr_name:
             for node in self._nodes:
-                log.info('adding "%s" to node "%s"' % (attr_name, node.name))
-                node.addAttr(attr_name, value=def_value)
+                log.info('adding "%s" to node "%s" (%s)' % (attr_name, node.name, attr_type))
+                node.addAttr(attr_name, value=def_value, type=attr_type, is_connectable=connectable, is_user=True)
 
-        self.parent().updateChildEditors([attr_name])
+        #self.parent().updateChildEditors([attr_name])
+        self.parent().updateChildEditors()
         self.parent().handler.dagNodesUpdatedAction(self._nodes)
         self.close()
 
@@ -1252,7 +1260,7 @@ class FileEditor(QtGui.QWidget):
         super(FileEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
-        self._attribute     = kwargs.get('file', '')
+        self._attribute     = kwargs.get('name', 'file')
         self._default_value = ""
         self._current_value = None
 
@@ -1267,6 +1275,12 @@ class FileEditor(QtGui.QWidget):
         self.button_browse = QtGui.QToolButton(self)
         self.button_browse.setObjectName("button_browse")
         self.mainLayout.addWidget(self.button_browse)
+
+        # set the completion model
+        self._completer = QtGui.QCompleter(self)
+        model = QtGui.QDirModel(self._completer)
+        self._completer.setModel(model)
+        self.file_edit.setCompleter(self._completer)
 
         self.button_browse.clicked.connect(self.browseAction)
 
@@ -1329,7 +1343,6 @@ class FileEditor(QtGui.QWidget):
         """
         if not self.nodes or not self.attribute:
             return
-
         editor_value = self.default_value
 
         node_values = self.values

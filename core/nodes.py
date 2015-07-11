@@ -9,101 +9,6 @@ from SceneGraph.core import log
 from SceneGraph.options import SCENEGRAPH_PLUGIN_PATH
 from . import attributes
 
-"""
-Goals:
- - hold basic attributes
- - easily add new attributes
- - query connections easily
- - can be cleanly mapped to and from json & new instances
-"""
-
-
-class Container(MutableMapping):
-    """
-    Generic mappable container class.
-
-    Mappings can be added as attributes but still functions as a dictionary.
-    Private attributes should be added to the "reserved" attribute. In the
-    default node types, the mapping is represented by the "_data" attribute.
-    """
-    reserved = ["_data"]
-    def __init__(self, *args, **kwargs):
-
-        self._data             = dict()
-        self.update(**kwargs)
-
-    def __str__(self):
-        """
-        String representation of the object, for printing.
-        """
-        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-
-    def __repr__(self):
-        return 'Container()'
-
-    def __getitem__(self, key, default=None):
-        try:
-            return self._data[key]
-        except KeyError:
-            return default
-
-    def __setitem__(self, key, value):
-        if key in self.reserved:
-            super(Container, self).__setattr__(key, value)
-        else:
-            self._data[key] = value
-
-    def __delitem__(self, key):
-        del self._data[key]
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __getattr__(self, key, default=None):
-        try:
-            return self.__getitem__(key, default)
-        except KeyError as e:
-            raise AttributeError(e.args[0])
-
-    def __contains__(self, key):
-        return key in self._data
-
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
-
-    @property
-    def node(self):
-        return self._node
-
-    @property
-    def data(self):
-        """
-        The data attribute is where you build your object's output. This
-        should be hashable data so that this object can be serialized.
-
-        In this example, we are *only* returning attributes that have a value,
-        to reduce saved file size.
-        """
-        data = copy.deepcopy(self._data)
-        #return data
-        return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
-
-    @classmethod
-    def ParentClasses(cls, p=None):
-        """
-        Return all subclasses.
-        """
-        base_classes = []
-        cl = p if p is not None else cls.__class__
-        for b in cl.__bases__:
-            if b.__name__ != "object":
-                base_classes.append(b.__name__)
-                base_classes.extend(cls.ParentClasses(b))
-        return base_classes
-
 
 class DagNode(MutableMapping):
 
@@ -111,6 +16,7 @@ class DagNode(MutableMapping):
 
     def __init__(self, *args, **kwargs):
 
+        # special attributes
         self._data              = dict()
         self._inputs            = dict()
         self._outputs           = dict()
@@ -184,7 +90,7 @@ class DagNode(MutableMapping):
 
         # auto-add attributes
         elif hasattr(value, 'keys'):
-            #print '%s type: ' % key, value['type']
+            print '%s type: ' % key, value['type']
             self.addAttr(key, **value)
         else:
             self._data[key] = value

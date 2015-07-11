@@ -69,7 +69,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # layers
         self.background = NodeBackground(self)
-        self.label = NodeLabel(self)   
+        self.label      = NodeLabel(self)   
 
         # signals/slots
         self.label.doubleClicked.connect(self.labelDoubleClickedEvent)
