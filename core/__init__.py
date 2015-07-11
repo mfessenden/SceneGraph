@@ -3,17 +3,13 @@ from . import logger
 log = logger.myLogger()
 
 
-from . import attributes
 from . import nodes
 from . import manager
 from . import metadata
 
 
-# attributes
-Attribute           = attributes.Attribute
-
-
 # nodes
+Attribute           = nodes.Attribute
 DagNode             = nodes.DagNode
 DagEdge             = nodes.DagEdge
 Connection          = nodes.Connection

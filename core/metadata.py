@@ -16,7 +16,7 @@ DATA_EXPRS = dict(
 
 DATA_PARAMS = dict(
     p = 'private',
-    h = 'hidden',
+    c = 'connectable',
     u = 'user',
     l = 'locked',
     )

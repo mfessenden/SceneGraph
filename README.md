@@ -58,6 +58,13 @@
     n1 = g.add_node('default', name='node1')
     n2 = g.add_node('default', name='node2')
 
+    # query node connections
+    if n1.is_input_connection:
+        conn = n1.output_connections()
+
+    # add a new input and output attribute
+    n1.addInput(name='fileIn')
+
     # connect the nodes (default output/inputs assumed)
     e1 = g.add_edge(n1, n2)
 
@@ -110,3 +117,10 @@
 ####### Admin:
 pyside-rcc ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/scenegraph_rc.py
 icn_build -f ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/icons.py
+
+# scratch
+from SceneGraph import core
+g=core.Graph(debug=True)
+m1=g.getNode('merge1')[0]
+e1=g.edges()[0]
+

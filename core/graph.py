@@ -40,6 +40,9 @@ class Graph(object):
         self.dagnodes        = dict()
         self.temp_scene      = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
 
+        # testing mode only
+        self.debug           = kwargs.pop('debug', False)
+
         # initialize the NetworkX graph attributes
         self.initializeNetworkAttributes()
 
@@ -48,6 +51,9 @@ class Graph(object):
             if os.path.exists(arg):
                 self.read(arg)
                 continue
+
+        if self.debug:
+            self.read(os.path.join(os.getenv('HOME'), 'graphs', 'connections.json'))
 
     def __str__(self):
         import networkx.readwrite.json_graph as nxj
@@ -255,15 +261,6 @@ class Graph(object):
             if UUID in self.dagnodes:
                 edges.append(self.dagnodes.get(UUID))
         return edges
-
-    def getNodeNames(self):
-        """
-        Returns a list of all dag node names.
-
-        returns:
-            (list)
-        """
-        return [n.name for n in self.nodes()]
 
     def getNode(self, *args):
         """
@@ -504,7 +501,7 @@ class Graph(object):
             return
 
         # create an edge
-        edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID)
+        edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID, _graph=self)
 
         conn_str = self.parseEdgeName(edge)
         log.debug('parsing edge: "%s"' % conn_str)
@@ -566,11 +563,18 @@ class Graph(object):
         for edge in dagedges:
             edge_ids.append(edge.id)
             if edge.id in self.dagnodes:
+                
                 self.dagnodes.pop(edge.id)
+
+                # remove references to nodes that were connected
+                edge.breakConnections()
 
             if (edge.src_id, edge.dest_id) in self.network.edges():
                 self.network.remove_edge(edge.src_id, edge.dest_id)
                 log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
+            
+            # delete the edge
+            del edge
 
         # update the scene
         if self.handler is not None:

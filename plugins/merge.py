@@ -11,4 +11,7 @@ class Merge(DagNode):
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
         DagNode.__init__(self, *args, **kwargs)
 
+        self.inputA    = kwargs.pop('inputA', "")
+        self.inputB    = kwargs.pop('inputB', "")
+        
         self.color     = [21, 140, 167, 255]
