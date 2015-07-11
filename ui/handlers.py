@@ -76,8 +76,10 @@ class SceneHandler(QtCore.QObject):
         """
         Do cool shit here.
         """
-        self.updateConsole('evaluating...')
-        return self.graph.evaluate(dagnodes=dagnodes)
+        if dagnodes:
+            self.updateConsole('evaluating %d nodes' % len(dagnodes))
+            return self.graph.evaluate(dagnodes=dagnodes)
+        return
 
     def updateConsole(self, msg, clear=False, graph=False):
         """

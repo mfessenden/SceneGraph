@@ -878,7 +878,8 @@ class SceneGraphUI(form_class, base_class):
         scene_pos = self.view.mapToScene(view_pos)
 
         for node in self.graph.node_types():
-            node_action = add_menu.addAction(node)
+            node_action = QtGui.QAction(node, parent)
+            add_menu.addAction(node_action)
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
 
