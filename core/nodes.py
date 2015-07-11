@@ -7,7 +7,7 @@ import copy
 import sys
 from SceneGraph.core import log
 from SceneGraph.options import SCENEGRAPH_PLUGIN_PATH
-
+from . import attributes
 
 """
 Goals:
@@ -91,16 +91,17 @@ class Container(MutableMapping):
         #return data
         return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
 
-    def ParentClasses(self, p=None):
+    @classmethod
+    def ParentClasses(cls, p=None):
         """
         Return all subclasses.
         """
         base_classes = []
-        cl = p if p is not None else self.__class__
+        cl = p if p is not None else cls.__class__
         for b in cl.__bases__:
             if b.__name__ != "object":
                 base_classes.append(b.__name__)
-                base_classes.extend(self.ParentClasses(b))
+                base_classes.extend(cls.ParentClasses(b))
         return base_classes
 
 
@@ -178,7 +179,13 @@ class DagNode(MutableMapping):
 
         elif key in self._attributes:
             attr = self._attributes.get(key)
+            #print 'setting Attribute: ', key
             attr.value = value
+
+        # auto-add attributes
+        elif hasattr(value, 'keys'):
+            #print '%s type: ' % key, value['type']
+            self.addAttr(key, **value)
         else:
             self._data[key] = value
 
@@ -220,6 +227,15 @@ class DagNode(MutableMapping):
 
     def dumps(self):
         print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
+
+    @property
+    def graph(self):
+        return self._graph
+
+    @graph.setter
+    def graph(self, value):
+        self._graph = value
+        return self.graph
 
     @property
     def height(self):
@@ -384,6 +400,20 @@ class DagNode(MutableMapping):
         return self._outputs.keys()
 
     #- Attributes ----
+    def userAttributes(self):
+        """
+        Returns a dictionary of user attributes.
+
+        returns:
+            (dict) - key, value pairs of user-added attributes.
+        """
+        result = dict()
+        for k, v in self.data.iteritems():
+            if k not in self.reserved:
+                if hasattr(v, 'keys'):
+                    result[k]=v
+        return result
+
     def addAttr(self, name, value=None, input=True, **kwargs):
         """
         Add attributes to the current node.
@@ -398,9 +428,8 @@ class DagNode(MutableMapping):
         returns:
             (Attribute) - attribute object.
         """
-        from SceneGraph.core import Attribute
         # TODO: need a way to protect core values
-        attr = Attribute(name, value=value, input=input, **kwargs)
+        attr = attributes.Attribute(name, value=value, input=input, **kwargs)
         attr._node = self
         self._attributes.update({attr.name:attr})
         return attr

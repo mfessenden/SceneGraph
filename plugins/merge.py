@@ -9,6 +9,6 @@ SCENEGRAPH_NODE_TYPE = 'merge'
 class Merge(DagNode):
     def __init__(self, *args, **kwargs):
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        super(Merge, self).__init__(*args, **kwargs)
+        DagNode.__init__(self, *args, **kwargs)
 
         self.color     = [21, 140, 167, 255]

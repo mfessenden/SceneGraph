@@ -7,7 +7,7 @@ from SceneGraph import options
 from . import commands
 
 
-class Node(QtGui.QGraphicsObject):
+class NodeWidget(QtGui.QGraphicsObject):
 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
@@ -15,7 +15,7 @@ class Node(QtGui.QGraphicsObject):
     nodeDeleted    = QtCore.Signal(object)  
 
     def __init__(self, dagnode, parent=None):
-        super(Node, self).__init__(parent)
+        super(NodeWidget, self).__init__(parent)
 
         self.dagnode         = dagnode
         self.dagnode._widget = self
@@ -170,7 +170,7 @@ class Node(QtGui.QGraphicsObject):
         """
         if change == self.ItemPositionHasChanged:
             self.nodeChanged.emit(self)
-        return super(Node, self).itemChange(change, value)
+        return super(NodeWidget, self).itemChange(change, value)
 
     def mouseDoubleClickEvent(self, event):
         """
@@ -554,8 +554,21 @@ class Node(QtGui.QGraphicsObject):
                 if hasattr(item, '_debug'):
                     item._debug = val
 
+    @classmethod
+    def ParentClasses(cls, p=None):
+        """
+        Return all subclasses.
+        """
+        base_classes = []
+        cl = p if p is not None else cls.__class__
+        for b in cl.__bases__:
+            if b.__name__ != "object":
+                base_classes.append(b.__name__)
+                base_classes.extend(cls.ParentClasses(b))
+        return base_classes
 
-class Edge(QtGui.QGraphicsObject):
+
+class EdgeWidget(QtGui.QGraphicsObject):
     
     Type          = QtGui.QGraphicsObject.UserType + 2
     adjustment    = 5

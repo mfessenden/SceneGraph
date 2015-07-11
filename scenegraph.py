@@ -11,10 +11,6 @@ from SceneGraph import core
 from SceneGraph import ui
 
 
-reload(options)
-reload(ui)
-
-
 log = core.log
 global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
@@ -205,19 +201,20 @@ class SceneGraphUI(form_class, base_class):
         """
         family = 'Consolas'
         if options.PLATFORM == 'MacOSX':
-            size = 11
+            size = 14
             family = 'Menlo'
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
-        #self.fonts["ui"].setFamily(family)
         self.fonts["ui"].setPointSize(size)
 
         self.fonts["output"] = QtGui.QFont('Monospace')
         self.fonts["output"].setPointSize(size)
+        self.fonts["output"].setFamily(family)
 
         self.fonts["console"] = QtGui.QFont('Monospace')
         self.fonts["console"].setPointSize(size-1)
+        self.fonts["console"].setFamily(family)
 
     def initializeGraphicsView(self, filter=False):
         """

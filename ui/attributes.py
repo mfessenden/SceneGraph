@@ -99,7 +99,11 @@ class AttributeEditor(QtGui.QWidget):
         """
         Build the layout dynamically
         """
-        #self.clearLayout(self.mainGroupLayout)
+        # add user attributes to the parser data.
+        user_attrs = self.userAttributes()
+        if user_attrs:
+            self.parser._data.update(user=user_attrs)
+
         for grp_name in self.parser._data.keys():
             group = QtGui.QGroupBox(self.mainGroup)
             group.setTitle('%s' % grp_name.title())
@@ -112,13 +116,18 @@ class AttributeEditor(QtGui.QWidget):
             attrs = self.parser._data.get(grp_name)
             row = 0
 
-            for attr_name, attr_attrs in attrs.iteritems():           
+            for attr_name, attr_attrs in attrs.iteritems(): 
                 private = attr_attrs.pop('private', False)
                 locked = attr_attrs.pop('locked', False)
 
                 if not private or self._show_private:
                     # create a label
                     attr_label = QtGui.QLabel('%s: ' % attr_name, parent=group)
+
+                    if 'attr_type' not in attr_attrs:
+                        log.warning('attribute "%s.%s" has no type.' % (self._nodes[0].name, attr_name))
+                        continue
+
                     attr_type = attr_attrs.pop('attr_type')
                     default_value = attr_attrs.pop('default_value', None)
                     
@@ -198,6 +207,27 @@ class AttributeEditor(QtGui.QWidget):
                 if cur_val not in node_values:
                     node_values.append(cur_val)
         return node_values
+
+    def userAttributes(self):
+        """
+        Returns a dictionary of user attributes for the current nodes.
+
+        returns:
+            (dict) - dictionary of attr name: attr value, attr type
+        """
+        # set the nodes
+        user_attrs = dict()
+        for n in self.nodes:
+            a = n.userAttributes()
+            if a:
+                for k, v in a.iteritems():
+                    # todo, switch this up to include multiple nodes
+                    if k not in user_attrs:
+                        user_attrs[k]=dict()
+                        user_attrs.get(k).update(value=v.value)
+                        user_attrs.get(k).update(attr_type=v.type)
+                        user_attrs.get(k).update(private=v.is_private)
+        return user_attrs
 
     @property
     def handler(self):
@@ -760,13 +790,16 @@ class QFloat3Editor(QtGui.QWidget):
                 # set the editor value
                 self.val1_edit.blockSignals(True)
                 self.val2_edit.blockSignals(True)
+                self.val3_edit.blockSignals(True)
 
                 # set the current node values.
                 self.val1_edit.setText(str(editor_value[0]))
                 self.val2_edit.setText(str(editor_value[1]))
+                self.val3_edit.setText(str(editor_value[2]))
 
                 self.val1_edit.blockSignals(False)
                 self.val2_edit.blockSignals(False)
+                self.val3_edit.blockSignals(False)
 
                 self.val1_edit.valueChanged.connect(self.valueUpdatedAction)
                 self.val2_edit.valueChanged.connect(self.valueUpdatedAction)
@@ -1719,6 +1752,9 @@ ATTRIBUTE_DEFAULTS = dict(
 
 
 def map_widget(typ, parent, name, ui):
+    """
+    Map the widget to the attribute type.
+    """
     typ=typ.replace(" ", "")
     if typ in WIDGET_MAPPER:
         cls = WIDGET_MAPPER.get(typ)

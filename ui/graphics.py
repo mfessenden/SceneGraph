@@ -350,6 +350,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         # graph
         self.graph       = graph
         self.network     = graph.network
+        self.pmanager    = graph.pmanager
 
         # temp line for drawing edges
         self.line        = None        
@@ -417,7 +418,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 dag = self.graph.dagnodes.get(dag_id)
                 if isinstance(dag, core.DagNode):              
                     if dag_id not in self.scenenodes:
-                        widget = node_widgets.Node(dag)
+                        
+                        widget = self.pmanager.get_widget(dag)
                         widget._render_effects = self.ui.render_fx
 
                         # set the debug mode
@@ -441,7 +443,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         src_conn_widget = src_widget.getOutputConnection(dag.src_attr)
                         dest_conn_widget = dest_widget.getInputConnection(dag.dest_attr)
 
-                        widget = node_widgets.Edge(dag, src_conn_widget, dest_conn_widget)
+                        widget = node_widgets.EdgeWidget(dag, src_conn_widget, dest_conn_widget)
                         widget.nodeDeleted.connect(self.nodeDeletedEvent)
 
                         widget._render_effects = self.ui.render_fx
@@ -469,11 +471,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
             
         for node in nodes:
             print '# Scene.removeNodes: ', node
-            if isinstance(node, node_widgets.Node):
+            if isinstance(node, node_widgets.NodeWidget):
                 print '# signalling graph...'
                 self.graph.remove_node(node.dagnode.id)
 
-            if isinstance(node, node_widgets.Edge):
+            if isinstance(node, node_widgets.EdgeWidget):
                 print 'edge!'
                 self.graph.remove_edge(node.dagnode.id)
 
@@ -486,7 +488,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         widgets = []
         for item in self.items():
-            if isinstance(item, node_widgets.Node):
+            if isinstance(item, node_widgets.NodeWidget):
                 widgets.append(item)
         return widgets
 
@@ -518,10 +520,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         widgets = []
         selected = self.selectedItems()
         for item in selected:
-            if isinstance(item, node_widgets.Node):
+            if isinstance(item, node_widgets.NodeWidget):
                 widgets.append(item)
 
-            if isinstance(item, node_widgets.Edge):
+            if isinstance(item, node_widgets.EdgeWidget):
                 if not nodes_only:
                     widgets.append(item)
         return widgets
@@ -546,7 +548,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         edges = []
         for item in self.items():
-            if isinstance(item, node_widgets.Edge):
+            if isinstance(item, node_widgets.EdgeWidget):
                 edges.append(item)
         return edges
 
@@ -706,11 +708,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
             node (QGraphicsObject) - node (or edge) widget.
         """
         print 'GraphicsScene.nodeDeletedEvent'
-        if isinstance(node, node_widgets.Node):
+        if isinstance(node, node_widgets.NodeWidget):
             print 'removing node: ', node.name
             self.removeItem(node)
 
-        if isinstance(node, node_widgets.Edge):
+        if isinstance(node, node_widgets.EdgeWidget):
             print 'removing edge: ', node.name
             self.removeItem(node)
 

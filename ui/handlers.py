@@ -57,6 +57,9 @@ class SceneHandler(QtCore.QObject):
                     self.graph.handler=self
                     self.graph.mode = 'ui'
                     log.info('SceneHandler: connecting Graph...')
+
+                    # load the node widgets
+                    self.graph.pmanager.load_widgets()
                     return True
         return False
 

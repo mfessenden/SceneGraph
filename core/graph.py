@@ -417,7 +417,7 @@ class Graph(object):
             name = self.getValidNodeName(name)
 
         # get the dag node from the PluginManager
-        dag = self.pmanager.get_dagnode(node_type=node_type, name=name, pos=pos, **kwargs)
+        dag = self.pmanager.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()
@@ -728,6 +728,26 @@ class Graph(object):
                     self.handler.renameNodes(dagnodes[0])
         return
 
+    def rename_attribute(self, id, old, new):
+        """
+        Rename an attribute.
+
+        params:
+            id   - (str) node UUID
+            old  - (str) old attribute name
+            new  - (str) new attribute name
+        """
+        if not id in self.network.nodes():
+            log.error('invalid id: "%s"' % id)
+            return False
+
+        nn = self.network.node[id]
+        if old in nn:
+            val = nn.pop(old)
+            nn[new] = val
+            return True
+        return False
+
     def copyNodes(self, nodes):
         """
         Copy nodes to the copy buffer
@@ -965,7 +985,6 @@ class Graph(object):
         for gdata in graph_data:
             if len(gdata):
                 if graph or gdata[0] in ['scene', 'api_version']:
-                    print 'updating graph attribute: ', gdata[0]
                     self.network.graph[gdata[0]]=gdata[1]
 
         # build nodes from data

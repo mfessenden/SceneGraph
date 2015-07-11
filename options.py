@@ -2,11 +2,25 @@
 import os
 
 
+def setup_platform_defaults():
+    """
+    Setup globals for a specific platform.
+    """
+    import sys
+    plaform = 'Windows'
+    if 'linux' in sys.platform:
+        plaform = 'Linux'
+
+    if sys.platform == 'darwin':
+        plaform = 'MacOSX'
+    return plaform
+
+
 PACKAGE                     = 'SceneGraph'
 API_VERSION                 = 0.62
-API_REVISION                = 2
+API_REVISION                = 3
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
-PLATFORM                    = None
+PLATFORM                    = setup_platform_defaults()
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)
 SCENEGRAPH_PLUGIN_PATH      = os.path.join(SCENEGRAPH_PATH, 'plugins')
@@ -17,26 +31,6 @@ SCENEGRAPH_STYLESHEET_PATH  = os.path.join(SCENEGRAPH_PATH, 'css')
 SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE)
 SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
 SCENEGRAPH_USER_WORK_PATH   = os.path.join(os.getenv('HOME'), 'graphs')
-
-
-def setup_platform_defaults():
-    """
-    Setup globals for a specific platform.
-    """
-    import sys
-    PLATFORM = 'Windows'
-    if 'linux' in sys.platform:
-        PLATFORM = 'Linux'
-
-    if sys.platform == 'darwin':
-        PLATFORM = 'MacOSX'
-
-    #print '[%s]: INFO: initializing platform globals for "%s"' % (PACKAGE, PLATFORM)
-
-
-# initialize the platform variable
-setup_platform_defaults()
-
 
 
 SCENEGRAPH_COLORS = {

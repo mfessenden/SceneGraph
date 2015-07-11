@@ -9,6 +9,6 @@ SCENEGRAPH_NODE_TYPE = 'default'
 class Default(DagNode):
     def __init__(self, *args, **kwargs):
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        super(Default, self).__init__(*args, **kwargs)
+        DagNode.__init__(self, *args, **kwargs)
 
         self.color     = [172, 172, 172, 255] 

@@ -5,6 +5,11 @@ import uuid
 import copy
 from SceneGraph import util
 
+"""
+from SceneGraph import core
+g=core.Graph('/Users/michael/graphs/connections.json')
+n2=g.getNode('node2')[0]
+"""
 
 
 class Attribute(MutableMapping):
@@ -16,7 +21,7 @@ class Attribute(MutableMapping):
     default node types, the mapping is represented by the "_data" attribute.
     
     """
-    reserved = ["_data", "_node", "_name"]
+    reserved = ["_data", "_node", "_name", "_user_type"]
     def __init__(self, *args, **kwargs):
 
         # attributes dictionary
@@ -26,9 +31,10 @@ class Attribute(MutableMapping):
         self._name             = args[0] if args else None
         self.default_value     = kwargs.get('default_value', None)
         self.value             = kwargs.get('value', None)
-        node_type              = kwargs.get('type', 'str')
-        self.type              = util.attr_type(self.value) if node_type not in ['file'] else node_type
-        
+
+        # parse attribute type
+        self._user_type        = kwargs.get('type', None)
+
         # globals
         self.is_private        = kwargs.get('is_private', False)  # hidden
         self.is_connectable    = kwargs.get('is_connectable', False)
@@ -44,9 +50,7 @@ class Attribute(MutableMapping):
         return json.dumps(data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        if self.node:
-            return 'Attribute("%s.%s")' % (self.node.name, str(self._name))
-        return 'Attribute("None.%s")' % str(self._name)
+        return '{"%s":"%s"}' % (self.name, self.value)
 
     def __getitem__(self, key, default=None):
         try:
@@ -67,9 +71,13 @@ class Attribute(MutableMapping):
                 if self.node:
                     if self._name:
                         if self._name != value:
-                            self._node._attributes.pop(self.name)
+                            old_name = self._name
+                            self.node._attributes.pop(self._name)
                             self._name = value
-                            self._node._attributes.update({value:self})
+                            self.node._attributes.update({value:self})
+
+                            #update the network graph
+                            self.node.graph.rename_attribute(self.node.id, old_name, value)
                             return
 
             self._data[key] = value
@@ -110,7 +118,7 @@ class Attribute(MutableMapping):
         to reduce saved file size.
         """
         data = copy.deepcopy(self._data)
-        return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
+        return {k: data[k] for k in data.keys() if data[k] or k in ['value']}
 
     @property
     def value(self):
@@ -120,7 +128,9 @@ class Attribute(MutableMapping):
 
     @property 
     def type(self):
-        return util.attr_type(self.value)
+        if self._user_type is None:
+            return util.attr_type(self.value)
+        return self._user_type
 
     @property 
     def node(self):

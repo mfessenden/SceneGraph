@@ -17,7 +17,6 @@ def main(debug=False):
     Launch the Maya Scene Graph
     """
     from SceneGraph import scenegraph
-    reload(scenegraph)
 
     global win
     try:

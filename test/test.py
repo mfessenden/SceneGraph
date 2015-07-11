@@ -74,7 +74,6 @@ class TestGraph(form_class, base_class):
 
     def initializeGraphicsView(self):
         from SceneGraph import ui
-        reload(ui)
         self.graph = core.Graph()
         self.network = self.graph.network
         self.network.graph['environment'] = self.environment

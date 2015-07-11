@@ -39,6 +39,7 @@ class PluginManager(object):
 
         # auto-load default plugins
         self.load_plugins(self._default_plugin_path)
+        self.load_widgets(self._default_plugin_path)
 
     def setLogLevel(self, level):
         """
@@ -125,7 +126,7 @@ class PluginManager(object):
 
     #- Loading ----
 
-    def load_plugins(self, path=None, plugin_name=None):
+    def load_plugins(self, path=None, plugins=[]):
         """
         Load built-in and external asset types
 
@@ -141,43 +142,11 @@ class PluginManager(object):
         if path is None:
             path = self.default_plugin_path
 
-        builtins = self._load_builtins(path, plugin_name=plugin_name)
+        builtins = self._load_builtins(path, plugins=plugins)
         #external = _load_external_classes(path, verbose=verbose, asset_name=asset_name)
-        external = []
+        #widgets = self._load_widgets(path, plugins=plugins)
 
-        mods = dict()
-
-        if builtins:
-            for b in builtins:
-                d=b.rfind('.')
-                mod = b[:d]
-                cls = b[d+1:]
-
-                if mod not in mods:
-                    mods[mod] = []
-
-                if cls not in mods[mod]:
-                    mods[mod].append(cls)
-
-        if external:
-            for e in external:
-                f=e.rfind('.')
-                emod = e[:f]
-                ecls = e[f+1:]
-
-                if emod not in mods:
-                    mods[emod] = []
-
-                if ecls not in mods[emod]:
-                    mods[emod].append(ecls)
-
-        for mod_name, plugins in mods.iteritems():
-            if plugins:
-                for plugin in plugins:
-                    if plugin not in globals().keys():
-                        log.warning('plugin type "%s" not loaded' % plugin)
-
-    def _load_builtins(self, path, plugin_name=None):
+    def _load_builtins(self, path, plugins=[]):
         """
         Dynamically load all submodules/asset classes
         in this package.
@@ -185,6 +154,9 @@ class PluginManager(object):
         params:
             path        (str) - path to scan.
             plugin_name (str) - plugin name to filter.
+
+        returns:
+            (list) - list of loaded plugin names.
         """
         imported = []
         fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
@@ -205,20 +177,81 @@ class PluginManager(object):
             
             # filter DagNode types
             for cname, obj in inspect.getmembers(module, inspect.isclass):
-                if hasattr(obj, 'ParentClasses'):
-                    if 'DagNode' in obj.ParentClasses(obj):
-                        globals()[cname] = obj
-                        imported.append(cname)                
-                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'widget':None, 'metadata':None, 'source':None}})
+                if not plugins or cname in plugins:
+                    if hasattr(obj, 'ParentClasses'):
+                        if 'DagNode' in obj.ParentClasses(obj):
+                            globals()[cname] = obj
+                            imported.append(cname)                
+                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None}})
 
-                        # add source and metadata files
-                        if os.path.exists(src_file):
-                            self._node_data.get(node_type).update(source=src_file)
+                            # add source and metadata files
+                            if os.path.exists(src_file):
+                                self._node_data.get(node_type).update(source=src_file)
 
-                        if os.path.exists(md_file):
-                            self._node_data.get(node_type).update(metadata=md_file)
+                            if os.path.exists(md_file):
+                                self._node_data.get(node_type).update(metadata=md_file)
 
         return sorted(list(set(imported)))
+
+    def load_widgets(self, path=None, plugins=[]):
+        """
+        Load built-in and external node widgets.
+
+         *todo: load the external plugins as well.
+
+        params:
+            path        (str) - path to scan.
+            plugin_name (str) - plugin name to filter.
+
+        """
+        log.info('loading plugin widgets...')
+
+        if path is None:
+            path = self.default_plugin_path
+
+        default_widgets = self._load_widgets(path, plugins=plugins)
+
+        # update the node data attribute with widget classes
+        for node_type in default_widgets:
+            if node_type in self._node_data:
+                self._node_data.get(node_type).update(default_widgets.get(node_type))
+        #external_widgets = _load_external_classes(path, verbose=verbose, asset_name=asset_name)
+
+    def _load_widgets(self, path, plugins=[]):
+        """
+        Dynamically load all node widgets.
+
+        params:
+            path        (str) - path to scan.
+            plugin_name (str) - plugin name to filter.
+
+        returns:
+            (dict) - dictionary of node type, widget.
+        """
+        imported = dict()
+        fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
+
+        for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
+            module = loader.find_module(mod_name).load_module(mod_name)
+
+            node_type = parse_module_variable(module, 'SCENEGRAPH_WIDGET_TYPE')
+
+            if node_type:
+                modfn = module.__file__
+                src_file = None
+
+                fnmatch = re.search(fexpr, modfn)
+                if fnmatch:
+                    src_file = '%s.py' % fnmatch.group('basename')
+
+                # filter DagNode types
+                for cname, obj in inspect.getmembers(module, inspect.isclass):
+                    if not plugins or cname in plugins:
+                        if hasattr(obj, 'ParentClasses'):
+                            if 'NodeWidget' in obj.ParentClasses(obj):
+                                globals()[cname] = obj
+                                imported.update({node_type:{'widget':globals()[cname]}})              
+        return imported
 
     def _get_external_plugin_paths(self, path='scenegraph_plugins'):
         """
@@ -250,34 +283,56 @@ class PluginManager(object):
             (DagNode) - dag node subclass.
         """
         if node_type not in self._node_data:
-            log.error('node type "%s" is not defined.' % node_type)
+            log.error('plugin type "%s" is not loaded.' % node_type)
+            return
+
         dag = self._node_data.get(node_type).get('dagnode')
 
         # assign the node metadata file
         return dag(*args, _metadata=self._node_data.get(node_type).get('metadata', None), **kwargs)
 
-    def get_widget(self, node_type):
+    def get_widget(self, dagnode, **kwargs):
         """
         Return the appropriate node type widget. Returns the default widget
         if one is not defined.
 
         params:
-            node_type (str) - node type to return.
+            dagnode (DagNode) - node type.
 
         returns:
             (Node) - node widget subclass.
         """
-        if node_type not in self._node_data:
-            log.error('node type "%s" is not defined.' % node_type)
+        if dagnode.node_type not in self._node_data:
+            log.error('plugin "%s" is not loaded.' % dagnode.node_type)
+            return
 
-        default_widget = self._node_data.get('default').get('widget')
-        return self._node_data.get(node_type).get('widget', default_widget)
+        if 'widget' not in self._node_data.get(dagnode.node_type):
+            log.error('plugin "%s" widget not loaded.' % dagnode.node_type)
+            return
+
+        widget = self._node_data.get(dagnode.node_type).get('widget')
+        return widget(dagnode)
 
     def flush(self):
         """
         Flush all currently loaded plugins.
         """
-        pass
+        flush = []
+        for attr in globals():
+            if not attr.startswith('__'):
+                obj = globals()[attr]
+                if hasattr(obj, 'ParentClasses'):
+                    if 'DagNode' in obj.ParentClasses(obj):
+                        flush.append(attr)
+
+
+        if flush:
+            for f in flush:
+                globals().pop(f)
+                log.info('flushing object: "%s"'% f)
+
+        self._node_data = dict()
+        self._default_modules = []
 
 
 #- Utilities ------

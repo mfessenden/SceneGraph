@@ -7,6 +7,6 @@ height_collapsed: int8: 20: -p;
 [attributes]
 id: str: -p;
 name: str: node1;
-node_type: str: model;
+node_type: str: model: -l;
 color: color: 0,0,0;
 enabled: bool: true;
