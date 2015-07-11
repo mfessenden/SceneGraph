@@ -393,14 +393,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
             data (dict) - node graph data.
 
         """
-        # haxx
-        current_scene = self.graph.getScene()
         self.initialize()
         self.blockSignals(True)
         self.graph.restore(data, graph=False)
         self.blockSignals(False)
         self.update()
-        self.graph.setScene(current_scene)
 
     def addNodes(self, dagids):
         """

@@ -14,6 +14,7 @@ class Attribute(MutableMapping):
     Mappings can be added as attributes but still functions as a dictionary.
     Private attributes should be added to the "reserved" attribute. In the
     default node types, the mapping is represented by the "_data" attribute.
+    
     """
     reserved = ["_data", "_node", "_name"]
     def __init__(self, *args, **kwargs):
@@ -25,7 +26,8 @@ class Attribute(MutableMapping):
         self._name             = args[0] if args else None
         self.default_value     = kwargs.get('default_value', None)
         self.value             = kwargs.get('value', None)
-        self.type              = util.attr_type(self.value)
+        node_type              = kwargs.get('type', 'str')
+        self.type              = util.attr_type(self.value) if node_type not in ['file'] else node_type
         
         # globals
         self.is_private        = kwargs.get('is_private', False)  # hidden
@@ -108,7 +110,7 @@ class Attribute(MutableMapping):
         to reduce saved file size.
         """
         data = copy.deepcopy(self._data)
-        return { k: data[k] for k in data.keys() if data[k]}
+        return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
 
     @property
     def value(self):

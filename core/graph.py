@@ -962,9 +962,10 @@ class Graph(object):
         self.updateConsole(msg='restoring %d nodes' % len(nodes))
 
         # update graph attributes
-        if graph:
-            for gdata in graph_data:
-                if len(gdata):
+        for gdata in graph_data:
+            if len(gdata):
+                if graph or gdata[0] in ['scene', 'api_version']:
+                    print 'updating graph attribute: ', gdata[0]
                     self.network.graph[gdata[0]]=gdata[1]
 
         # build nodes from data
@@ -1090,6 +1091,17 @@ class Graph(object):
         """
         return []
 
+    #- Plugins ----
+    @property 
+    def plugins(self):
+        """
+        Prints a list of plugins.
+        """
+        for node_type, data in self.pmanager._node_data.iteritems():
+            print '\n# Node: %s: ' % node_type
+            print '    source file: %s' % data.get('source')
+            print '    metadata:    %s' % data.get('metadata')
+            print '    widget:      %s' % data.get('widget', '(none)')
 
 
 class Array(object):
