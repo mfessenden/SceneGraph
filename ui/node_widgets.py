@@ -74,6 +74,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # set node position
         self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
+        self.drawConnections()
 
     def __str__(self):
         return '%s("%s")' % (self.__class__.__name__, self.dagnode.name)
@@ -432,6 +433,9 @@ class NodeWidget(QtGui.QGraphicsObject):
     def drawConnections(self, remove=False):
         """
         Update all of the connection widgets.
+
+        params:
+            remove (bool) - force connection removal & rebuild.
         """
         inp_start = self.input_pos
         out_start = self.output_pos
@@ -647,6 +651,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
             (bool) - connection succeeded.
         """
         # conn.connections (dict of edge id, edge widget)
+        if not conn:
+            log.warning('invalid connection.')
+            return False
+
         if self.ids in conn.connections:
             log.warning('edge is already connected to: "%s"' % conn.connection_name)
             return False
@@ -664,6 +672,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (bool) - disconnection succeeded.
         """
+        if not conn:
+            log.warning('invalid connection.')
+            return False
+
         if self.ids in conn.connections:
             conn.connections.pop(self.ids)
             return True
@@ -948,7 +960,6 @@ class Connection(QtGui.QGraphicsObject):
         self.dagconn        = conn_node
 
         # globals
-        self.name           = name        
         self.draw_radius    = 4.0
         self.pen_width      = 1.5
         self.radius         = self.draw_radius*4
@@ -987,6 +998,10 @@ class Connection(QtGui.QGraphicsObject):
     @property 
     def connection_name(self):
         return "%s.%s" % (self.dagnode.name, self.name)
+
+    @property
+    def name(self):
+        return self.dagconn.name
 
     @property
     def node(self):

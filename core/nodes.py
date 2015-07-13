@@ -21,6 +21,7 @@ n2=g.get_node('node2')[0]
 class DagNode(MutableMapping):
 
     reserved      = ['_data', '_graph', '_widget', '_attributes', '_metadata', '_command']
+    default_color = [172, 172, 172, 255]
 
     def __init__(self, *args, **kwargs):
 
@@ -28,15 +29,14 @@ class DagNode(MutableMapping):
         self._data              = dict()
         self._attributes        = dict()
         self._metadata          = kwargs.pop('_metadata', None)
-        
+        self.color              = kwargs.pop('color', self.default_color)
+
         self.default_name       = 'dag'
         self.name               = kwargs.pop('name', self.default_name)
         self.node_type          = kwargs.pop('node_type', 'default')
 
         self.width              = kwargs.pop('width', 100.0)
         self.base_height        = kwargs.pop('base_height', 15.0)
-
-        self.color              = kwargs.pop('color', [172, 172, 172, 255])
 
         self.pos                = kwargs.pop('pos', (0,0))
         self.enabled            = kwargs.pop('enabled', True)
@@ -91,12 +91,10 @@ class DagNode(MutableMapping):
 
         elif key in self._attributes:
             attr = self._attributes.get(key)
-            #print 'setting Attribute: ', key
             attr.value = value
 
         # auto-add attributes
         elif hasattr(value, 'keys'):
-            #print '%s type: ' % key, value['type']
             self.addAttr(key, **value)
         else:
             self._data[key] = value
@@ -307,8 +305,7 @@ class DagNode(MutableMapping):
         """
         conn = self.get_connection(old)
         if conn:
-            self._attributes.pop(old)
-            self._attributes.update({new:conn})
+            conn.name = new
             return True
         return False
 
@@ -324,7 +321,6 @@ class DagNode(MutableMapping):
         """
         if name in self._attributes:
             if self._attributes.get(name).get('is_connectable'):
-                print 'removing connection: ', name
                 conn = self._attributes.pop(name)
                 del conn 
                 return True 
@@ -551,7 +547,7 @@ class Attribute(MutableMapping):
                             self.node._attributes.update({value:self})
 
                             #update the network graph
-                            self.node.graph.rename_attribute(self.node.id, old_name, value)
+                            self.node.graph.rename_connection(self.node.id, old_name, value)
                             return
 
             self._data[key] = value
@@ -641,6 +637,7 @@ class Attribute(MutableMapping):
 class Connection(MutableMapping):
     
     reserved = ["_data", "_edges", "_node"]
+
     def __init__(self, *args, **kwargs):
 
         self._data             = dict()

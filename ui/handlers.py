@@ -27,11 +27,14 @@ class SceneHandler(QtCore.QObject):
     """
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self, parent)
-        
-        self.ui    = parent.ui 
-        self.graph = None
+        from SceneGraph.icn import icons
+
+        self.icons   = icons.ICONS
+        self.ui      = parent.ui 
+        self.graph   = None
 
         if parent is not None:
+            self.ui.icons = self.icons
             if self.connectGraph(parent):
                 self.connectSignals()
     

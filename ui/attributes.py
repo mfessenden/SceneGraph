@@ -8,6 +8,7 @@ class AttributeEditor(QtGui.QWidget):
 
     def __init__(self, parent=None, **kwargs):
         super(AttributeEditor, self).__init__(parent)
+        from SceneGraph.icn import icons
 
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
@@ -16,12 +17,14 @@ class AttributeEditor(QtGui.QWidget):
         self._show_private  = False
         self._handler       = kwargs.get('handler', None)
         self._add_dialog    = None
+        self.icons          = self._handler.icons
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
+
         #self.mainGroup.setFlat(True)
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -132,7 +135,7 @@ class AttributeEditor(QtGui.QWidget):
                     default_value = attr_attrs.pop('default_value', None)
                     
                     # map the correct editor widget
-                    editor = map_widget(attr_type, parent=group, name=attr_name, ui=self)
+                    editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
                     if editor:
                         editor.initializeEditor()
                         grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
@@ -178,6 +181,7 @@ class AttributeEditor(QtGui.QWidget):
             if hasattr(node, editor.attribute):
                 cur_val = getattr(node, editor.attribute)
                 if cur_val != editor.value:
+                    print '# DEBUG: setting "%s": "%s": ' % (node.name, editor.attribute), editor.value
                     setattr(node, editor.attribute, editor.value)
                     updated_nodes.append(node)
         
@@ -229,7 +233,8 @@ class AttributeEditor(QtGui.QWidget):
             if attributes:
                 for attr in attributes:
                     if attr.is_user:
-                        # ['default_value', 'is_user', 'is_locked', 'value', 'connection_type', 'is_required', 'is_connectable', 'is_private', 'max_connections']
+                        # ['default_value', 'is_user', 'is_locked', 'value', 'connection_type', 
+                        # 'is_required', 'is_connectable', 'is_private', 'max_connections']
 
                         user_attrs[attr.name]=dict()
                         user_attrs.get(attr.name).update(value=attr.value)
@@ -313,52 +318,64 @@ class AddAttributeDialog(QtGui.QDialog):
 
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
-
+        
         # main group
         self.groupBox = QtGui.QGroupBox(self)
         self.groupBox.setObjectName("groupBox")
         self.groupBoxLayout = QtGui.QFormLayout(self.groupBox)
         self.groupBoxLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
+        self.groupBoxLayout.setFormAlignment(QtCore.Qt.AlignCenter)
         self.groupBoxLayout.setObjectName("groupBoxLayout")
         
         # name editor
         self.nameLabel = QtGui.QLabel(self.groupBox)
-        self.nameLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.nameLabel.setMinimumSize(QtCore.QSize(110, 0))
         self.nameLabel.setObjectName("nameLabel")
         self.groupBoxLayout.setWidget(0, QtGui.QFormLayout.LabelRole, self.nameLabel)
         self.nameLineEdit = QtGui.QLineEdit(self.groupBox)
         self.nameLineEdit.setObjectName("nameLineEdit")
         self.groupBoxLayout.setWidget(0, QtGui.QFormLayout.FieldRole, self.nameLineEdit)
         
-        # id editor
+        # id (nyi)
         self.iDLabel = QtGui.QLabel(self.groupBox)
-        self.iDLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.iDLabel.setMinimumSize(QtCore.QSize(110, 0))
         self.iDLabel.setObjectName("iDLabel")
         self.groupBoxLayout.setWidget(1, QtGui.QFormLayout.LabelRole, self.iDLabel)
         self.iDLineEdit = QtGui.QLineEdit(self.groupBox)
         self.iDLineEdit.setObjectName("iDLineEdit")
         self.groupBoxLayout.setWidget(1, QtGui.QFormLayout.FieldRole, self.iDLineEdit)
         
-        # type editor
+        # attribute type
         self.typeLabel = QtGui.QLabel(self.groupBox)
-        self.typeLabel.setMinimumSize(QtCore.QSize(100, 0))
+        self.typeLabel.setMinimumSize(QtCore.QSize(110, 0))
         self.typeLabel.setObjectName("typeLabel")
         self.groupBoxLayout.setWidget(2, QtGui.QFormLayout.LabelRole, self.typeLabel)
         self.typeComboBox = QtGui.QComboBox(self.groupBox)
         self.typeComboBox.setObjectName("typeComboBox")
         self.groupBoxLayout.setWidget(2, QtGui.QFormLayout.FieldRole, self.typeComboBox)
-        
-        # connectable
         self.checkbox_connectable = QtGui.QCheckBox(self.groupBox)
         self.checkbox_connectable.setObjectName("checkbox_connectable")
         self.groupBoxLayout.setWidget(3, QtGui.QFormLayout.FieldRole, self.checkbox_connectable)
+        
+        # connection type
+        self.connectionTypeLabel = QtGui.QLabel(self.groupBox)
+        self.connectionTypeLabel.setMinimumSize(QtCore.QSize(110, 0))
+        self.connectionTypeLabel.setObjectName("connectionTypeLabel")
+        self.groupBoxLayout.setWidget(4, QtGui.QFormLayout.LabelRole, self.connectionTypeLabel)
+        self.connectionTypeMenu = QtGui.QComboBox(self.groupBox)
+        self.connectionTypeMenu.setObjectName("connectionTypeMenu")
+        self.groupBoxLayout.setWidget(4, QtGui.QFormLayout.FieldRole, self.connectionTypeMenu)
         self.mainLayout.addWidget(self.groupBox)
+        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.mainLayout.addItem(spacerItem)
         self.buttonBox = QtGui.QDialogButtonBox(self)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Cancel|QtGui.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.mainLayout.addWidget(self.buttonBox)
 
+        self.checkbox_connectable.toggled.connect(self.connectionTypeMenu.setVisible)
+        self.checkbox_connectable.toggled.connect(self.connectionTypeLabel.setVisible)
         self.buttonBox.accepted.connect(self.acceptedAction)
         self.buttonBox.rejected.connect(self.close)
         self.initializeUI()
@@ -373,8 +390,16 @@ class AddAttributeDialog(QtGui.QDialog):
         self.iDLabel.setText("ID:")
         self.typeLabel.setText("Type:")
         self.checkbox_connectable.setText('Connectable:')
+        self.connectionTypeLabel.setText("Connection type:")
+
         self.typeComboBox.clear()
         self.typeComboBox.addItems(sorted(WIDGET_MAPPER.keys()))
+
+        self.connectionTypeMenu.clear()
+        self.connectionTypeMenu.addItems(['input', 'output'])
+
+        self.connectionTypeMenu.setVisible(False)
+        self.connectionTypeLabel.setVisible(False)
 
     def acceptedAction(self):
         """
@@ -384,10 +409,12 @@ class AddAttributeDialog(QtGui.QDialog):
         attr_type = self.typeComboBox.currentText()
         def_value = ATTRIBUTE_DEFAULTS.get(attr_type)
         connectable = self.checkbox_connectable.isChecked()
+        connection_type = self.connectionTypeMenu.currentText()
         if attr_name:
             for node in self._nodes:
                 log.info('adding "%s" to node "%s" (%s)' % (attr_name, node.name, attr_type))
-                node.addAttr(attr_name, value=def_value, type=attr_type, is_connectable=connectable, is_user=True)
+                node.addAttr(attr_name, value=def_value, type=attr_type, is_connectable=connectable, 
+                                is_user=True, connection_type=connection_type)
 
         #self.parent().updateChildEditors([attr_name])
         self.parent().buildLayout()
@@ -408,6 +435,7 @@ class QFloatEditor(QtGui.QWidget):
         super(QFloatEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = 0.0
         self._current_value = None
@@ -508,6 +536,7 @@ class QIntEditor(QtGui.QWidget):
         super(QIntEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = 0
         self._current_value = None
@@ -608,6 +637,7 @@ class QFloat2Editor(QtGui.QWidget):
         super(QFloat2Editor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = (0,0)
         self._current_value = None
@@ -719,6 +749,7 @@ class QFloat3Editor(QtGui.QWidget):
         super(QFloat3Editor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = (0.0, 0.0, 0.0)
 
@@ -838,6 +869,7 @@ class QInt2Editor(QtGui.QWidget):
         super(QInt2Editor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = (0, 0)
         self._current_value = None
@@ -949,6 +981,7 @@ class QInt3Editor(QtGui.QWidget):
         super(QInt3Editor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = (0, 0, 0)
         self._current_value = None
@@ -1076,6 +1109,7 @@ class QBoolEditor(QtGui.QCheckBox):
         super(QBoolEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = False
         self._current_value = None
@@ -1165,6 +1199,7 @@ class StringEditor(QtGui.QWidget):
         super(StringEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
         self._default_value = ""
         self._current_value = None
@@ -1280,6 +1315,7 @@ class FileEditor(QtGui.QWidget):
         super(FileEditor, self).__init__(parent)
 
         self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'file')
         self._default_value = ""
         self._current_value = None
@@ -1302,6 +1338,8 @@ class FileEditor(QtGui.QWidget):
         self._completer.setModel(model)
         self.file_edit.setCompleter(self._completer)
 
+        self.button_browse.setAutoRaise(True)
+        self.button_browse.setIcon(self.icons.get("folder_horizontal_open"))
         self.button_browse.clicked.connect(self.browseAction)
 
     def browseAction(self):
@@ -1620,7 +1658,6 @@ class ColorSwatch(QtGui.QToolButton):
         self.color          = kwargs.get('color', [1.0, 1.0, 1.0])
         self.qcolor         = QtGui.QColor()
         self.setColor(self.color)
-        #self.setStyleSheet("font-size:40px;background-color:#%s;border: 0px solid #333333" % self.qcolor.name())
 
     def setColor(self, color):
         """
@@ -1784,14 +1821,14 @@ ATTRIBUTE_DEFAULTS = dict(
     )
 
 
-def map_widget(typ, parent, name, ui):
+def map_widget(typ, parent, name, ui, icons):
     """
     Map the widget to the attribute type.
     """
     typ=typ.replace(" ", "")
     if typ in WIDGET_MAPPER:
         cls = WIDGET_MAPPER.get(typ)
-        return cls(parent, name=name, ui=ui)
+        return cls(parent, name=name, ui=ui, icons=icons)
     return
 
 

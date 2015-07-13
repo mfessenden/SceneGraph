@@ -8,15 +8,14 @@ SCENEGRAPH_NODE_TYPE = 'merge'
 
 class Merge(DagNode):
 
-    default_name = 'merge'
+    default_name  = 'merge'
+    default_color = [185, 172, 151, 255]
 
     def __init__(self, *args, **kwargs):
-
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
         DagNode.__init__(self, *args, **kwargs)
 
         self._command           = 'touch %s'
-        self.color              = [185, 172, 151, 255]
 
         self.remove_connection('input')
         # add two inputs

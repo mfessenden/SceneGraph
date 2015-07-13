@@ -69,7 +69,7 @@
     e1 = g.add_edge(n1, n2)
 
     # connect with a connection string
-    e1 = g.connectNodes('node1.output', 'node2.input')
+    e1 = g.connect('node1.output', 'node2.input')
 
     # write the graph
     g.write('~/graphs/my_graph.json')
@@ -83,6 +83,13 @@
     # query all connections
     print g.connections()
 
+    # Updating Attributes
+    from SceneGraph import core
+    g = core.Graph()
+    d = g.add_node('default')
+    m = g.add_node('merge')
+    g.add_edge(d, m, dest_attr='inputA')
+    m.rename_connection('inputA', 'newInput')
 
 ####### Advanced API:
 

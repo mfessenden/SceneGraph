@@ -487,8 +487,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
             # get the relevant connection terminals
             src_conn_widget = source_node.getOutputConnection(src_attr)
             dest_conn_widget = dest_node.getInputConnection(dest_attr)
-            edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget)
 
+            if not src_conn_widget or not dest_conn_widget:
+                continue
+
+            edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget)
             edge_widget.nodeDeleted.connect(self.nodeDeletedEvent)
             edge_widget._render_effects = self.ui.render_fx
 
@@ -548,7 +551,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if name in self.scenenodes:
             return self.scenenodes.get(name)
 
-        for id, node in self.scenenodes.iteritems():
+        for node in self.get_nodes():
             node_name = node.dagnode.name
             if node_name == name:
                 return node

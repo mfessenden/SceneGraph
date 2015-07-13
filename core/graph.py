@@ -142,20 +142,28 @@ class Graph(object):
         if not dagnodes:
             dagnodes = self.dagnodes.values()
 
+        # update network nodes from dag attributes
         self.updateDagNodes(dagnodes)
 
         node_ids = []
-
+        invalid_node_ids = []
         for node in dagnodes:
             if issubclass(type(node), DagNode):
                 if node.id not in node_ids:
                     node_ids.append(node.id)
 
+        if self.network.edges():
+            for edge in self.network.edges_iter(data=True):
+                src_id, dest_id, edge_attrs = edge
+
+                source_node = self.dagnodes.get(src_id, None)
+                dest_node = self.dagnodes.get(dest_id, None)
 
         if self.network.nodes():
             for node in self.network.nodes_iter(data=True):
                 node_id, node_attrs = node
                 if node_id not in node_ids:
+                    invalid_node_ids.append(node_id)
                     log.warning('invalid node "%s" ( %s )' % (node_attrs.get('name'), node_id))
                     result = False
         return result
@@ -752,9 +760,9 @@ class Graph(object):
                     self.handler.renameNodes(dagnodes[0])
         return
 
-    def rename_attribute(self, id, old, new):
+    def rename_connection(self, id, old, new):
         """
-        Rename an attribute.
+        Rename an attribute in the network.
 
         params:
             id   - (str) node UUID
@@ -769,6 +777,18 @@ class Graph(object):
         if old in nn:
             val = nn.pop(old)
             nn[new] = val
+
+            # update any connections
+            if self.network.edges():
+                for edge in self.network.edges(data=True):
+                    src_id, dest_id, attrs = edge
+                    if id in [src_id, dest_id]:
+                        for attr in ['src_attr', 'dest_attr']:
+                            val = attrs.get(attr, None)
+                            if val is not None:
+                                if val == old:
+                                    print 'updating attribute name: "%s": "%s" ("%s")' % (attr, new, old)
+                                    self.network.edge[src_id][dest_id]['attributes'][attr] = new
             return True
         return False
 
@@ -786,9 +806,16 @@ class Graph(object):
         pasted_nodes = []
         return pasted_nodes
 
-    def connectNodes(self, source, dest):
+    def connect(self, source, dest):
         """
         Connect two nodes via a "Node.attribute" string
+
+        params:
+            source (str) - connection string (ie: 'node1.output')
+            dest   (str) - connection string (ie: 'node2.input')
+
+        returns:
+            (bool) - edge was added successfully.
         """
         if not '.' in source or not '.' in dest:
             return False
@@ -806,22 +833,11 @@ class Graph(object):
             src_nodes = self.get_node(src_name)
             dest_nodes = self.get_node(dest_name)
 
-            src_node = None
-            dest_node = None
-
-            if src_nodes:
-                src_node = src_nodes[0]
-            
-            if dest_nodes:
-                dest_node = dest_nodes[0]
-
-            if not src_node or not dest_node:
-                if not src_node:
-                    log.error('invalid source node: "%s"' % src_name)
-
-                if not dest_node:
-                    log.error('invalid destination node: "%s"' % dest_name)
+            if not src_nodes or not dest_nodes:
                 return False
+
+            src_node = src_nodes[0]            
+            dest_node = dest_nodes[0]
 
             # add the edge
             return self.add_edge(src_node, dest_node, src_attr=src_attr, dest_attr=dest_attr)
@@ -1130,7 +1146,10 @@ class Graph(object):
         for gd in gdata:
             key, val = gd
             if key == 'api_version':
-                api_ver = float(val)
+                try:
+                    api_ver = float(val)
+                except:
+                    api_ver = float('.'.join(val.split('.')[:-1]))
         if api_ver:
             return api_ver >= options.API_MINIMUM
         return False

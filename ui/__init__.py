@@ -6,6 +6,7 @@ from . import handlers
 from . import attributes
 from . import commands
 
+reload(node_widgets)
 
 GraphicsView            = graphics.GraphicsView
 GraphicsScene           = graphics.GraphicsScene

@@ -55,9 +55,8 @@ class SceneGraphUI(form_class, base_class):
         self.setDockNestingEnabled(True)
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        from SceneGraph.icn import icons
 
-        self.icons            = icons.ICONS  
+        self.icons            = None  
         self.view             = None
 
         # preferences
@@ -115,7 +114,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetStatus()        
         self.draw_scene = QtGui.QGraphicsScene()
         self.draw_view.setScene(self.draw_scene)
-        #self.initializeStylesheet()
+        self.initializeStylesheet()
         #QtGui.QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
@@ -154,9 +153,12 @@ class SceneGraphUI(form_class, base_class):
         """
         self.setupFonts()
         self.setFont(self.fonts.get("ui"))
-        self.initializePreferencesUI()
+
         # build the graph
         self.initializeGraphicsView()
+
+        self.initializePreferencesUI()
+
 
         self.outputTextBrowser.setFont(self.fonts.get('output'))
         self.initializeRecentFilesMenu()
@@ -424,8 +426,7 @@ class SceneGraphUI(form_class, base_class):
         if not self.undo_stack.isClean():
             title_str = '%s*' % title_str
         self.setWindowTitle(title_str)
-        # haxx: check speed hit
-        self.initializeStylesheet()
+        #self.initializeStylesheet()
 
     def sizeHint(self):
         return QtCore.QSize(800, 675)
@@ -624,7 +625,7 @@ class SceneGraphUI(form_class, base_class):
             log.info('initializing OpenGL renderer.')
         else:
             self.view.setViewport(QtGui.QWidget())
-        self.initializeStylesheet()
+        #self.initializeStylesheet()
         self.view.scene().update()
 
     def toggleEffectsRendering(self, val):

@@ -8,10 +8,10 @@ SCENEGRAPH_NODE_TYPE = 'dot'
 
 class Dot(DagNode):
 
-    default_name = 'dot'
+    default_name  = 'dot'
+    default_color = [172, 172, 172, 255]
 
-    def __init__(self, *args, **kwargs):
-        
+    def __init__(self, *args, **kwargs):        
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
         DagNode.__init__(self, *args, **kwargs)
 
@@ -19,7 +19,7 @@ class Dot(DagNode):
         self.base_height        = 10.0
         self.height_expanded    = 10.0
 
-        self.color              = [172, 172, 172, 255]
+        
         self.orientation        = 'dot'
 
     @property
