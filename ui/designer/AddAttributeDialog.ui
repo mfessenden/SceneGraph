@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>313</width>
-    <height>216</height>
+    <width>394</width>
+    <height>235</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,11 +23,14 @@
       <property name="fieldGrowthPolicy">
        <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
       </property>
+      <property name="formAlignment">
+       <set>Qt::AlignCenter</set>
+      </property>
       <item row="0" column="0">
        <widget class="QLabel" name="nameLabel">
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>110</width>
           <height>0</height>
          </size>
         </property>
@@ -43,7 +46,7 @@
        <widget class="QLabel" name="iDLabel">
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>110</width>
           <height>0</height>
          </size>
         </property>
@@ -59,7 +62,7 @@
        <widget class="QLabel" name="typeLabel">
         <property name="minimumSize">
          <size>
-          <width>100</width>
+          <width>110</width>
           <height>0</height>
          </size>
         </property>
@@ -77,6 +80,22 @@
          <string>Connectable</string>
         </property>
        </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="connectionTypeLabel">
+        <property name="minimumSize">
+         <size>
+          <width>110</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Connection type:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="connectionTypeMenu"/>
       </item>
      </layout>
     </widget>
@@ -124,6 +143,38 @@
     <hint type="destinationlabel">
      <x>286</x>
      <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkbox_connectable</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>connectionTypeMenu</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>134</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>255</x>
+     <y>160</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>checkbox_connectable</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>connectionTypeLabel</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>134</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>81</x>
+     <y>159</y>
     </hint>
    </hints>
   </connection>

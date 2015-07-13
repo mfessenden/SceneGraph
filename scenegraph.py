@@ -35,7 +35,7 @@ def loadUiType(uiFile):
         try:
             exec pyc in frame
         except ImportError as err:
-            log.warning('loadUi error: %s' % err)              
+            log.warning('loadUi: %s' % err)              
 
         #Fetch the base_class and form class based on their type in the xml from designer
         form_class = frame['Ui_%s'%form_class]
@@ -115,7 +115,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetStatus()        
         self.draw_scene = QtGui.QGraphicsScene()
         self.draw_view.setScene(self.draw_scene)
-        self.initializeStylesheet()
+        #self.initializeStylesheet()
         #QtGui.QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
@@ -183,6 +183,8 @@ class SceneGraphUI(form_class, base_class):
         self.scene_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posy))
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
+
+        self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
 
     def initializeStylesheet(self):
@@ -530,7 +532,7 @@ class SceneGraphUI(form_class, base_class):
 
     def readGraph(self, filename=None):
         """
-        Read the current graph from a json file
+        Read the current graph from a json file.
         """
         if filename is None:
             filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._work_path, "JSON files (*.json)")
@@ -824,6 +826,19 @@ class SceneGraphUI(form_class, base_class):
     def createCreateMenuActions(self):
         pass
 
+    def outputTextChangedAction(self):
+        current_text = self.outputTextBrowser.toPlainText()
+        valid = False
+        try:
+            json_data = json.loads(current_text, indent=5)
+            valid=True
+        except:
+            pass
+
+        if valid:
+            print 'text is valid!'
+        #self.outputTextBrowser.clear()   
+
     def promptDialog(self, msg):
         """
         Simple Qt prompt dialog.
@@ -1024,7 +1039,7 @@ class SceneGraphUI(form_class, base_class):
         self.outputTextBrowser.setFont(self.fonts.get('output'))
 
         self.outputTextBrowser.scrollContentsBy(0, posy)
-        self.outputTextBrowser.setReadOnly(True)
+        #self.outputTextBrowser.setReadOnly(True)
 
     def updateDrawTab(self, filename=None):
         """
@@ -1111,10 +1126,10 @@ class SceneGraphUI(form_class, base_class):
         """
         Refresh the current graph.
         """
-        self.view.scene().handler.updateConsole('refreshing graph...', clear=True)
-        data = self.graph.snapshot()
-        self.graph.restore(data, graph=False)
-        self.view.scene().update()
+        #self.view.scene().handler.updateConsole('refreshing graph...', clear=True)
+        #data = self.graph.snapshot()
+        #self.graph.restore(data, graph=False)
+        self.view.scene().evaluate()
 
     def drawGraph(self, filename=None):
         """

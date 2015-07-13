@@ -49,9 +49,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         self._label_coord    = [0,0]                  # default coordiates of label
 
         # connections widget
-        self.connections     = dict(input  = dict(),
-                                    output = dict(),
-                                    )
+        self.connections     = dict()
 
         # undo/redo snapshots
         self._current_pos    = QtCore.QPointF(0,0)
@@ -76,9 +74,6 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # set node position
         self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
-
-        # build the connection widgets.
-        self.buildConnections()
 
     def __str__(self):
         return '%s("%s")' % (self.__class__.__name__, self.dagnode.name)
@@ -425,23 +420,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         if name in self.outputs:
             return self.connections.get(name)
 
-    def buildConnections(self):
-        """
-        Build the nodes' connection widgets.
-        """
-
-        for input_name in self.dagnode.inputs:            
-            # connection dag node
-            input_dag = self.dagnode.get_connection(input_name)
-            input_widget = Connection(self, input_dag, input_name, **input_dag)
-            self.connections[input_name] = input_widget
-
-        for output_name in self.dagnode.outputs:
-            # connection dag node
-            output_dag = self.dagnode.get_connection(output_name)
-            output_widget = Connection(self, output_dag, output_name, **output_dag)
-            self.connections[output_name] = output_widget
-
     def removeConnectionWidgets(self):
         """
         Remove all of the connection widgets.
@@ -451,33 +429,47 @@ class NodeWidget(QtGui.QGraphicsObject):
             if conn_widget:
                 self.scene().removeItem(conn_widget)
 
-    def drawConnections(self):
+    def drawConnections(self, remove=False):
         """
         Update all of the connection widgets.
         """
-        ipos = self.input_pos
-        opos = self.output_pos
+        inp_start = self.input_pos
+        out_start = self.output_pos
 
-        iconn_cnt = 0
-        oconn_cnt = 0
+        inp_count = 0
+        out_count = 0
 
-        y_offset_in = 0
-        y_offset_ou = 0
+        inp_y_offset = 0
+        out_y_offset = 0
 
-        for conn_name in reversed(self.connections.keys()):    
-            conn_widget = self.connections.get(conn_name)
+        for conn_name in self.dagnode.connections:
+            conn_dag = self.dagnode.get_connection(conn_name)
+            conn_widget = None
+
+            if conn_name in self.connections:
+                conn_widget = self.connections.get(conn_name)
+
+                if remove:
+                    # pop the current widget
+                    self.connections.pop(conn_name)
+                    self.scene().removeItem(conn_widget)
+
+
+            if conn_widget is None:
+                conn_widget = Connection(self, conn_dag, conn_name, **conn_dag)
+                self.connections[conn_name] = conn_widget
 
             if conn_widget.is_input:
-                y_offset_in = self.dagnode.base_height * iconn_cnt
-                conn_widget.setY(ipos.y() + y_offset_in)
-                conn_widget.setX(ipos.x())
-                iconn_cnt += 1
+                inp_y_offset = self.dagnode.base_height * inp_count
+                conn_widget.setY(inp_start.y() + inp_y_offset)
+                conn_widget.setX(inp_start.x())
+                inp_count += 1
 
             if conn_widget.is_output:
-                y_offset_ou = self.dagnode.base_height * oconn_cnt
-                conn_widget.setY(opos.y() + y_offset_ou)
-                conn_widget.setX(opos.x())
-                oconn_cnt += 1
+                out_y_offset = self.dagnode.base_height * out_count
+                conn_widget.setY(out_start.y() + out_y_offset)
+                conn_widget.setX(out_start.x())
+                out_count += 1
 
     def paint(self, painter, option, widget):
         """
@@ -499,6 +491,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.label.setPos(self.label_pos)        
         self.drawConnections()
 
+        # render fx
         if self._render_effects:
             # background
             self.bgshd = QtGui.QGraphicsDropShadowEffect()

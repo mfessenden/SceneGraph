@@ -3,6 +3,7 @@ import os
 import uuid
 import simplejson as json
 from collections import MutableMapping
+from collections import OrderedDict as dict
 import copy
 import sys
 from SceneGraph.core import log
@@ -322,7 +323,8 @@ class DagNode(MutableMapping):
             (bool) - connection was removed.
         """
         if name in self._attributes:
-            if self._attributes.get('name').get('is_connectable'):
+            if self._attributes.get(name).get('is_connectable'):
+                print 'removing connection: ', name
                 conn = self._attributes.pop(name)
                 del conn 
                 return True 

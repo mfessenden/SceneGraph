@@ -325,7 +325,7 @@ class PluginManager(object):
             (dict) - dictionary of plugin data.
         """
         result = dict()
-        for plugin in self._node_data:
+        for plugin in sorted(self._node_data.keys()):
             if not plugins or plugin in plugins:
                 plugin_attrs = self._node_data.get(plugin)
                 if plugin_attrs.get('enabled', True) or disabled:

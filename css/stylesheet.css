@@ -350,3 +350,8 @@ QPlainTextEdit.Console {
     font-family: "Monospace";
     background-color: #222222;
 }
+
+QGraphicsView {
+    background-color: #222222;
+    
+}

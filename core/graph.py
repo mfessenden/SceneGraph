@@ -66,7 +66,7 @@ class Graph(object):
         params:
             scene (str) - name of scene file.
         """
-        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
+        self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = scene
         self.network.graph['autosave'] = self.temp_scene
         self.network.graph['environment'] = self.mode
@@ -108,7 +108,7 @@ class Graph(object):
         """
         Update the network graph attributes.
         """
-        self.network.graph['api_version'] = options.API_VERSION_AS_STRING
+        self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = self.getScene()
         self.network.graph['autosave'] = self.temp_scene
         self.network.graph['environment'] = self.mode
@@ -290,11 +290,13 @@ class Graph(object):
             src_nodes = self.get_node(srcid)
             dest_nodes = self.get_node(destid)
 
+            if not src_nodes or not dest_nodes:
+                continue
+
             # query node names
-            if src_nodes and dest_nodes:
-                src_node = src_nodes[0]
-                dest_node = dest_nodes[0]
-                connections.append('%s.%s,%s.%s' % (src_node.name, src_attr, 
+            src_node = src_nodes[0]
+            dest_node = dest_nodes[0]
+            connections.append('%s.%s,%s.%s' % (src_node.name, src_attr, 
                                                     dest_node.name, dest_attr))
         return connections
 
@@ -1128,7 +1130,7 @@ class Graph(object):
         for gd in gdata:
             key, val = gd
             if key == 'api_version':
-                api_ver = float('.'.join(val.split('.')[:-1]))
+                api_ver = float(val)
         if api_ver:
             return api_ver >= options.API_MINIMUM
         return False

@@ -16,8 +16,9 @@ class Merge(DagNode):
         DagNode.__init__(self, *args, **kwargs)
 
         self._command           = 'touch %s'
-        self.color              = [21, 140, 167, 255]
+        self.color              = [185, 172, 151, 255]
 
+        self.remove_connection('input')
         # add two inputs
         for i in ['inputA', 'inputB']:
             self.add_input(name=i)

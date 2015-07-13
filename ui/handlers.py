@@ -234,7 +234,7 @@ class SceneHandler(QtCore.QObject):
         Signal AttributeEditor -> Graph.
         """
         self.dagNodesUpdated.emit(dagnodes)
-
+        self.scene.update()
         # push to undo here
 
 """

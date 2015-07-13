@@ -311,15 +311,18 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Pop up a node creation context menu at a given location.
         """
-
         menu = QtGui.QMenu()
         menuActions = ['add attribute']
         for action in menuActions:
             #action.setData((action.data()[0], self.mapToScene(pos)))
-            menu.addAction(action)
+            menu_action = menu.addAction(action)
+            menu_action.triggered.connect(self.addAttributeAction)
         menu.exec_(self.mapToGlobal(pos))
     
     #- Actions -----
+    def addAttributeAction(self, node=None):
+        print 'adding something'
+
     def sceneChangedAction(self, *args):
         """
         Runs when the scene has changed in some manner.
@@ -373,6 +376,15 @@ class GraphicsScene(QtGui.QGraphicsScene):
     @property 
     def undo_stack(self):
         return self.ui.undo_stack
+
+    def evaluate(self):
+        """
+        Refresh the scene.
+        """
+        for nid in self.scenenodes:
+            widget = self.scenenodes.get(nid)
+            widget.update()
+        self.update()
 
     def updateNodes(self, data):
         """
