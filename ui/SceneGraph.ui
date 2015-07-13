@@ -113,7 +113,7 @@
      <x>0</x>
      <y>0</y>
      <width>984</width>
-     <height>22</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -143,28 +143,6 @@
     <addaction name="action_draw_graph"/>
     <addaction name="separator"/>
     <addaction name="action_evaluate"/>
-    <addaction name="separator"/>
-    <addaction name="action_show_all_attributes"/>
-    <addaction name="separator"/>
-    <addaction name="separator"/>
-   </widget>
-   <widget class="QMenu" name="menu_nodes">
-    <property name="title">
-     <string>Nodes</string>
-    </property>
-    <widget class="QMenu" name="menu_add_node">
-     <property name="title">
-      <string>Add node...</string>
-     </property>
-    </widget>
-    <widget class="QMenu" name="menu_color">
-     <property name="title">
-      <string>Color...</string>
-     </property>
-     <addaction name="action_COLOR1"/>
-    </widget>
-    <addaction name="menu_add_node"/>
-    <addaction name="menu_color"/>
    </widget>
    <widget class="QMenu" name="menu_window">
     <property name="title">
@@ -189,6 +167,11 @@
    <widget class="QMenu" name="menu_edit">
     <property name="title">
      <string>Edit</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_nodes">
+    <property name="title">
+     <string>Nodes</string>
     </property>
    </widget>
    <addaction name="menu_file"/>
@@ -233,8 +216,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>376</width>
-          <height>154</height>
+          <width>377</width>
+          <height>142</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -282,8 +265,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>376</width>
-          <height>153</height>
+          <width>377</width>
+          <height>141</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -387,8 +370,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>356</width>
-                  <height>280</height>
+                  <width>361</width>
+                  <height>274</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -624,8 +607,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>129</width>
-              <height>110</height>
+              <width>145</width>
+              <height>119</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -716,8 +699,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>197</width>
-              <height>123</height>
+              <width>208</width>
+              <height>177</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -803,7 +786,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../icn/scenegraph.qrc">
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">
@@ -933,11 +916,6 @@
   <action name="action_update_mode">
    <property name="text">
     <string>Update mode:</string>
-   </property>
-  </action>
-  <action name="action_COLOR1">
-   <property name="text">
-    <string>COLOR01</string>
    </property>
   </action>
  </widget>

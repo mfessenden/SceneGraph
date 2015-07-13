@@ -14,7 +14,7 @@ from SceneGraph import ui
 log = core.log
 global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
-SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', '0')
+SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', 0) # default value was '0'
 
 
 def loadUiType(uiFile):
@@ -60,7 +60,7 @@ class SceneGraphUI(form_class, base_class):
         self.view             = None
 
         # preferences
-        self.debug            = kwargs.get('debug', False)
+        self.debug            = kwargs.get('debug', bool(SCENEGRAPH_DEBUG))
         self.use_gl           = kwargs.get('opengl', False)
 
         self.edge_type        = 'bezier'
@@ -156,9 +156,7 @@ class SceneGraphUI(form_class, base_class):
 
         # build the graph
         self.initializeGraphicsView()
-
         self.initializePreferencesUI()
-
 
         self.outputTextBrowser.setFont(self.fonts.get('output'))
         self.initializeRecentFilesMenu()
@@ -178,7 +176,7 @@ class SceneGraphUI(form_class, base_class):
         self.menu_edit.addAction(undo_action)
         self.menu_edit.addAction(redo_action)
 
-        self.initializeNodesMenu()
+        #self.initializeNodesMenu()
 
         # validators for console widget
         self.scene_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posx))
@@ -259,10 +257,14 @@ class SceneGraphUI(form_class, base_class):
         self.action_revert.triggered.connect(self.revertGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_draw_graph.triggered.connect(self.refreshGraph)
-        self.action_evaluate.triggered.connect(self.graph.evaluate)
+
+        
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
+
+        # nodes menu
+        self.menu_nodes.aboutToShow.connect(partial(self.initializeNodesMenu, self.menu_nodes))
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -314,14 +316,42 @@ class SceneGraphUI(form_class, base_class):
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
 
-    def initializeNodesMenu(self):
+    def initializeNodesMenu(self, parent, color=True):
         """
         Build a context menu at the current pointer pos.
         """
+        parent.clear()
+        qcurs = QtGui.QCursor()
+
+        menu_add_node   = QtGui.QMenu('Add node:   ', parent)
+        menu_node_color = QtGui.QMenu('Node color: ', parent)
+
         for node in self.graph.node_types():
-            node_action = self.menu_add_node.addAction(node)
+            node_action = menu_add_node.addAction(node)
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.add_node, node_type=node))
+
+        # build the color menu
+        if color:
+            for color_name in options.SCENEGRAPH_COLORS:
+                color_val = options.SCENEGRAPH_COLORS.get(color_name)
+                color = QtGui.QColor(*color_val)
+                pixmap = QtGui.QPixmap(24, 24)
+                pixmap.fill(color)
+
+                icon = QtGui.QIcon(pixmap)
+                color_action = menu_node_color.addAction(icon, color_name)
+                color_action.setIconVisibleInMenu(True)
+                color_action.triggered.connect(partial(self.view.scene().colorChangedAction, color=color_val))
+
+        parent.addMenu(menu_add_node)
+        if color:
+            parent.addMenu(menu_node_color)
+        
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        parent.setStyleSheet(str(ssf.readAll()))
+        #parent.exec_(qcurs.pos())
 
     def initializeUIMenu(self):
         """
@@ -671,6 +701,7 @@ class SceneGraphUI(form_class, base_class):
             for ewidget in edge_widgets:
                 ewidget._debug = SCENEGRAPH_DEBUG
 
+        self.debug = eval(SCENEGRAPH_DEBUG)
         self.view.scene().update()      
 
     def toggleEdgeTypes(self):

@@ -247,8 +247,10 @@ class GraphicsView(QtGui.QGraphicsView):
 
         if event.button() == QtCore.Qt.RightButton:
             item = self.itemAt(event.pos())
+            color = False
             if item is not None:
-                self.showContextMenu(event.pos())
+                color = True
+            self.showContextMenu(event.pos(), color=color)
             
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
@@ -307,16 +309,12 @@ class GraphicsView(QtGui.QGraphicsView):
         sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
         return sceneWidthPercent, sceneHeightPercent
 
-    def showContextMenu(self, pos):
+    def showContextMenu(self, pos, color=True):
         """
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        menuActions = ['add attribute']
-        for action in menuActions:
-            #action.setData((action.data()[0], self.mapToScene(pos)))
-            menu_action = menu.addAction(action)
-            menu_action.triggered.connect(self.addAttributeAction)
+        self._parent.initializeNodesMenu(menu,color=color)
         menu.exec_(self.mapToGlobal(pos))
     
     #- Actions -----
@@ -504,6 +502,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 widgets.append(edge_widget)
 
         return widgets
+
+    def removeItem(self, item):
+        print '# removing: ', item.__class__.__name__
+        super(GraphicsScene, self).removeItem(item)
 
     def removeNodes(self, nodes):
         """
@@ -761,6 +763,18 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if isinstance(node, node_widgets.EdgeWidget):
             print 'removing edge: ', node.name
             self.removeItem(node)
+
+    def colorChangedAction(self, color):
+        """
+        Color any selected nodes.
+
+        params:
+            color (list) - list of RGB values.
+        """
+        nodes = self.selectedNodes()
+        for node in nodes:
+            node.dagnode.color = color
+            node.update()
 
     def updateNodesAction(self, dagnodes):
         print 'GraphicsScene: updating %d dag nodes' % len(dagnodes)

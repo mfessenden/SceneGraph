@@ -35,6 +35,7 @@ class SceneHandler(QtCore.QObject):
 
         if parent is not None:
             self.ui.icons = self.icons
+            self.ui.action_evaluate.triggered.connect(self.evaluate)
             if self.connectGraph(parent):
                 self.connectSignals()
     
@@ -85,6 +86,7 @@ class SceneHandler(QtCore.QObject):
         """
         Do cool shit here.
         """
+        print '# evaluating...'
         if dagnodes:
             self.updateConsole('evaluating %d nodes' % len(dagnodes))
             return self.graph.evaluate(dagnodes=dagnodes)
@@ -158,9 +160,10 @@ class SceneHandler(QtCore.QObject):
         """
         Signal Graph -> GraphicsScene.
         """
+        scene = self.scene
         widgets_to_remove = []
-        for id in self.scene.scenenodes:
-            widget = self.scene.scenenodes.get(id)
+        for id in scene.scenenodes:
+            widget = scene.scenenodes.get(id)
             if issubclass(type(widget), node_widgets.NodeWidget):
                 if widget.id not in self.graph.network.nodes():
                     widgets_to_remove.append(widget)
@@ -177,8 +180,7 @@ class SceneHandler(QtCore.QObject):
                 if node.breakConnections():
                     print 'disconnected edge: %s' % node.name
 
-                #node.breakConnections()
-            self.scene.removeItem(node)
+            scene.removeItem(node)
 
     def updateNodes(self, dagnodes):
         """
