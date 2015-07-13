@@ -9,7 +9,7 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, DagNode, DagEdge, PluginManager
+from SceneGraph.core import log, DagNode, PluginManager
 
 
 class Graph(object):
@@ -56,8 +56,7 @@ class Graph(object):
             self.read(os.path.join(os.getenv('HOME'), 'graphs', 'connections.json'))
 
     def __str__(self):
-        import networkx.readwrite.json_graph as nxj
-        graph_data = nxj.node_link_data(self.network)
+        graph_data = self.snapshot()
         return json.dumps(graph_data, indent=5)
 
     def initializeNetworkAttributes(self, scene=None):
@@ -88,14 +87,12 @@ class Graph(object):
             log.warning('node path "%s" does not exist.' % path)
             return nodes
 
-        #print '# searching for nodes in: "%s"' % path
         for fn in os.listdir(path):
             if fn not in ['README']:
                 node_name = os.path.splitext(os.path.basename(fn))[0]
                 node_mod = os.path.join(path, '%s.py' % node_name)
                 node_data = os.path.join(path, '%s.mtd' % node_name)
                 if os.path.exists(node_mod) and os.path.exists(node_data):
-                    #print '# loading node type "%s"' % node_name
                     node_attrs = dict()
                     node_attrs['module'] = node_mod
                     node_attrs['metadata'] = node_data
@@ -140,12 +137,13 @@ class Graph(object):
         """
         Evalute the Graph, updating networkx graph.
         """
+        #print '\n# Evaluating: ', inspect.stack()[1][3]
         result = True
         if not dagnodes:
             dagnodes = self.dagnodes.values()
 
         self.updateDagNodes(dagnodes)
-        edge_ids = self.getEdgeIDs()
+
         node_ids = []
 
         for node in dagnodes:
@@ -153,19 +151,6 @@ class Graph(object):
                 if node.id not in node_ids:
                     node_ids.append(node.id)
 
-        # check for invalid edges.
-        if self.network.edges():
-            for edge in self.network.edges_iter(data=True):
-                src_id, dest_id, edge_attrs = edge
-
-                edge_id = edge_attrs.get('id')
-                dagedge = self.getEdge(edge_id)
-                src_name = self.getNode(src_id)
-                dest_name = self.getNode(dest_id)
-
-                if edge_id not in edge_ids:
-                    log.warning('invalid edge "%s".' % dagedge.name)
-                    result = False
 
         if self.network.nodes():
             for node in self.network.nodes_iter(data=True):
@@ -175,11 +160,11 @@ class Graph(object):
                     result = False
         return result
 
-    def node_types(self):
+    def node_types(self, plugins=[], disabled=False):
         """
         Returns a list of node types.
         """
-        return self.pmanager.node_types
+        return self.pmanager.node_types(plugins=plugins, disabled=disabled)
 
     #-- NetworkX Stuff -----
     def getScene(self):
@@ -217,9 +202,9 @@ class Graph(object):
         """
         return self.network.nodes(data=True)
 
-    def listNodeNames(self):
+    def nx_node_names(self):
         """
-        Returns a list of node names in the scene.
+        Returns a list of nx node names in the scene.
         
         returns:
             (list)
@@ -229,9 +214,19 @@ class Graph(object):
         if nodes:
             for node in nodes:
                 id, data = node
-                name = data.get('name')
-                node_names.append(name)
+                name = data.get('name', None)
+                if name is not None:
+                    node_names.append(name)
         return node_names
+
+    def node_names(self):
+        """
+        Returns a dag node names.
+
+        returns:
+            (list)
+        """
+        return [node.name for node in self.nodes()]
 
     def nodes(self):
         """
@@ -247,22 +242,16 @@ class Graph(object):
                 nodes.append(self.dagnodes.get(UUID))
         return nodes
 
-    def edges(self):
+    def edges(self, *args):
         """
         Returns a list of all dag edges.
 
         returns:
-            (list) - list of DagEdge objects.
+            (list) - list of edges.
         """
-        edges = []
-        for edge in  self.network.edges(data=True):
-            src_id, dest_id, attrs = edge
-            UUID = attrs.get('id')
-            if UUID in self.dagnodes:
-                edges.append(self.dagnodes.get(UUID))
-        return edges
+        return self.network.edges(data=True)
 
-    def getNode(self, *args):
+    def get_node(self, *args):
         """
         Return a dag node by name.
 
@@ -282,15 +271,6 @@ class Graph(object):
                         nodes.append(node)
         return nodes
 
-    def node_names(self):
-        """
-        Returns a list of all dag connection strings.
-
-        returns:
-            (list)
-        """
-        return [node.name for node in self.nodes()]
-
     def connections(self):
         """
         Returns a list of human-readable edge
@@ -300,13 +280,15 @@ class Graph(object):
             (list) - list of connection strings. 
         """
         connections = []
+        # edge: (id, id, {attrs})
         for edge in self.edges():
+            srcid, destid, edge_attrs = edge
 
-            src_attr = edge.get('src_attr')
-            dest_attr = edge.get('dest_attr')
+            src_attr = edge_attrs.get('src_attr')
+            dest_attr = edge_attrs.get('dest_attr')
 
-            src_nodes = self.getNode(edge.get('src_id'))
-            dest_nodes = self.getNode(edge.get('dest_id'))
+            src_nodes = self.get_node(srcid)
+            dest_nodes = self.get_node(destid)
 
             # query node names
             if src_nodes and dest_nodes:
@@ -315,80 +297,6 @@ class Graph(object):
                 connections.append('%s.%s,%s.%s' % (src_node.name, src_attr, 
                                                     dest_node.name, dest_attr))
         return connections
-
-    def parseEdgeName(self, edge):
-        """
-        Parse an edge name string into human-readable format.
-        Since we don't store node names in edges (because UUIDs are immutable),
-        we need to parse the UUID into a node name.
-
-        params:
-            edge - (DagEdge) edge instance
-
-        returns:
-            (str) - edge connection string.
-        """
-        src_nodes = self.getNode(edge.src_id)
-        dest_nodes = self.getNode(edge.dest_id)
-
-        if not src_nodes or not dest_nodes:
-            log.error('invalid node ids in edge "%s"' % edge.name)
-            return 
-
-        src_name = src_nodes[0].name
-        src_str = '%s.%s' % (src_name, edge.src_attr)
-        dest_name = dest_nodes[0].name
-        dest_str = '%s.%s' % (dest_name, edge.dest_attr)
-        return '%s,%s' % (src_str, dest_str)
-
-    def getEdgeIDs(self):
-        """
-        Returns a list of all edges in the network.
-
-        returns:
-            (list) - list of edge ids.
-        """
-        ids = []
-        for edge in self.network.edges(data=True):
-            src_id, dest_id, attrs = edge
-            ids.append(attrs.get('id'))
-        return ids
-
-    def getEdge(self, *args):
-        """
-        Return a dag edge.
-
-        returns:
-            (obj) - dag edge.
-        """
-        edges=[]
-        for arg in args:
-            # if UUID is passed
-            if arg in self.dagnodes:
-                edges.append(self.dagnodes.get(arg))
-
-        for edge in self.network.edges(data=True):
-            src_id, dest_id, attrs = edge
-            edge_id = attrs.get('UUID')
-            src_attr = attrs.get('src_attr', None)
-            dest_attr = attrs.get('dest_attr', None)
-
-            src_nodes = self.getNode(src_id)
-            dest_nodes = self.getNode(dest_id)
-
-            if not src_nodes and dest_nodes:
-                continue
-
-            if not src_attr and dest_attr:
-                continue
-
-            if src_nodes and dest_nodes:
-                src_name = src_nodes[0].name
-                dest_name = dest_nodes[0].name
-                conn_str = '%s.%s,%s.%s' % (src_name, src_attr, dest_name, dest_attr)
-                if conn_str in args:
-                    edges.append(self.dagnodes.get(edge_id))
-        return edges
 
     def add_node(self, node_type='default', **kwargs):
         """
@@ -402,18 +310,46 @@ class Graph(object):
                           - dag in standalone mode
                           - node widget in ui mode
         """
-        name  = kwargs.pop('name', 'node1')
-        pos  = kwargs.pop('pos', self.grid.coords)
-
         # check to see if node type is valid
         if node_type not in self.node_types():
             log.error('invalid node type: "%s"' % node_type)
             return
 
-        if not self.validNodeName(name):
-            name = self.getValidNodeName(name)
+        pos  = kwargs.pop('pos', self.grid.coords)
 
-        # get the dag node from the PluginManager
+        # get the default name for the node type and validate it
+        name = self.get_valid_name(self.pmanager.default_name(node_type))
+
+        if 'name' in kwargs:
+            name = kwargs.pop('name')
+
+        # parse connections from data
+        inputs = dict()
+        outputs = dict()
+        poppers = []
+        for attr, val in kwargs.iteritems():
+            if hasattr(val, 'keys'):
+                if 'is_connectable' in val:
+                    if val.get('is_connectable'):
+                        if 'connection_type' in val:
+                            if val.get('connection_type') == 'input':
+                                inputs[attr] = val
+                                poppers.append(attr)
+
+                            if val.get('connection_type') == 'output':
+                                outputs[attr] = val
+                                poppers.append(attr)
+
+        if poppers:
+            for p in poppers:
+                kwargs.pop(p)
+
+        if inputs:
+            kwargs.update(inputs=inputs)
+        if outputs:
+            kwargs.update(outputs=outputs)
+
+        # get the dag node from the PluginManager 
         dag = self.pmanager.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
 
         # advance the grid to the next value.
@@ -430,6 +366,16 @@ class Graph(object):
             self.handler.dagNodesAdded([dag.id,])
         return dag
 
+    def parse_connections(self, data):
+        """
+        parse connections from parsed graph data.
+        """
+        attributes = dict()
+        for k, v in data.iteritems():
+            if hasattr(v, keys):
+                attributes[k] = data.pop(k)
+        return attributes
+
     def remove_node(self, *args):
         """
         Removes a node from the graph
@@ -441,7 +387,7 @@ class Graph(object):
             (bool) - node was removed.
         """
         node_ids = []
-        nodes = self.getNode(*args)
+        nodes = self.get_node(*args)
 
         # iterate through the nodes
         for node in nodes:
@@ -456,18 +402,10 @@ class Graph(object):
                 if self.dagnodes.pop(dag_id):
                     node_ids.append(dag_id)
 
-        # todo: check that method appears to be getting called twice
-        for edge_id, edge in self.dagnodes.iteritems():
-            if issubclass(type(edge), DagEdge):
-                ptr = (edge.src_id, edge.dest_id)
-                if ptr not in self.network.edges():
-                    if edge_id not in node_ids:
-                        node_ids.append(edge_id)
-
         if node_ids:
             # update the scene
             if self.handler is not None:
-                self.handler.dagNodesRemoved(node_ids)
+                self.handler.dagUpdated(node_ids)
             return True
         return False
 
@@ -483,7 +421,6 @@ class Graph(object):
             (DagEdge) - edge object
 
         """
-        UUID = kwargs.pop('id', None)
         src_attr = kwargs.pop('src_attr', 'output')
         dest_attr = kwargs.pop('dest_attr', 'input')
 
@@ -500,25 +437,139 @@ class Graph(object):
             log.warning('invalid connection: "%s", "%s"' % (src.name, dest.name))
             return
 
-        # create an edge
-        edge = DagEdge(src, dest, src_attr=src_attr, dest_attr=dest_attr, id=UUID, _graph=self)
-
-        conn_str = self.parseEdgeName(edge)
-        log.debug('parsing edge: "%s"' % conn_str)
-
+        conn_str = '%s.%s,%s.%s' % (src.name, src_attr, dest.name, dest_attr)
         if conn_str in self.connections():
             log.warning('connection already exists: %s' % conn_str)
             return 
+  
+        edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr)
+        
+        # add the nx edge        
+        self.network.add_edge(src.id, dest.id, key='attributes', weight=1, attr_dict=edge_attrs)
+        log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
 
-        # TODO: networkx check here!
-        src_id, dest_id, edge_attrs = edge.data
-        self.network.add_edge(src_id, dest_id, **edge_attrs)
-        self.dagnodes[edge.id] = edge
-
+        # new edge = {'attributes': {'dest_attr': 'input', 'src_attr': 'output', 'weight': 1}}
+        new_edge = self.network.edge[src.id][dest.id]
         # update the scene
         if self.handler is not None:
-            self.handler.dagNodesAdded([edge.id,])
-        return edge
+            self.handler.dagEdgesAdded(new_edge.get('attributes'))
+        return new_edge
+
+    def get_edge(self, *args):
+        """
+        Return a dag edge.
+
+        Pass connection string ie: ('node1.output, node2.input'),
+        or source dest (ie: 'node1.output', 'node2.input')
+
+        returns:
+            (list) - list of nx edges (id, id, {attributes})
+        """
+        edges=[]
+
+        cs = lambda x: [y.strip() for y in x.split(',')]
+
+        # variables to match
+        src_conn  = None
+        dest_conn = None
+
+        src_name  = None
+        dest_name = None
+
+        src_attr  = 'output'
+        dest_attr = 'input'
+
+        edgeid    = None
+
+        # parse connection strings
+        if len(args):
+            if len(args) > 1:
+                if (args[0], args[1]) in self.network.edges():
+                    edgeid = (args[0], args[1])
+
+                if type(args[0]) is str and type(args[1]) is str:
+
+                    src_conn = args[0]
+                    dest_conn = args[1]
+            else:
+                if type(args[0]) is str:
+                    if ',' in args[0]:
+                        src_conn, dest_conn = cs(args[0])
+
+        if not src_conn or not dest_conn:
+            log.warning('invalid arguments passed.')
+            return
+
+        if '.' in src_conn:
+            src_name, src_attr = src_conn.split('.')
+
+        if '.' in dest_conn:
+            dest_name, dest_attr = dest_conn.split('.')
+
+        # loop through nx edges
+        # edge: (id, id, {'src_id': id, 'dest_attr': 'input', 'src_attr': 'output', 'dest_id': id, 'weight': 1})
+        for edge in self.network.edges(data=True):
+
+            srcid, destid, attrs = edge
+            edge_id = (srcid, destid)
+
+            #match two ids
+            if edge_id == edgeid:
+                edges.append(edge)
+
+            sn_attr = attrs.get('src_attr', None)
+            dn_attr = attrs.get('dest_attr', None)
+
+            src_nodes = self.get_node(srcid)
+            dest_nodes = self.get_node(destid)
+
+            if not src_nodes or not dest_nodes:
+                continue
+
+            if not sn_attr or not dn_attr:
+                continue
+
+            src_node  = src_nodes[0]
+            dest_node = dest_nodes[0]
+
+            sn_name = src_node.name
+            dn_name = dest_node.name
+
+            if src_name == sn_name and dest_name == dn_name:
+                if src_attr == sn_attr and dest_attr == dn_attr:
+                    edges.append(edge)
+        return edges
+
+    def get_edge_ids(self, *args):
+        """
+        Returns a valid nx ids tuple.
+
+        returns:
+            (tuple) - (src_id, dest_id)
+        """
+        edges = self.get_edge(*args)
+        if edges:
+            return [(edge[0], edge[1]) for edge in edges]
+        return []
+
+    def edge_nice_name(self, *args):
+        """
+        Returns a connection string from ids.
+        """
+        edges = self.get_edge(*args)
+        if edges:
+            if len(edges) > 1:
+                return '(Invalid)'
+
+        # edge: (id, id, attrs)
+        edge = edges[0]
+        
+        source_name = self.dagnodes.get(edge[0]).name
+        dest_name = self.dagnodes.get(edge[1]).name
+
+        return '%s.%s,%s.%s' % (source_name, edge[2].get('src_attr', 'output'),
+                                dest_name, edge[2].get('dest_attr', 'input'))
+
 
     def remove_edge(self, *args): 
         """
@@ -531,55 +582,22 @@ class Graph(object):
         returns:
             (object)  - removed edge
         """
-        dagedges = []
-        for arg in args:
-            # arg is a DagEdge instance
-            if isinstance(arg, DagEdge):
-                dagedges.append(arg)
-                continue
+        edges = self.get_edge(*args)
+        if not edges:
+            log.warning('cannot find edge.')
+            return
 
-            # arg is a UUID str
-            if arg in self.dagnodes:
-                dag = self.dagnodes.get(arg)
-                dagedges.append(dag)
-                continue
-
-            # arg is a connection str
-            if arg in self.connections():
-                UUID = self.getEdgeID(arg)
-                if not UUID:
-                    continue
-                dag = self.getEdge(UUID)
-                if not dag:
-                    continue
-                dagedges.append(dag[0])
-                continue
-
-        if not dagedges:
-            #log.error('no valid edges specified.')
-            return False
-
-        edge_ids = []
-        for edge in dagedges:
-            edge_ids.append(edge.id)
-            if edge.id in self.dagnodes:
+        for edge in edges:
+            edge_id = (edge[0], edge[1])
+            if edge_id in self.network.edges():
+                log.info('Removing edge: "%s"' % self.edge_nice_name(*edge_id))
+                self.network.remove_edge(*edge_id)
                 
-                self.dagnodes.pop(edge.id)
-
-                # remove references to nodes that were connected
-                edge.breakConnections()
-
-            if (edge.src_id, edge.dest_id) in self.network.edges():
-                self.network.remove_edge(edge.src_id, edge.dest_id)
-                log.info('Removing edge: "%s"' % self.parseEdgeName(edge))
-            
-            # delete the edge
-            del edge
-
-        # update the scene
-        if self.handler is not None:
-            self.handler.dagNodesRemoved(edge_ids)
-        return True
+                # update the scene
+                if self.handler is not None:
+                    self.handler.dagUpdated(edge_id)
+                return True
+        return False
 
     def getNodeID(self, name):
         """
@@ -621,8 +639,8 @@ class Graph(object):
             src_attr = edge_attrs.get('src_attr')
             dest_attr = edge_attrs.get('dest_attr')
 
-            src_nodes = self.getNode(src_id)
-            dest_nodes = self.getNode(dest_id)
+            src_nodes = self.get_node(src_id)
+            dest_nodes = self.get_node(dest_id)
 
             if not src_nodes or not dest_nodes:
                 return result
@@ -670,7 +688,7 @@ class Graph(object):
             for edge in edges:
                 src_id, dest_id, attrs = edge
                 edge_id = attrs.get('id', None)
-                dag_edges = self.getEdge(edge_id)
+                dag_edges = self.get_edge(edge_id)
                 if dag_edges:
                     for d in dag_edges:
                         if d not in result:
@@ -716,14 +734,14 @@ class Graph(object):
         returns:
             (object)  - renamed node
         """
-        if not self.validNodeName(new_name):
+        if not self.is_valid_name(new_name):
             log.error('"%s" is not unique' % new_name)
             return
 
         UUID = self.getNodeID(old_name)
 
         if UUID:
-            dagnodes = self.getNode(UUID)
+            dagnodes = self.get_node(UUID)
             self.network.node[UUID]['name'] = new_name
             
             if dagnodes:
@@ -783,8 +801,8 @@ class Graph(object):
             dest_name = d[0]
             dest_attr = d[2]
 
-            src_nodes = self.getNode(src_name)
-            dest_nodes = self.getNode(dest_name)
+            src_nodes = self.get_node(src_name)
+            dest_nodes = self.get_node(dest_name)
 
             src_node = None
             dest_node = None
@@ -850,28 +868,42 @@ class Graph(object):
             return nx.ancestors(self.network, nid)  
         return []
 
-    def validNodeName(self, name):
+    def is_valid_name(self, name):
         """
         Returns true if name not already assigned to a node.
-        """
-        return name not in self.listNodeNames()
 
-    def getValidNodeName(self, name):
+        params:
+            name (str) - node name to check against other nodes
+                         in the graph.
+
+        returns:
+            (bool) - node name is valid.
+        """
+        return name not in self.node_names()
+
+    def get_valid_name(self, name, force_int=True):
         """
         Returns a legal node name
 
         params:
-            name (str) - node name to query
-        """
-        name = re.sub(r'[^a-zA-Z0-9\[\]]','_', name)
-        if not re.search('\d+$', name):
-            name = '%s1' % name
+            name      (str)  - node name to query
+            force_int (bool) - always force a number as the last character (maya behavior)
 
-        while not self.validNodeName(name):
+        returns:
+            (str) - valid node name.
+        """
+        # cleaup invalid characters.
+        name = re.sub(r'[^a-zA-Z0-9\[\]]','_', name)
+
+        if force_int:
+            if not re.search('\d+$', name):
+                name = '%s1' % name
+
+        while not self.is_valid_name(name):
             node_num = int(re.search('\d+$', name).group())
             node_base = name.split(str(node_num))[0]
             for i in range(node_num+1, 9999):
-                if '%s%d' % (node_base, i) not in self.listNodeNames():
+                if '%s%d' % (node_base, i) not in self.node_names():
                     name = '%s%d' % (node_base, i)
                     break
         return name
@@ -882,7 +914,6 @@ class Graph(object):
         Runs when a node is changed in the graph.
         """
         print '# Graph: node changed: ', UUID
-        print kwargs
         
     #- Snapshots, Reading & Writing -----
     def snapshot(self):
@@ -894,7 +925,9 @@ class Graph(object):
         """
         if not self.evaluate():
             log.warning('graph did not evaluate correctly.')
-        graph_data = nxj.node_link_data(self.network)
+        attrs = {'source': 'source', 'target': 'target', 'key': 'key', 
+                'id': 'id', 'src_id': 'src_id', 'dest_id': 'dest_id', 'src_attr': 'src_attr', 'dest_attr': 'dest_attr'}
+        graph_data = nxj.node_link_data(self.network, attrs=attrs)
         return graph_data
 
     def graph_snapshot(self):
@@ -939,7 +972,7 @@ class Graph(object):
                 if node.get('name') not in nodes:
                     continue
 
-            dagnode = self.getNode(node.get('name'))
+            dagnode = self.get_node(node.get('name'))
             node_data_filtered.append(node)
             link_data_filtered.extend(self.connectedEdges(dagnode))
 
@@ -980,10 +1013,10 @@ class Graph(object):
         self.reset()
 
         graph_data = data.get('graph', [])
-        nodes = data.get('nodes', [])
-        edges = data.get('links', [])
+        node_data = data.get('nodes', [])
+        edge_data = data.get('links', [])
         
-        self.updateConsole(msg='restoring %d nodes' % len(nodes))
+        self.updateConsole(msg='restoring %d nodes' % len(node_data))
 
         # update graph attributes
         for gdata in graph_data:
@@ -993,7 +1026,7 @@ class Graph(object):
 
         # build nodes from data
         if nodes:
-            for node_attrs in nodes:
+            for node_attrs in node_data:
                 # get the node type
                 node_type = node_attrs.pop('node_type', 'default')
 
@@ -1001,16 +1034,17 @@ class Graph(object):
                 dag_node = self.add_node(node_type, **node_attrs)
                 log.debug('building node "%s"' % node_attrs.get('name'))
 
-            for edge_attrs in edges:
-                edge_id = edge_attrs.get('id')
-                src_id = edge_attrs.get('src_id')
-                dest_id = edge_attrs.get('dest_id')
+            # edge : ['src_attr', 'target', 'weight', 'dest_id', 'source', 'dest_attr', 'key', 'src_id']
+            for edge in edge_data:
 
-                src_attr = edge_attrs.get('src_attr')
-                dest_attr = edge_attrs.get('dest_attr')
+                src_id = edge.get('src_id')
+                dest_id = edge.get('dest_id')
 
-                src_dag_nodes = self.getNode(src_id)
-                dest_dag_nodes = self.getNode(dest_id)
+                src_attr = edge.get('src_attr')
+                dest_attr = edge.get('dest_attr')
+
+                src_dag_nodes = self.get_node(src_id)
+                dest_dag_nodes = self.get_node(dest_id)
 
                 if not src_dag_nodes or not dest_dag_nodes:
                     log.warning('cannot parse nodes.')
@@ -1023,28 +1057,51 @@ class Graph(object):
 
                 # TODO: need to get connection node here
                 log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))            
-                dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_id=src_id, dest_id=dest_id, id=edge_id)
+                dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_attr=src_attr, dest_attr=dest_attr)
 
+        #self.handler.scene.clear()
+        scene_pos = self.network.graph.get('view_center', (0,0))
+        view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
 
-                #self.handler.scene.clear()
-                scene_pos = self.network.graph.get('view_center', (0,0))
-                view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
+        # update the UI.
+        if self.handler is not None:
+            if graph:
+                view = self.handler.scene.views()[0]
+                view.resetTransform()
+                view.setCenterPoint(scene_pos)
+                view.scale(*view_scale)
 
-                # update the UI.
-                if self.handler is not None:
-                    if graph:
-                        view = self.handler.scene.views()[0]
-                        view.resetTransform()
-                        view.setCenterPoint(scene_pos)
-                        view.scale(*view_scale)
-
-    def read(self, filename):
+    def read(self, filename, force=False):
         """
         Read a graph from a saved scene.
 
         params:
             filename - (str) file to read
         """
+        graph_data = self.read_file(filename)
+
+        if not graph_data:
+            log.error('scene "%s" appears to be invalid.' % filename)
+            return False
+
+        api_ver = [x[1] for x in graph_data.get('graph', []) if x[0] == 'api_version'][0]
+        if not self.version_check(graph_data):
+            if not force:
+                log.error('scene "%s" requires api version %s ( %s )' % (filename, options.API_MINIMUM, api_ver))
+                return False   
+
+        # restore from state.
+        self.restore(graph_data)
+        return self.setScene(filename)
+    
+    def read_file(self, filename):
+        """
+        Read a data file and return the data.
+        """
+        # substitute home variable.
+        if '~' in filename:
+            filename = re.sub('~', os.getenv('HOME'), filename)
+
         if not os.path.exists(filename):
             log.error('file %s does not exist.' % filename)
             return False
@@ -1052,11 +1109,30 @@ class Graph(object):
         log.info('reading scene file "%s"' % filename)
         raw_data = open(filename).read()
         graph_data = json.loads(raw_data, object_pairs_hook=dict)
-        
-        # restore from state.
-        self.restore(graph_data)
-        return self.setScene(filename)
-    
+        return graph_data
+
+    def version_check(self, data):
+        """
+        Check to make sure the document is readable.
+
+        params:
+            data (dict) - raw json data from file.
+
+        returns:
+            (bool) - file is readable.
+        """
+        # version check
+        api_ver = 0.0
+        gdata = data.get('graph', [])
+
+        for gd in gdata:
+            key, val = gd
+            if key == 'api_version':
+                api_ver = float('.'.join(val.split('.')[:-1]))
+        if api_ver:
+            return api_ver >= options.API_MINIMUM
+        return False
+
     @property
     def version(self):
         """
@@ -1095,8 +1171,8 @@ class Graph(object):
         dag_names = [node1.name, node2.name]
         for edge in self.network.edges(data=True):
             src_id, dest_id, attrs = edge
-            dagnode1 = self.getNode(src_id)
-            dagnode2 = self.getNode(dest_id)
+            dagnode1 = self.get_node(src_id)
+            dagnode2 = self.get_node(dest_id)
 
             if dagnode1.name in dag_names and dagnode2.name in dag_names:
                 return True
@@ -1120,11 +1196,15 @@ class Graph(object):
         """
         Prints a list of plugins.
         """
+        if self.pmanager._node_data:
+            print '#' * 35
+            print ' PLUGINS LOADED: %d' % (len(self.pmanager._node_data))
+            print '#' * 35
         for node_type, data in self.pmanager._node_data.iteritems():
-            print '\n# Node: %s: ' % node_type
-            print '    source file: %s' % data.get('source')
-            print '    metadata:    %s' % data.get('metadata')
-            print '    widget:      %s' % data.get('widget', '(none)')
+            print '\n%s\n%s\n%s' % ('#' *35, node_type, '#' * 35)
+            print 'source file: %s' % data.get('source')
+            print 'metadata:    %s' % data.get('metadata')
+            print 'widget:      %s' % data.get('widget', '(none)')
 
 
 class Array(object):

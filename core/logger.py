@@ -9,17 +9,21 @@ LOGGERS = {}
 LOGGER_LEVEL = logging.INFO
 
 
-def myLogger():
+def myLogger(name=None):
     global LOGGERS
     from SceneGraph import options
-    if LOGGERS.get(options.PACKAGE):
-        return LOGGERS.get(options.PACKAGE)
+
+    if name is None:
+        name = options.PACKAGE
+
+    if LOGGERS.get(name):
+        return LOGGERS.get(name)
     else:
-        logger=logging.getLogger(options.PACKAGE)
+        logger=logging.getLogger(name)
         logger.setLevel(LOGGER_LEVEL)
         
         console_handler = logging.StreamHandler()
-        file_handler = logging.FileHandler(getLogFile())        
+        file_handler = logging.FileHandler(getLogFile(name))        
 
         formatter_console = logging.Formatter('[%(name)s]: %(levelname)s: %(message)s')
         formatter_file = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -56,10 +60,10 @@ def disableDebugging():
     return
 
 
-def getLogFile():
+def getLogFile(name):
     """ Returns the user log file """
     import os
     from SceneGraph import options
     if not os.path.exists(options.SCENEGRAPH_PREFS_PATH):
         os.makedirs(options.SCENEGRAPH_PREFS_PATH)
-    return os.path.join(options.SCENEGRAPH_PREFS_PATH, '%s.log' % options.PACKAGE)
+    return os.path.join(options.SCENEGRAPH_PREFS_PATH, '%s.log' % name)

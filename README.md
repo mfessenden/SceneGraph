@@ -22,7 +22,7 @@
     dags = graph.nodes()
 
     # return a named dag node
-    dagnode = graph.getNode('node1')
+    dagnode = graph.get_node('node1')
 
     # get node attributes
     dagnode.getNodeAttributes()
@@ -33,10 +33,10 @@
     # querying widgets
 
     # get an output connection widget
-    c_output=n1.getConnection('output')
+    c_output=n1.get_connection('output')
 
     # query an edge 
-    e1=scene.getEdge('node1.output', 'node2.input')[0]
+    e1=scene.get_edge('node1.output', 'node2.input')[0]
 
     # get edge source item (Connection)
     e1.source_item
@@ -63,7 +63,7 @@
         conn = n1.output_connections()
 
     # add a new input and output attribute
-    n1.addInput(name='fileIn')
+    n1.add_input(name='fileIn')
 
     # connect the nodes (default output/inputs assumed)
     e1 = g.add_edge(n1, n2)
@@ -121,6 +121,9 @@ icn_build -f ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/icons.p
 # scratch
 from SceneGraph import core
 g=core.Graph(debug=True)
-m1=g.getNode('merge1')[0]
+g.edge_nice_name('732e7908-6264-4e96-b95b-1fe72c9e2f61', '0abdbeaf-681c-4d85-a712-7b3bd7e7a8d4')
+pm=g.pmanager
+m1=g.get_node('merge1')[0]
 e1=g.edges()[0]
+c=m1.get_input('input')
 

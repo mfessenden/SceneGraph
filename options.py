@@ -17,10 +17,11 @@ def setup_platform_defaults():
 
 
 PACKAGE                     = 'SceneGraph'
-API_VERSION                 = 0.62
-API_REVISION                = 4
+API_VERSION                 = 0.63
+API_REVISION                = 0
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_VERSION, API_REVISION)
 PLATFORM                    = setup_platform_defaults()
+API_MINIMUM                 = 0.630
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)
 SCENEGRAPH_PLUGIN_PATH      = os.path.join(SCENEGRAPH_PATH, 'plugins')

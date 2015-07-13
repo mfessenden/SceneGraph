@@ -88,6 +88,10 @@ class NodeWidget(QtGui.QGraphicsObject):
 
     #- Attributes ----
     @property
+    def id(self):
+        return self.dagnode.id
+    
+    @property
     def name(self):
         return self.dagnode.name
 
@@ -142,12 +146,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
     @property
     def is_expanded(self):
-        return self.dagnode.expanded
-
-    @is_expanded.setter
-    def is_expanded(self, val):
-        self.dagnode.expanded = val
-        return self.dagnode.expanded
+        return len(self.inputs) > 1 or len(self.outputs) > 1
 
     #- TESTING ---
     def labelDoubleClickedEvent(self):
@@ -174,7 +173,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
     def mouseDoubleClickEvent(self, event):
         """
-        translate Y: height_expanded - height_collapsed/2
+        translate Y: height_expanded - base_height/2
         """
         expanded = self.dagnode.expanded        
         ### DISABLING EXPANDED ###
@@ -182,7 +181,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.dagnode.expanded = not self.dagnode.expanded
 
         # translate the node in relation to it's expanded height
-        diffy = (self.dagnode.height_expanded - self.dagnode.height_collapsed)/2
+        diffy = (self.dagnode.height_expanded - self.dagnode.base_height)/2
         if expanded:
             diffy = -diffy
         self.translate(0, diffy)
@@ -268,7 +267,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         height = rect.height()
         ypos = -rect.center().y()
         if self.is_expanded:         
-            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+            ypos = -(height / 2 ) +  self.dagnode.base_height * 2
         return QtCore.QPointF(-width/2, ypos)
 
     @property
@@ -284,7 +283,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         height = rect.height()
         ypos = -rect.center().y()
         if self.is_expanded:         
-            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+            ypos = -(height / 2 ) +  self.dagnode.base_height * 2
         return QtCore.QPointF(width/2, ypos)
 
     @property
@@ -397,7 +396,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         if name not in self.inputs:
             return 
-        return self.connections.get('input').get(name)
+        return self.connections.get(name)
 
     def getOutputConnection(self, name):
         """
@@ -408,7 +407,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         if name not in self.outputs:
             return 
-        return self.connections.get('output').get(name)
+        return self.connections.get(name)
 
     def getConnection(self, name):
         """
@@ -421,10 +420,10 @@ class NodeWidget(QtGui.QGraphicsObject):
             return 
 
         if name in self.inputs:
-            return self.connections.get('input').get(name)
+            return self.connections.get(name)
 
         if name in self.outputs:
-            return self.connections.get('output').get(name)
+            return self.connections.get(name)
 
     def buildConnections(self):
         """
@@ -433,55 +432,52 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         for input_name in self.dagnode.inputs:            
             # connection dag node
-            input_dag = self.dagnode._inputs.get(input_name)
+            input_dag = self.dagnode.get_connection(input_name)
             input_widget = Connection(self, input_dag, input_name, **input_dag)
-            self.connections['input'][input_name] = input_widget
+            self.connections[input_name] = input_widget
 
         for output_name in self.dagnode.outputs:
             # connection dag node
-            output_dag = self.dagnode._outputs.get(output_name)
+            output_dag = self.dagnode.get_connection(output_name)
             output_widget = Connection(self, output_dag, output_name, **output_dag)
-            self.connections['output'][output_name] = output_widget
+            self.connections[output_name] = output_widget
 
     def removeConnectionWidgets(self):
         """
         Remove all of the connection widgets.
         """
-        for input_name in self.connections.get('input'):            
-            input_widget = self.connections.get('input').get(input_name)
-            if input_widget:
-                self.scene().removeItem(input_widget)
+        for conn_name in self.connections:            
+            conn_widget = self.connections.get(conn_name)
+            if conn_widget:
+                self.scene().removeItem(conn_widget)
 
-        for output_name in self.dagnode.outputs:
-            output_widget = self.connections.get('output').get(output_name)
-            if output_widget:
-                self.scene().removeItem(output_widget)
-
-    def updateConnections(self):
+    def drawConnections(self):
         """
         Update all of the connection widgets.
         """
-        i = 0
-        for input_name in self.connections.get('input'):            
-            input_widget = self.connections.get('input').get(input_name)
-            input_pos = self.input_pos
-            y_offset1 = 0
-            if i:
-                y_offset1 = self.dagnode.height_collapsed * i
-            input_pos.setY(input_pos.y() + y_offset1)
-            input_widget.setPos(input_pos)
-            i += 1
+        ipos = self.input_pos
+        opos = self.output_pos
 
-        o = 0
-        for output_name in self.dagnode.outputs:
-            output_widget = self.connections.get('output').get(output_name)
-            output_pos = self.output_pos
-            y_offset2 = 0
-            if o:
-                y_offset2 = self.dagnode.height_collapsed * o
-            output_pos.setY(output_pos.y() + y_offset2)
-            output_widget.setPos(output_pos)
-            o += 1
+        iconn_cnt = 0
+        oconn_cnt = 0
+
+        y_offset_in = 0
+        y_offset_ou = 0
+
+        for conn_name in reversed(self.connections.keys()):    
+            conn_widget = self.connections.get(conn_name)
+
+            if conn_widget.is_input:
+                y_offset_in = self.dagnode.base_height * iconn_cnt
+                conn_widget.setY(ipos.y() + y_offset_in)
+                conn_widget.setX(ipos.x())
+                iconn_cnt += 1
+
+            if conn_widget.is_output:
+                y_offset_ou = self.dagnode.base_height * oconn_cnt
+                conn_widget.setY(opos.y() + y_offset_ou)
+                conn_widget.setX(opos.x())
+                oconn_cnt += 1
 
     def paint(self, painter, option, widget):
         """
@@ -501,7 +497,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
         # translate the label
         self.label.setPos(self.label_pos)        
-        self.updateConnections()
+        self.drawConnections()
 
         if self._render_effects:
             # background
@@ -572,12 +568,26 @@ class EdgeWidget(QtGui.QGraphicsObject):
     
     Type          = QtGui.QGraphicsObject.UserType + 2
     adjustment    = 5
-    nodeDeleted   = QtCore.Signal(object) 
+    nodeDeleted   = QtCore.Signal(object)
 
-    def __init__(self, dagnode, source_item, dest_item, *args, **kwargs):
+    """
+    class EdgeWidget:
+
+        Widget represention of an graph edge.
+
+    params:
+        edge (dict)              - nx edge: (id, id, {attributes})
+        source_item (Connection) - source node connection
+        dest_item (Connection)   - destination node connection
+    """
+    def __init__(self, edge, source_item, dest_item, *args, **kwargs):
         QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
 
-        self.dagnode         = dagnode
+        #edge: (id, id, {attributes})
+        # edge attributes
+        self.src_id          = edge.get('src_id')
+        self.dest_id         = edge.get('dest_id')
+        self.edge_data       = edge                   # nx edge: (id, id, {attributes})  
 
         # globals
         self._l_color        = [224, 224, 224]        # line color
@@ -597,7 +607,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.multi_conn      = False                  # multiple connections (future)
         self.edge_type       = 'bezier'
 
-        # Connections
+        # Connection widgets
         self.source_item     = source_item
         self.dest_item       = dest_item
 
@@ -620,6 +630,19 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.setAcceptsHoverEvents(True)
         self.setZValue(-1.0)
 
+    def __del__(self):
+        self.breakConnections()
+
+    @property 
+    def ids(self):
+        """
+        Return an easy-to-query attribute to check nx edges.
+
+        returns:
+            (tuple) - edge source id, edge destination id
+        """
+        return (self.src_id, self.dest_id)
+
     def connect_terminal(self, conn):
         """
         Connect the edge widget to the connection passed.
@@ -630,10 +653,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (bool) - connection succeeded.
         """
-        if self.dagnode.id in conn.connections:
+        # conn.connections (dict of edge id, edge widget)
+        if self.ids in conn.connections:
             log.warning('edge is already connected to: "%s"' % conn.connection_name)
             return False
-        conn.connections[self.dagnode.id] = self
+
+        conn.connections[self.ids] = self
         return True
 
     def disconnect_terminal(self, conn):
@@ -646,8 +671,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (bool) - disconnection succeeded.
         """
-        if self.dagnode.id in conn.connections:
-            conn.connections.pop(self.dagnode.id)
+        if self.ids in conn.connections:
+            conn.connections.pop(self.ids)
             return True
         return False
 
@@ -655,9 +680,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Disconnect all connection objects.
         """
-        self.source_item.connections.pop(self.dagnode.id)
-        self.dest_item.connections.pop(self.dagnode.id)
-        return True
+        result = True
+        if not self.disconnect_terminal(self.source_item):
+            result = False
+        if not self.disconnect_terminal(self.source_item):
+            result = False
+        return result
 
     def __str__(self):
         return 'Edge("%s")' % self.name
@@ -682,21 +710,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
         return (self.source_item.node, self.dest_item.node)
 
     @property
-    def source_connection(self):
-        return '%s.%s' % (self.source_item.node.dagnode.name, self.source_item.name)
-
-    @property
-    def dest_connection(self):
-        return '%s.%s' % (self.dest_item.node.dagnode.name, self.dest_item.name)
-
-    @property
-    def name(self):
-        return "%s,%s" % (self.source_connection, self.dest_connection)
-
-    @property
     def source_node(self):
         """
         Returns the source node widget.
+
+        returns:
+            (NodeWidget) - source node.
         """
         return self.source_item.node
 
@@ -704,8 +723,35 @@ class EdgeWidget(QtGui.QGraphicsObject):
     def dest_node(self):
         """
         Returns the destination node widget.
+
+        returns:
+            (NodeWidget) - destination node.
         """
         return self.dest_item.node
+
+    @property
+    def source_connection(self):
+        """
+        returns:
+            (str) - source connection name (ie: "node1.output").
+        """
+        return '%s.%s' % (self.source_item.node.dagnode.name, self.source_item.name)
+
+    @property
+    def dest_connection(self):
+        """
+        returns:
+            (str) - destination connection name (ie: "node2.input").
+        """
+        return '%s.%s' % (self.dest_item.node.dagnode.name, self.dest_item.name)
+
+    @property
+    def name(self):
+        """
+        returns:
+            (str) - connection string.
+        """
+        return "%s,%s" % (self.source_connection, self.dest_connection)
 
     @property
     def line_color(self):
@@ -787,6 +833,9 @@ class EdgeWidget(QtGui.QGraphicsObject):
         return path
 
     def getCenterPoint(self):
+        """
+        Returns the node center point.
+        """ 
         line = self.getLine()
         centerX = (line.p1().x() + line.p2().x())/2
         centerY = (line.p1().y() + line.p2().y())/2
@@ -899,6 +948,9 @@ class Connection(QtGui.QGraphicsObject):
     def __init__(self, parent, conn_node, name, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
 
+        # attribute params (kwargs):'default_value', 'is_user', 'is_locked', 
+        # 'connection_type', 'value', 'is_required', 'is_connectable', 'is_private', 'max_connections'
+
         self.dagnode        = parent.dagnode
         self.dagconn        = conn_node
 
@@ -913,6 +965,8 @@ class Connection(QtGui.QGraphicsObject):
         self.is_proxy       = False                  # connection is a proxy for several connections
 
         # widget colors
+        self._i_color       = [255, 255, 41, 255]    # input color
+        self._o_color       = [0, 204, 0, 255]       # output color   
         self._l_color       = [5, 5, 5, 200]         # label color
         self._s_color       = [0, 0, 0, 60]          # shadow color
         self._p_color       = [178, 187, 28, 255]    # proxy node color
@@ -925,7 +979,7 @@ class Connection(QtGui.QGraphicsObject):
         # label
         self.label          = QtGui.QGraphicsSimpleTextItem(self)
 
-        # connections (dict of edge id, edge widget)
+        # dict: {(id, id) : edge widget} 
         self.connections    = dict()
 
         self.setAcceptHoverEvents(True)
@@ -933,6 +987,9 @@ class Connection(QtGui.QGraphicsObject):
 
     def __repr__(self):
         return 'Connection("%s")' % self.connection_name
+
+    def __del__(self):
+        print '# Connection "%s" deleted.' % self.name
 
     @property 
     def connection_name(self):
@@ -946,10 +1003,9 @@ class Connection(QtGui.QGraphicsObject):
     def is_input(self):
         return self.dagconn.is_input
 
-    @is_input.setter
-    def is_input(self, val):
-        self.dagnode.is_input = val
-        return self.dagconn.is_input
+    @property
+    def is_output(self):
+        return self.dagconn.is_output
 
     @property
     def is_connected(self):
@@ -965,7 +1021,7 @@ class Connection(QtGui.QGraphicsObject):
 
     @property
     def is_expanded(self):
-        return self.dagnode.expanded
+        return self.node.is_expanded
 
     @property
     def max_connections(self):
@@ -981,32 +1037,11 @@ class Connection(QtGui.QGraphicsObject):
             return True
         return len(self.connections) < self.max_connections
 
-    @property
-    def id(self):
-        if self.dagnode:
-            return str(self.dagnode.id)
-        return None
-
     def type(self):
         """
         Assistance for the QT windowing toolkit.
         """
         return Connection.Type
-
-    @property
-    def color(self):
-        """
-        Return the 'node color' (background color)
-        """
-        return self.dagconn.color
-
-    @color.setter
-    def color(self, val):
-        """
-        Return the 'node color' (background color)
-        """
-        self.dagconn.color = val
-        return self.color
 
     @property
     def bg_color(self):
@@ -1016,6 +1051,9 @@ class Connection(QtGui.QGraphicsObject):
         returns:
             (QColor) - widget background color.
         """
+        color = self._i_color
+        if self.is_output:
+            color = self._o_color
         if not self.is_enabled:
             return QtGui.QColor(*[125, 125, 125])
 
@@ -1024,7 +1062,7 @@ class Connection(QtGui.QGraphicsObject):
                 return QtGui.QColor(*[137, 204, 226])
             else:
                 return QtGui.QColor(*[238, 46, 36])
-        return QtGui.QColor(*self.color)
+        return QtGui.QColor(*color)
 
     @property
     def pen_color(self):
@@ -1453,12 +1491,6 @@ class ProxyConnection(QtGui.QGraphicsObject):
          0 - unlimited connections
         """
         return True
-
-    @property
-    def id(self):
-        if self.dagnode:
-            return str(self.dagnode.id)
-        return None
 
     def type(self):
         """

@@ -13,43 +13,41 @@ from SceneGraph import util
 """
 from SceneGraph import core
 g=core.Graph('/Users/michael/graphs/connections.json')
-n2=g.getNode('node2')[0]
+n2=g.get_node('node2')[0]
 """
 
 
 class DagNode(MutableMapping):
 
-    reserved      = ['_data', '_graph', '_inputs', '_outputs', '_widget', '_attributes', '_metadata']
+    reserved      = ['_data', '_graph', '_widget', '_attributes', '_metadata', '_command']
 
     def __init__(self, *args, **kwargs):
 
         # special attributes
         self._data              = dict()
-        self._inputs            = dict()
-        self._outputs           = dict()
         self._attributes        = dict()
         self._metadata          = kwargs.pop('_metadata', None)
         
-        self.name               = kwargs.pop('name', 'node1')
+        self.default_name       = 'dag'
+        self.name               = kwargs.pop('name', self.default_name)
         self.node_type          = kwargs.pop('node_type', 'default')
 
-        # reference to the node widget.
-        self._widget            = None  
-
         self.width              = kwargs.pop('width', 100.0)
-        self.height_collapsed   = kwargs.pop('height_collapsed', 15.0)
-        self.height_expanded    = kwargs.pop('height_expanded', 175.0)
+        self.base_height        = kwargs.pop('base_height', 15.0)
 
         self.color              = kwargs.pop('color', [172, 172, 172, 255])
-        self.expanded           = kwargs.pop('expanded', False)
 
         self.pos                = kwargs.pop('pos', (0,0))
         self.enabled            = kwargs.pop('enabled', True)
         self.orientation        = kwargs.pop('orientation', 'horizontal')
 
+        # SUBCLASS
+        # reference to the node widget.
+        self._widget            = None  
+
         # connections
-        input_connections       = kwargs.pop('_inputs', {'input':{}})
-        output_connections      = kwargs.pop('_outputs', {'output':{}})
+        input_connections       = kwargs.pop('inputs', {'input':{}})
+        output_connections      = kwargs.pop('outputs', {'output':{}})
 
 
         if type(input_connections) in [list, tuple]:
@@ -60,10 +58,10 @@ class DagNode(MutableMapping):
 
         # add input & output connections
         for input_name, input_attrs in input_connections.iteritems():
-            self.addInput(name=input_name, **input_attrs)
+            self.add_input(name=input_name, **input_attrs)
 
         for output_name, output_attrs in output_connections.iteritems():
-            self.addOutput(name=output_name, **output_attrs)
+            self.add_output(name=output_name, **output_attrs)
 
         # node unique ID
         UUID = kwargs.pop('id', None)
@@ -74,7 +72,7 @@ class DagNode(MutableMapping):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return self.name
+        return '%s : %s' % (self.node_type, self.name)
 
     def __getitem__(self, key, default=None):
         try:
@@ -97,7 +95,7 @@ class DagNode(MutableMapping):
 
         # auto-add attributes
         elif hasattr(value, 'keys'):
-            print '%s type: ' % key, value['type']
+            #print '%s type: ' % key, value['type']
             self.addAttr(key, **value)
         else:
             self._data[key] = value
@@ -132,14 +130,15 @@ class DagNode(MutableMapping):
     @property
     def data(self):
         data = copy.deepcopy(self._data)
-        data.update(_inputs=self._inputs)
-        data.update(_outputs=self._outputs)
         #data.update(_attributes=self._attributes)
         data.update(**self._attributes)
         return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
 
     def dumps(self):
-        print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
+        data = copy.deepcopy(self)
+        data._graph = 'SceneGraph.core.Graph'
+        data._widget = ""
+        print json.dumps(data, indent=5)
 
     @property
     def graph(self):
@@ -151,30 +150,35 @@ class DagNode(MutableMapping):
         return self.graph
 
     @property
+    def expanded(self):
+        height = max(len(self.inputs), len(self.outputs))
+        return height > 1
+
+    @property
     def height(self):
-        if self.expanded:
-            return self.height_expanded
-        return self.height_collapsed
+        btm_buffer = 0
+        height = max(len(self.inputs), len(self.outputs))
+        if height > 1:
+            height+=1
+            btm_buffer = self.base_height/2
+        return (height * self.base_height) + btm_buffer
 
     @height.setter
     def height(self, value):
-        if self.expanded:
-            self.height_expanded=value
-            return
-        self.height_collapsed=value
+        self.base_height=value
 
     #- Connections ----
-    def addInput(self, **kwargs):
+    def add_input(self, **kwargs):
         """
         Add a named input to the node.
 
         returns:
-            (object) - Connection object
+            (object) - Attribute object
         """
         name = kwargs.pop('name', 'input')
-        node = Connection(self, **kwargs)
-        self._inputs.update({name:node})
-        return node
+        connection_type = kwargs.pop('connection_type', 'input')
+        is_connectable = kwargs.pop('is_connectable', True)
+        return self.addAttr(name, is_connectable=is_connectable, connection_type=connection_type, **kwargs)
 
     def get_input(self, name='input'):
         """
@@ -186,35 +190,42 @@ class DagNode(MutableMapping):
         returns:
             (Connection) - connection node.
         """
-        if name in self._inputs:
-            return self._inputs.get(name)
+        if not name in self._attributes:
+            return
+
+        attr_data = self._attributes.get(attr_name)
+        if attr_data.get('is_connectable') and attr_data.get('connection_type') == 'input':
+            return self._attributes.get(attr_name)
         return
 
-    def addOutput(self, **kwargs):
+    def add_output(self, **kwargs):
         """
-        Add a named input to the node.
+        Add a named output to the node.
 
         returns:
-            (object) - Connection object
+            (object) - Attribute object
         """
         name = kwargs.pop('name', 'output')
-        ctype = kwargs.pop('type', 'output')
-        node = Connection(self, type=ctype, **kwargs)
-        self._outputs.update({name:node})
-        return node
+        connection_type = kwargs.pop('connection_type', 'output')
+        is_connectable = kwargs.pop('is_connectable', True)
+        return self.addAttr(name, is_connectable=is_connectable, connection_type=connection_type, **kwargs)
 
-    def get_output(self, name='output'):
+    def get_output(self, name='input'):
         """
-        Return a named node output.
+        Return a named node input.
 
         params:
-            name (str) - name of output.
+            name (str) - name of input.
 
         returns:
             (Connection) - connection node.
         """
-        if name in self._outputs:
-            return self._outputs.get(name)
+        if not name in self._attributes:
+            return
+
+        attr_data = self._attributes.get(attr_name)
+        if attr_data.get('is_connectable') and attr_data.get('connection_type') == 'output':
+            return self._attributes.get(attr_name)
         return
 
     def input_connections(self):
@@ -225,15 +236,12 @@ class DagNode(MutableMapping):
             (list) - list of DagNode objects.
         """
         connected_nodes = []
-        for input_name in self._inputs:
-            conn = self._inputs.get(input_name)
-            if conn._edges:
-                for edge_id in conn._edges:
-                    dagedges = self.graph.getEdge(edge_id)
-                    if dagedges:
-                        dagedge = dagedges[0]
-                        if dagedge.source_node:
-                            connected_nodes.append(dagedge.source_node)
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if destid == self.id:
+                if srcid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(srcid))
         return connected_nodes
 
     def output_connections(self):
@@ -244,15 +252,12 @@ class DagNode(MutableMapping):
             (list) - list of DagNode objects.
         """
         connected_nodes = []
-        for output_name in self._outputs:
-            conn = self._outputs.get(output_name)
-            if conn._edges:
-                for edge_id in conn._edges:
-                    dagedges = self.graph.getEdge(edge_id)
-                    if dagedges:
-                        dagedge = dagedges[0]
-                        if dagedge.dest_node:
-                            connected_nodes.append(dagedge.dest_node)
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if srcid == self.id:
+                if destid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(destid))
         return connected_nodes
 
     @property
@@ -269,7 +274,7 @@ class DagNode(MutableMapping):
         """
         return bool(self.input_connections())   
 
-    def getConnection(self, name):
+    def get_connection(self, name):
         """
         Returns a named connection (input or output).
 
@@ -277,17 +282,18 @@ class DagNode(MutableMapping):
             name (str) - name of connection to query.
 
         returns:
-            (Connection) - connection object.
+            (Attribute) - connection object.
         """
         conn = None
-        if name in self.inputs:
-            conn = self._inputs.get(name)
+        if name not in self._attributes:
+            return 
 
-        if name in self.outputs:
-            conn = self._outputs.get(name)
-        return conn
+        attr_data = self._attributes.get(name)
+        if attr_data.get('is_connectable'):
+            return self._attributes.get(name)
+        return
 
-    def renameConnection(self, old, new):
+    def rename_connection(self, old, new):
         """
         Rename a connection.
 
@@ -298,20 +304,14 @@ class DagNode(MutableMapping):
         returns:
             (bool) - rename was successful.
         """
-        node = self.getConnection(old)
-        if node:
-            if node.is_input:
-                self._inputs.pop(old)
-                self._inputs.update({new:node})
-                return True
-
-            if node.is_output:
-                self._outputs.pop(old)
-                self._outputs.update({new:node})
-                return True
+        conn = self.get_connection(old)
+        if conn:
+            self._attributes.pop(old)
+            self._attributes.update({new:conn})
+            return True
         return False
 
-    def removeConnection(self, name):
+    def remove_connection(self, name):
         """
         Remove a named connection (input or output).
 
@@ -321,26 +321,28 @@ class DagNode(MutableMapping):
         returns:
             (bool) - connection was removed.
         """
-        conn = self.getConnection(name)
-        if conn:
-            if conn.is_input:
-                self._inputs.pop(name)
-            else:
-                self._outputs.pop(name)
-            del conn
+        if name in self._attributes:
+            if self._attributes.get('name').get('is_connectable'):
+                conn = self._attributes.pop(name)
+                del conn 
+                return True 
+        return False
 
-    def allConnections(self):
+    @property
+    def connections(self):
         """
         Returns a list of connections (input & output)
 
         returns:
             (list) - list of connection names.
         """
-        conn = self.inputs 
-        conn.extend(self.outputs)
-        return conn
+        conn_names = []
+        for name in self._attributes:
+            if self._attributes.get(name).get('is_connectable'):
+                conn_names.append(name)
+        return conn_names
 
-    def isConnected(self, name):
+    def is_connected(self, name):
         """
         Returns true if the named connection has 
         a connection.
@@ -351,35 +353,52 @@ class DagNode(MutableMapping):
         returns:
             (bool) - connection status.
         """
-        conn = self.getConnection(name)
+        conn = self.get_connection(name)
         if not conn:
             return False
         return not conn.is_connectable
 
     @property
     def inputs(self):
-        return self._inputs.keys()
+        """
+        Returns a list of input connection names.
+        """
+        input_names = []
+        for attr_name in self._attributes:
+            attr_data = self._attributes.get(attr_name)
+            if attr_data.get('is_connectable') and attr_data.get('connection_type') == 'input':
+                input_names.append(attr_name)
+        return input_names
 
     @property
     def outputs(self):
-        return self._outputs.keys()
+        """
+        Returns a list of output connection names.
+        """
+        input_names = []
+        for attr_name in self._attributes:
+            attr_data = self._attributes.get(attr_name)
+            if attr_data.get('is_connectable') and attr_data.get('connection_type') == 'output':
+                input_names.append(attr_name)
+        return input_names
 
     #- Attributes ----
-    def userAttributes(self):
+    def attributes(self, *args):
         """
-        Returns a dictionary of user attributes.
+        Returns a dictionary of connections attributes.
 
         returns:
-            (dict) - key, value pairs of user-added attributes.
+            (dict) - { connection name: Attribute }
         """
-        result = dict()
-        for k, v in self.data.iteritems():
-            if k not in self.reserved:
-                if hasattr(v, 'keys'):
-                    result[k]=v
-        return result
+        if not args:
+            return self._attributes.values()
+        else:
+            attrs = [x for x in self._attributes.values() if x.name in args]
+            if attrs and len(attrs) == 1:
+                return attrs[0]
+            return attrs
 
-    def addAttr(self, name, value=None, input=True, **kwargs):
+    def addAttr(self, name, value=None, is_connectable=False, **kwargs):
         """
         Add attributes to the current node.
 
@@ -393,82 +412,10 @@ class DagNode(MutableMapping):
         returns:
             (Attribute) - attribute object.
         """
-        # TODO: need a way to protect core values
-        attr = Attribute(name, value=value, input=input, **kwargs)
+        attr = Attribute(name, value=value, is_connectable=is_connectable, **kwargs)
         attr._node = self
         self._attributes.update({attr.name:attr})
         return attr
-
-    def getAttr(self, name):
-        """
-        Query any user attribute from the node, returning
-        the attribute value.
-
-        params:
-            name (str) - attribute name to query.
-
-        returns:
-            (n/a) - attribute value.
-        """
-        if name in self.getAttrs():
-            attr = self._attributes.get(name)
-            return attr.value
-        return
-
-    def getAttrNode(self, name):
-        """
-        Query any attribute from the node, returning
-        an Attribute object if the attr is a dict.
-
-        params:
-            name (str) - attribute name to query.
-
-        returns:
-            (Attribute) - attribute object.
-        """
-        if name in self.getAttrs():
-            return self._attributes.get(name)
-        return
-
-    def setAttr(self, name, value):
-        """
-        Set a named user attribute.
-
-        params:
-            name (str) - attribute name to query.
-            value (n/a) - value to set.
-
-        returns:
-            (n/a) - attribute value.
-        """
-        if name in self.getAttrs():
-            attr = self._attributes.get(name)
-            attr.value = value
-            return attr.value
-        return
-
-    def getAttrs(self):
-        """
-        Query all user atttributes.
-
-        returns:
-            (list) - list of attribute names.
-        """
-        return self._attributes.keys()
-
-    def deleteAttr(self, name):
-        """
-        Remove the attribute.
-
-        params:
-            name (str) - attribute name to remove.
-        
-        returns:
-            (bool) - attribute was removed.
-        """
-        attr = self.getAttr(name)
-        attr._node = None
-        return self._attributes.pop(name)
 
     @classmethod
     def ParentClasses(cls, p=None):
@@ -484,177 +431,35 @@ class DagNode(MutableMapping):
         return base_classes
 
 
-class DagEdge(MutableMapping):
-    """
-    Notes:
-        - needs a reference to source node, dest node.
-        - needs to be able to query either at any time.
-    """
-
-    reserved = ["_data", "_graph", "_source", "_dest"]
+'''
+class Connection(MutableMapping):
+    
+    reserved = ["_data", "_edges", "_node"]
     def __init__(self, *args, **kwargs):
 
-        # stash attributes
-        self._data              = dict()
-        self._source            = dict()
-        self._dest              = dict()
+        self._data             = dict()
+        self._edges            = []        # connected edges
 
-        self.src_id             = kwargs.pop('src_id', None)
-        self.dest_id            = kwargs.pop('dest_id', None)
-        
-        self.src_attr           = kwargs.pop('src_attr', 'output')
-        self.dest_attr          = kwargs.pop('dest_attr', 'input')
+        self._node             = None
+        self.type              = kwargs.get('type', 'input') 
+        self.input_color       = kwargs.pop('input_color', [255, 255, 51])
+        self.output_color      = kwargs.pop('output_color', [0, 204, 0])
+        self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
+        self.is_input          = True if self.type == 'input' else False
 
-        self.color              = kwargs.pop('color', [180, 180, 180])
+        # input nodes can have only one connection
+        if self.type == 'input':
+            self.max_connections = 1
 
-        # node unique ID
-        UUID = kwargs.pop('id', None)
-        self.id = UUID if UUID else str(uuid.uuid4())
+        for arg in args:
+            if isinstance(arg, DagNode):
+                self._node = arg
+
         self.update(**kwargs)
 
-        if len(args):
-            # source node
-            if isinstance(args[0], DagNode):
-                source_node = args[0]
-                self.src_id = source_node.id
-                self._source[source_node.id] = source_node
-
-                src_conn = source_node.get_output(name=self.src_attr)
-                if src_conn:
-                    if src_conn.is_connectable:
-                        if self.id not in src_conn._edges:
-                            src_conn._edges.append(self.id)
-
-            if len(args) > 1:
-                # destination node
-                if isinstance(args[1], DagNode):
-                    dest_node = args[1]
-                    self.dest_id = dest_node.id
-                    self._dest[dest_node.id] = dest_node
-
-                dest_conn = dest_node.get_input(name=self.dest_attr)
-                if dest_conn:
-                    if dest_conn.is_connectable:
-                        if self.id not in dest_conn._edges:
-                            dest_conn._edges.append(self.id)
-
-    def __del__(self):
-        self.breakConnections()
-
-    def breakConnections(self):
-        """
-        Remove the edge id from the connection nodes _edges attributes.
-        """
-        if not self.source_node or not self.dest_node:
-            log.warning('hmmm...edge is missing connected nodes.')
-            return
-
-        src_conn = self.source_node.get_output(name=self.src_attr)
-        dest_conn = self.dest_node.get_input(name=self.dest_attr)
-
-        if src_conn:
-            if self.id in src_conn._edges:
-                src_conn._edges.remove(self.id)
-        
-        if dest_conn:
-            if self.id in dest_conn._edges:
-                dest_conn._edges.remove(self.id)
-
     def __str__(self):
-        """printed"""
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-
-    def __repr__(self):
-        return self.id
-
-    def __getitem__(self, key, default=None):
-        try:
-            return self._data[key]
-        except KeyError:
-            return default
-
-    def __setitem__(self, key, value):
-        if key in self.reserved:
-            super(DagEdge, self).__setattr__(key, value)
-        else:
-            self._data[key] = value
-
-    def __delitem__(self, key):
-        del self._data[key]
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __getattr__(self, key, default=None):
-        try:
-            return self.__getitem__(key, default)
-        except KeyError as e:
-            raise AttributeError(e.args[0])
-
-    def __contains__(self, key):
-        return key in self._data
-
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
-
-    @property
-    def data(self):
-        data = copy.deepcopy(self._data)
-        src_id = self._source.keys()[0]
-        dest_id = self._dest.keys()[0]
-        #return {k: data[k] for k in data.keys() if data[k] or type(data[k]) is bool}
-        return (src_id, dest_id, data)        
-
-    def dumps(self):
-        print json.dumps(self.data, default=lambda obj: obj.data, indent=5)
-
-    @property
-    def name(self):
-        """
-        Return a edges' nice name.
-        """
-        return self._graph.parseEdgeName(self)
-
-    @property 
-    def source_node(self):
-        """
-        Returns the edge's source node.
-
-        returns:
-            (DagNode) - source dag node.
-        """
-        if self._source:
-            return self._source.values()[0]
-        return
-
-    @property 
-    def dest_node(self):
-        """
-        Returns the edge's destination node.
-
-        returns:
-            (DagNode) - destination dag node.
-        """
-        if self._dest:
-            return self._dest.values()[0]
-        return
-
-    @property
-    def graph(self):
-        return self._graph
-
-    @graph.setter
-    def graph(self, value):
-        self._graph = value
-        return self.graph
-
-    def updateGraph(self, msg):
-        if hasattr(self.MANAGER, 'updateGraph'):
-            self.MANAGER.updateGraph(msg)
-
+'''
 
 class Attribute(MutableMapping):
     """
@@ -664,6 +469,7 @@ class Attribute(MutableMapping):
     Private attributes should be added to the "reserved" attribute. In the
     default node types, the mapping is represented by the "_data" attribute.
     
+    Need to add:
     """
     reserved = ["_data", "_node", "_name", "_type"]
     def __init__(self, *args, **kwargs):
@@ -673,17 +479,36 @@ class Attribute(MutableMapping):
         self._node             = None
 
         self._name             = args[0] if args else None
-        self.default_value     = kwargs.get('default_value', None)
-        self.value             = kwargs.get('value', None)
+        self.default_value     = kwargs.get('default_value', "")
+        self.value             = kwargs.get('value', "")
 
-        # if we get a type argument, stash that
+        # stash argument passed to 'type' - overrides auto-type mechanism.
         self._type             = kwargs.get('type', None)
 
         # globals
         self.is_private        = kwargs.get('is_private', False)  # hidden
         self.is_connectable    = kwargs.get('is_connectable', False)
-        self.is_user           = kwargs.get('is_user', True)
-        self.is_locked         = kwargs.get('is_locked', False)  
+        self.is_user           = kwargs.get('is_user', False)
+        self.is_locked         = kwargs.get('is_locked', False)
+        self.is_required       = kwargs.get('is_required', False)
+
+        # connection
+        self.connection_type   = kwargs.get('connection_type', 'input')
+        self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
+
+        if self.is_input:
+            self.max_connections = 1
+
+    def dumps(self):
+        dstr = "\"%s\"" % self.name
+        dstr += json.dumps(self.data, default=lambda obj: obj.data, indent=5)
+        print dstr
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return (self.name) == (other.name)
 
     def __str__(self):
         """
@@ -746,14 +571,22 @@ class Attribute(MutableMapping):
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
-
-    @property
+    
+    @property 
     def node(self):
         return self._node
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def is_input(self):
+        return self.connection_type == 'input'
+
+    @property
+    def is_output(self):
+        return self.connection_type == 'output'
 
     @property
     def data(self):
@@ -782,12 +615,13 @@ class Attribute(MutableMapping):
         """
         if self.is_user:
             if self._type is not None:
-                return self._user_type
+                return self._type
         return util.attr_type(self.value)
 
-    @property 
-    def node(self):
-        return self._node
+    @type.setter 
+    def type(self, val):
+        self._type = val
+        return self.type
 
     def ParentClasses(self, p=None):
         """
@@ -800,7 +634,6 @@ class Attribute(MutableMapping):
                 base_classes.append(b.__name__)
                 base_classes.extend(self.ParentClasses(b))
         return base_classes
-
 
 
 class Connection(MutableMapping):
@@ -832,7 +665,7 @@ class Connection(MutableMapping):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __repr__(self):
-        return 'Connection("%s.%s")' %  (self.node.name, self.type)
+        return '"%s.%s"' %  (self.node.name, self.type)
 
     def __getitem__(self, key, default=None):
         try:

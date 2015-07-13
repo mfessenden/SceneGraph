@@ -179,7 +179,7 @@ class Node(QtGui.QGraphicsObject):
         self.update()
 
         # translate the node in relation to it's expanded height
-        diffy = (self.dagnode.height_expanded - self.dagnode.height_collapsed)/2
+        diffy = (self.dagnode.height_expanded - self.dagnode.base_height)/2
         if expanded:
             diffy = -diffy
         self.translate(0, diffy)
@@ -227,7 +227,7 @@ class Node(QtGui.QGraphicsObject):
         height = rect.height()
         ypos = -rect.center().y()
         if self.is_expanded:         
-            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+            ypos = -(height / 2 ) +  self.dagnode.base_height * 2
         return QtCore.QPointF(-width/2, ypos)
 
     @property
@@ -243,7 +243,7 @@ class Node(QtGui.QGraphicsObject):
         height = rect.height()
         ypos = -rect.center().y()
         if self.is_expanded:         
-            ypos = -(height / 2 ) +  self.dagnode.height_collapsed * 2
+            ypos = -(height / 2 ) +  self.dagnode.base_height * 2
         return QtCore.QPointF(width/2, ypos)
 
     @property
@@ -401,7 +401,7 @@ class Node(QtGui.QGraphicsObject):
             input_pos = self.input_pos
             y_offset1 = 0
             if i:
-                y_offset1 = self.dagnode.height_collapsed * i
+                y_offset1 = self.dagnode.base_height * i
             input_pos.setY(input_pos.y() + y_offset1)
             input_widget.setPos(input_pos)
             i += 1
@@ -412,7 +412,7 @@ class Node(QtGui.QGraphicsObject):
             output_pos = self.output_pos
             y_offset2 = 0
             if o:
-                y_offset2 = self.dagnode.height_collapsed * o
+                y_offset2 = self.dagnode.base_height * o
             output_pos.setY(output_pos.y() + y_offset2)
             output_widget.setPos(output_pos)
             o += 1

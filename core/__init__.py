@@ -11,7 +11,6 @@ from . import metadata
 # nodes
 Attribute           = nodes.Attribute
 DagNode             = nodes.DagNode
-DagEdge             = nodes.DagEdge
 Connection          = nodes.Connection
 
 

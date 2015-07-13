@@ -657,8 +657,8 @@ class SceneGraphUI(form_class, base_class):
         os.environ["SCENEGRAPH_DEBUG"] = val
         SCENEGRAPH_DEBUG = val
 
-        node_widgets = self.view.scene().getNodes()
-        edge_widgets = self.view.scene().getEdges()
+        node_widgets = self.view.scene().get_nodes()
+        edge_widgets = self.view.scene().get_edges()
 
         if node_widgets:
             for widget in node_widgets:
@@ -694,7 +694,8 @@ class SceneGraphUI(form_class, base_class):
         # clear the list view
         self.tableModel.clear()
         self.tableView.reset()
-        self.tableView.setHidden(True)  
+        self.tableView.setHidden(True)
+
         if selected_nodes:
             node = selected_nodes[0]
 
@@ -709,7 +710,6 @@ class SceneGraphUI(form_class, base_class):
             if node_selection_changed:
                 self._selected_nodes = selected_nodes
                 dagnodes = [x.dagnode for x in selected_nodes]
-
                 self.updateAttributeEditor(dagnodes)
 
                 # populate the graph widget with downstream nodes
@@ -718,7 +718,7 @@ class SceneGraphUI(form_class, base_class):
                     ds_ids = self.graph.downstream(node.dagnode.name)
                     dagnodes = []
                     for nid in ds_ids:
-                        dnodes = self.graph.getNode(nid)
+                        dnodes = self.graph.get_node(nid)
                         if dnodes:
                             dagnodes.append(dnodes[0])
 
@@ -1009,9 +1009,7 @@ class SceneGraphUI(form_class, base_class):
     def updateOutput(self):
         """
         Update the output text edit.
-        """
-        import networkx.readwrite.json_graph as nxj
-        
+        """        
         # store the current position in the text box
         bar = self.outputTextBrowser.verticalScrollBar()
         posy = bar.value()
@@ -1020,8 +1018,7 @@ class SceneGraphUI(form_class, base_class):
 
         # update graph attributes
         self.graph.updateGraphAttributes()
-        #graph_data = nxj.adjacency_data(self.graph.network)
-        graph_data = nxj.node_link_data(self.graph.network)
+        graph_data = self.graph.snapshot()
         html_data = self.formatOutputHtml(graph_data)
         self.outputTextBrowser.setHtml(html_data)
         self.outputTextBrowser.setFont(self.fonts.get('output'))
@@ -1104,8 +1101,8 @@ class SceneGraphUI(form_class, base_class):
         self.nodesModel.clear()
         self.edgesModel.clear()
 
-        nodes = self.view.scene().getNodes()
-        edges = self.view.scene().getEdges()
+        nodes = self.view.scene().get_nodes()
+        edges = self.view.scene().get_edges()
 
         self.nodesModel.addNodes(nodes)
         self.edgesModel.addEdges(edges)

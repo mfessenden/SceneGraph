@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from PySide import QtCore
 from SceneGraph import core
+from . import node_widgets
 
 log = core.log
 
@@ -8,6 +9,7 @@ log = core.log
 class SceneHandler(QtCore.QObject):
     # graph -> scene
     nodesAdded          = QtCore.Signal(list)
+    edgesAdded          = QtCore.Signal(list)
     nodesRemoved        = QtCore.Signal(list)   # remove??
     nodesUpdated        = QtCore.Signal(list)
     graphNodesRenamed   = QtCore.Signal(list)
@@ -58,7 +60,7 @@ class SceneHandler(QtCore.QObject):
                     self.graph.mode = 'ui'
                     log.info('SceneHandler: connecting Graph...')
 
-                    # load the node widgets
+                    # load the node widgets from disk
                     self.graph.pmanager.load_widgets()
                     return True
         return False
@@ -70,6 +72,7 @@ class SceneHandler(QtCore.QObject):
         log.info('SceneHandler: connecting SceneHandler to Scene.') 
         # connect scene functions
         self.nodesAdded.connect(self.scene.addNodes)
+        self.edgesAdded.connect(self.scene.addEdges)
         self.nodesUpdated.connect(self.scene.updateNodesAction)
 
         # connect graph functions
@@ -129,20 +132,49 @@ class SceneHandler(QtCore.QObject):
         self.updateConsole('adding %d nodes' % len(dagids))
         self.nodesAdded.emit(dagids)
 
-    def dagNodesRemoved(self, dagids):
+    def dagEdgesAdded(self, edges):
+        """
+        Signal Graph -> GraphicsScene.
+
+        params:
+            edges (list) - list edge dictionaries.
+        """
+        if type(edges) not in [list, tuple]:
+            edges = [edges,]
+
+        for edge in edges:
+            src_id = edge.get('src_id')
+            dest_id = edge.get('dest_id')
+            
+            src_attr = edge.get('src_attr')
+            dest_attr = edge.get('dest_attr')
+            wgt = edge.get('weight', 1)
+        self.edgesAdded.emit(edges)
+
+    def dagUpdated(self, dagids):
         """
         Signal Graph -> GraphicsScene.
         """
-        nodes_to_remove = []
-        for id in dagids:
-            if id in self.scene.scenenodes:
-                widget = self.scene.scenenodes.pop(id)
-                log.info('removing "%s"' % widget.name)
-                self.updateConsole('removing "%s"' % widget.name)
-                if widget and widget not in nodes_to_remove:
-                    nodes_to_remove.append(widget)
+        widgets_to_remove = []
+        for id in self.scene.scenenodes:
+            widget = self.scene.scenenodes.get(id)
+            if issubclass(type(widget), node_widgets.NodeWidget):
+                if widget.id not in self.graph.network.nodes():
+                    widgets_to_remove.append(widget)
 
-        for node in nodes_to_remove:
+            if issubclass(type(widget), node_widgets.EdgeWidget): 
+                if widget.ids not in self.graph.network.edges():
+                    widgets_to_remove.append(widget)
+
+        for node in widgets_to_remove:
+            if issubclass(type(node), node_widgets.EdgeWidget):
+                src_conn = node.source_item
+                dest_conn = node.dest_item
+
+                if node.breakConnections():
+                    print 'disconnected edge: %s' % node.name
+
+                #node.breakConnections()
             self.scene.removeItem(node)
 
     def updateNodes(self, dagnodes):
@@ -174,15 +206,16 @@ class SceneHandler(QtCore.QObject):
             return False
 
         for node in nodes:
-            dag = node.dagnode
-            nid = dag.id
-
-            if issubclass(type(dag), core.DagNode):
+            if issubclass(type(node), node_widgets.NodeWidget):
+                dag = node.dagnode
+                nid = dag.id
                 if self.graph.remove_node(nid):
                     log.debug('removing dag node: %s' % nid)
-            if issubclass(type(dag), core.DagEdge):
-                if self.graph.remove_edge(nid):
-                    log.debug('removing dag edge: %s' % nid)
+
+            if issubclass(type(node), node_widgets.EdgeWidget):
+                if node.ids in self.graph.network.edges():
+                    log.debug('removing edge: %s' % str(node.ids))
+                    self.graph.remove_edge(*node.ids)
 
     def sceneNodesUpdatedAction(self, nodes):
         """
@@ -203,3 +236,29 @@ class SceneHandler(QtCore.QObject):
         self.dagNodesUpdated.emit(dagnodes)
 
         # push to undo here
+
+"""
+def dagNodesRemoved(self, dagids):
+    ntype = 'node'
+    if type(dagids) is tuple:
+        ntype = 'edge'
+    
+    if ntype == 'node':
+        for id in dagids:
+            if id in self.scene.scenenodes:
+                widget = self.scene.scenenodes.pop(id)
+                log.info('removing %s: "%s"' % (ntype, widget.name))
+                self.updateConsole('removing %s: "%s"' % (ntype, widget.name))
+                if widget and widget not in nodes_to_remove:
+                    nodes_to_remove.append(widget)
+
+    elif ntype == 'edge':
+        for id in self.scene.scenenodes:
+            widget = self.scene.scenenodes.get(id)
+            if issubclass(type(widget), node_widgets.EdgeWidget):
+                if widget.ids == dagids:
+                    self.updateConsole('removing %s: "%s"' % (ntype, widget.name))
+                    if widget and widget not in nodes_to_remove:
+                        nodes_to_remove.append(widget)
+"""
+

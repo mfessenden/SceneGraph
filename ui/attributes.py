@@ -151,9 +151,15 @@ class AttributeEditor(QtGui.QWidget):
         self.mainGroup.setHidden(False)
 
         # update the main group title
+        node_types = list(set([x.node_type for x in self._nodes]))
+        node_type = None
         group_title = '( %d nodes )' % len(self._nodes)
+        if len(node_types) == 1:
+            node_type = node_types[0]
+            group_title = '( %d %s nodes )' % (len(self._nodes), node_type)
+
         if len(self._nodes) == 1:
-            group_title = '%s:' % self._nodes[0].name
+            group_title = '%s: %s:' % (node_type, self._nodes[0].name)
         self.mainGroup.setTitle(group_title)
 
     #- Events -----
@@ -219,15 +225,16 @@ class AttributeEditor(QtGui.QWidget):
         # set the nodes
         user_attrs = dict()
         for n in self.nodes:
-            a = n.userAttributes()
-            if a:
-                for k, v in a.iteritems():
-                    # todo, switch this up to include multiple nodes
-                    if k not in user_attrs:
-                        user_attrs[k]=dict()
-                        user_attrs.get(k).update(value=v.value)
-                        user_attrs.get(k).update(attr_type=v.type)
-                        user_attrs.get(k).update(private=v.is_private)
+            attributes = n.attributes()
+            if attributes:
+                for attr in attributes:
+                    if attr.is_user:
+                        # ['default_value', 'is_user', 'is_locked', 'value', 'connection_type', 'is_required', 'is_connectable', 'is_private', 'max_connections']
+
+                        user_attrs[attr.name]=dict()
+                        user_attrs.get(attr.name).update(value=attr.value)
+                        user_attrs.get(attr.name).update(attr_type=attr.type)
+                        user_attrs.get(attr.name).update(private=attr.is_private)
         return user_attrs
 
     @property
@@ -383,7 +390,7 @@ class AddAttributeDialog(QtGui.QDialog):
                 node.addAttr(attr_name, value=def_value, type=attr_type, is_connectable=connectable, is_user=True)
 
         #self.parent().updateChildEditors([attr_name])
-        self.parent().updateChildEditors()
+        self.parent().buildLayout()
         self.parent().handler.dagNodesUpdatedAction(self._nodes)
         self.close()
 
@@ -1169,11 +1176,24 @@ class StringEditor(QtGui.QWidget):
 
         # value 1 editor
         self.val1_edit = QtGui.QLineEdit(self)
+        regexp = QtCore.QRegExp('^([a-zA-Z0-9_]+)')
+        validator = QtGui.QRegExpValidator(regexp)
+        self.val1_edit.setValidator(validator)
+
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
+        self.val1_edit.textEdited.connect(self.validate_text)
         self.val1_edit.editingFinished.connect(self.valueUpdatedAction)
         self.val1_edit.returnPressed.connect(self.valueUpdatedAction)
+
+    def validate_text(self, text):
+        validator = self.val1_edit.validator()
+        state, txt, pos = validator.validate(self.val1_edit.text(), 0)
+        if state == QtGui.QValidator.State.Acceptable:
+            pass
+        if state == QtGui.QValidator.State.Invalid:
+            print 'invalid: ', txt
 
     @property
     def attribute(self):

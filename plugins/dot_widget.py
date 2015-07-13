@@ -30,8 +30,6 @@ class DotWidget(NodeWidget):
             output_widget = Connection(self, output_dag, output_name, **output_dag)
             self.connections['output'][output_name] = output_widget
 
-    def updateConnections(self):
-        pass
 
     def paint(self, painter, option, widget):
         """

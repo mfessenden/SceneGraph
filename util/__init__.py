@@ -124,3 +124,36 @@ def is_bool(s):
 
 def is_list(s):
     return type(s) in [list, tuple]
+
+
+def nodeParse(node):
+    t = node[u"type"]
+
+    if t == u"Program":
+        body = [parse(block) for block in node[u"body"]]
+        return Program(body)
+
+    elif t == u"VariableDeclaration":
+        kind = node[u"kind"]
+        declarations = [parse(declaration) for declaration in node[u"declarations"]]
+        return VariableDeclaration(kind, declarations)
+
+    elif t == u"VariableDeclarator":
+        id = parse(node[u"id"])
+        init = parse(node[u"init"])
+        return VariableDeclarator(id, init)
+
+    elif t == u"Identifier":
+        return Identifier(node[u"name"])
+
+    elif t == u"Literal":
+        return Literal(node[u"value"])
+
+    elif t == u"BinaryExpression":
+        operator = node[u"operator"]
+        left = parse(node[u"left"])
+        right = parse(node[u"right"])
+        return BinaryExpression(operator, left, right)
+
+    else:
+        raise ValueError("Invalid data structure.")

@@ -8,7 +8,7 @@ import inspect
 import time
 import simplejson as json
 
-from SceneGraph.core import log, DagNode, DagEdge, Connection
+from SceneGraph.core import log, DagNode, Connection
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH
 
 
@@ -41,6 +41,44 @@ class PluginManager(object):
         self.load_plugins(self._default_plugin_path)
         self.load_widgets(self._default_plugin_path)
 
+    @property
+    def globals(self):
+        return globals()
+
+    def query(self):
+        """
+        Query globals for loaded plugins.
+
+        returns:
+            (dict) - class name, filename
+        """
+        plugin_data = dict()
+        for k, v in globals().iteritems():
+            if inspect.isclass(v):
+                
+                filename = inspect.getsourcefile(v)
+                module = inspect.getmodule(v)
+
+                plugin_name = parse_module_variable(module, 'SCENEGRAPH_NODE_TYPE')
+                widget_name = parse_module_variable(module, 'SCENEGRAPH_WIDGET_TYPE')
+
+                if plugin_name or widget_name:
+                    plugin_data[k] = dict()
+                    plugin_data.get(k).update(filename=filename)
+
+                    if plugin_name:
+                        plugin_data.get(k).update(type='plugin')
+                        mtd_file = self._node_data.get(plugin_name).get('metadata', None)
+                        if mtd_file:
+                            plugin_data.get(k).update(metadata=mtd_file)
+                    if widget_name:
+                        plugin_data.get(k).update(type='widget')
+
+        return plugin_data
+
+    def pprint(self):
+        print json.dumps(self.query(), indent=5, sort_keys=True)
+
     def setLogLevel(self, level):
         """
          * debugging.
@@ -58,15 +96,18 @@ class PluginManager(object):
         """
         return DagNode.__subclasses__()
 
-    @property
-    def node_types(self):
+    def node_types(self, plugins=[], disabled=False):
         """
         Return a list of loaded node types.
+
+        params:
+            plugins (list)  - plugins to filter.
+            disabled (bool) - show disabled plugins.
 
         returns:
             (list) - list of node types (strings).
         """
-        return self._node_data.keys()  
+        return self.get_plugins(plugins=plugins, disabled=disabled) 
 
     @property
     def default_plugin_path(self):
@@ -182,7 +223,7 @@ class PluginManager(object):
                         if 'DagNode' in obj.ParentClasses(obj):
                             globals()[cname] = obj
                             imported.append(cname)                
-                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None}})
+                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
 
                             # add source and metadata files
                             if os.path.exists(src_file):
@@ -272,6 +313,25 @@ class PluginManager(object):
                         result.append(ad)
         return result
 
+    def get_plugins(self, plugins=[], disabled=False):
+        """
+        Return filtered plugin data.
+
+        params:
+            plugins (list)  - plugins to filter.
+            disabled (bool) - show disabled plugins.
+
+        returns:
+            (dict) - dictionary of plugin data.
+        """
+        result = dict()
+        for plugin in self._node_data:
+            if not plugins or plugin in plugins:
+                plugin_attrs = self._node_data.get(plugin)
+                if plugin_attrs.get('enabled', True) or disabled:
+                    result[plugin] = plugin_attrs
+        return result
+
     def get_dagnode(self, node_type, *args, **kwargs):
         """
         Return the appropriate dag node type.
@@ -313,6 +373,37 @@ class PluginManager(object):
         widget = self._node_data.get(dagnode.node_type).get('widget')
         return widget(dagnode)
 
+    def default_name(self, nodetype):
+        """
+        Return the DagNode's default name.
+
+        params:
+            nodetype (str) - node type to query.
+
+        returns:
+            (str) - node default name.
+        """
+        if nodetype in self._node_data:
+            cls = self._node_data.get(nodetype).get('dagnode')
+            if cls:
+                if hasattr(cls, 'default_name'):
+                    return cls.default_name
+        return
+
+    def enable(self, plugin, enabled=True):
+        """
+        Enable/disable plugins.
+        """
+        if not plugin in self._node_data:
+            log.error('plugin "%s" not recognized.' % plugin)
+            return False
+
+        for plug, plugin_attrs in self._node_data.iteritems():
+            if plug == plugin:
+                self._node_data.get(plugin).update(enabled=enabled)
+                return True
+        return False
+
     def flush(self):
         """
         Flush all currently loaded plugins.
@@ -324,7 +415,6 @@ class PluginManager(object):
                 if hasattr(obj, 'ParentClasses'):
                     if 'DagNode' in obj.ParentClasses(obj):
                         flush.append(attr)
-
 
         if flush:
             for f in flush:

@@ -1,9 +1,7 @@
 [transform]
 pos: short2: 0,0;
 width: int8: 100;
-height: int8: 15;
-height_expanded: int8: 120: -p;
-height_collapsed: int8: 20: -p;
+base_height: int8: 15: -p;
 [attributes]
 id: str: -p;
 name: str: node1;

@@ -9,10 +9,12 @@ from . import commands
 
 GraphicsView            = graphics.GraphicsView
 GraphicsScene           = graphics.GraphicsScene
+
 NodeWidget              = node_widgets.NodeWidget
 EdgeWidget              = node_widgets.EdgeWidget
 Connection              = node_widgets.Connection
 GraphTableModel         = models.GraphTableModel
+
 TableView               = models.TableView
 NodesListModel          = models.NodesListModel
 EdgesListModel          = models.EdgesListModel

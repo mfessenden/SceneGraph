@@ -14,17 +14,22 @@ DATA_EXPRS = dict(
      )
 
 
-DATA_PARAMS = dict(
+ATTR_FLAGS = dict(
     p = 'private',
     c = 'connectable',
     u = 'user',
     l = 'locked',
+    r = 'required',
     )
 
 
 class DataParser(object):
     """
-    Node metadata template parser
+    class DataParser:
+
+        DESCRIPTION:
+            read and parse node metadata (.mtd) files to build a 
+            template for the AttributeEditor widget.
     """
     def __init__(self, filename=None, **kwargs):
 
@@ -45,17 +50,23 @@ class DataParser(object):
 
     def read(self, filename):
         """
-        Read a template file.
+        Read a template file. Data is structured into groups
+        of attributes (ie: 'Transform', 'Attributes')
+
+        params:
+            filename (str) - file on disk to read.
         """
         if filename is not None:
             if os.path.exists(filename):
                 data = open(filename).read()
+
                 log.debug('reading metadata file "%s".' % filename)
                 current_category = None
                 for line in data.split('\n'):
                     val = self._parse_line(line)
-                    #print json.dumps(val, indent=5)
                     if val:
+                        
+                        # parse the 
                         if 'group_name' in val:
                             current_category = val.get('group_name')
                             if current_category not in self._data:
@@ -93,7 +104,13 @@ class DataParser(object):
 
     def _parse_tail(self, l):
         """
-        Parse attributes from a line of data.
+        Parse attribute flags from the end of the string.
+
+        params:
+            l (str) - line of data.
+
+        returns:
+            (dict) - attribute parameters.
         """
         attributes = dict()
         l=l.replace(" ", "")
@@ -104,8 +121,8 @@ class DataParser(object):
                     attrs = [x for x in list(v) if x!="-"]
                     if attrs:
                         for attr in attrs:
-                            if attr in DATA_PARAMS:
-                                attributes[DATA_PARAMS[attr]] = True
+                            if attr in ATTR_FLAGS:
+                                attributes[ATTR_FLAGS[attr]] = True
                 else:
                     attributes.update(default_value=v)
         return attributes

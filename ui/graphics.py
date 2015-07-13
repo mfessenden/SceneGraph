@@ -55,7 +55,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
         # context menu
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.showContextMenu)
+        #.customContextMenuRequested.connect(self.showContextMenu)
         self.connectSignals()
 
     def initializeSceneGraph(self, graph, ui, **kwargs):
@@ -238,6 +238,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Pan the viewport if the control key is pressed
         """
+        
         self.current_cursor_pos = event.pos()
         if event.modifiers() & QtCore.Qt.ControlModifier:
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
@@ -245,7 +246,9 @@ class GraphicsView(QtGui.QGraphicsView):
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
 
         if event.button() == QtCore.Qt.RightButton:
-            self.showContextMenu(event.pos())
+            item = self.itemAt(event.pos())
+            if item is not None:
+                self.showContextMenu(event.pos())
             
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
@@ -308,6 +311,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Pop up a node creation context menu at a given location.
         """
+
         menu = QtGui.QMenu()
         menuActions = ['add attribute']
         for action in menuActions:
@@ -431,32 +435,59 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         widget.nodeChanged.connect(self.nodeChangedEvent)
                         widget.nodeDeleted.connect(self.nodeDeletedEvent)
 
-                # adding an edge
-                elif isinstance(dag, core.DagEdge):              
-                    if dag_id not in self.scenenodes:
-                        # get the source connection node
+            else:
+                raise GraphException('invalid graph id: "%s"' % dag_id )
+        return widgets
 
-                        src_widget = self.getNode(dag.src_id)
-                        dest_widget = self.getNode(dag.dest_id)
+    def addEdges(self, edges):
+        """
+        Add edges to the current scene.
 
-                        # get the relevant connection terminals
-                        src_conn_widget = src_widget.getOutputConnection(dag.src_attr)
-                        dest_conn_widget = dest_widget.getInputConnection(dag.dest_attr)
+        params:
+            edges (list) - list of nx edge dictionaries.
+        """
+        if type(edges) not in [list, tuple]:
+            edges = [edges,]
 
-                        widget = node_widgets.EdgeWidget(dag, src_conn_widget, dest_conn_widget)
-                        widget.nodeDeleted.connect(self.nodeDeletedEvent)
+        widgets = []
+        for edge in edges:
 
-                        widget._render_effects = self.ui.render_fx
+            src_id = edge.get('src_id')
+            dest_id = edge.get('dest_id')
 
-                        # check that connection is valid. (implement this)
-                        if widget.connect_terminal(src_conn_widget) and widget.connect_terminal(dest_conn_widget):
-                            # set the debug mode
-                            widget.setDebug(self.debug)
-                            self.scenenodes[dag.id]=widget
-                            self.addItem(widget)
-                            widgets.append(widget)
-                else:
-                    raise GraphException('invalid graph id: "%s"' % dag_id )
+            src_attr = edge.get('src_attr', 'output')
+            dest_attr = edge.get('dest_attr', 'input')
+
+            weight = edge.get('weight', 1)
+
+            source_node = self.get_node(src_id)
+            dest_node  = self.get_node(dest_id)
+
+            # nodes not found? Seeya
+            if not source_node:
+                raise GraphException('invalid source id: "%s"' % srcid)
+                return False
+
+            if not dest_node:
+                raise GraphException('invalid destination id: "%s"' % destid)
+                return False
+
+            # get the relevant connection terminals
+            src_conn_widget = source_node.getOutputConnection(src_attr)
+            dest_conn_widget = dest_node.getInputConnection(dest_attr)
+            edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget)
+
+            edge_widget.nodeDeleted.connect(self.nodeDeletedEvent)
+            edge_widget._render_effects = self.ui.render_fx
+
+            # check that connection is valid. (implement this)
+            if edge_widget.connect_terminal(src_conn_widget) and edge_widget.connect_terminal(dest_conn_widget):
+                # set the debug mode
+                edge_widget.setDebug(self.debug)
+                self.scenenodes[edge_widget.ids]=edge_widget
+                self.addItem(edge_widget)
+                widgets.append(edge_widget)
+
         return widgets
 
     def removeNodes(self, nodes):
@@ -477,9 +508,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
             if isinstance(node, node_widgets.EdgeWidget):
                 print 'edge!'
-                self.graph.remove_edge(node.dagnode.id)
+                self.graph.remove_edge(*node.ids)
 
-    def getNodes(self):
+    def get_nodes(self):
         """
         Returns a list of node widgets.
 
@@ -492,7 +523,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 widgets.append(item)
         return widgets
 
-    def getNode(self, name):
+    def get_node(self, name):
         """
         Get a named node widget from the scene.
 
@@ -539,7 +570,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             return [n.dagnode for n in self.selectedNodes()]
         return []
 
-    def getEdges(self):
+    def get_edges(self):
         """
         Returns a list of edge widgets.
 
@@ -552,12 +583,12 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 edges.append(item)
         return edges
 
-    def getEdge(self, *args):
+    def get_edge(self, *args):
         """
         Return a named edge.
         """
         edges = []
-        for edge in self.getEdges():
+        for edge in self.get_edges():
             if edge.name in args:
                 edges.append(edge)
             if edge.source_connection in args:
@@ -616,9 +647,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                             # remove the edge from the connections
                             if conn_edge.disconnect_terminal(item):
-
+                                log.info('disconnecting edge')
                                 # todo: call manage?
-                                self.graph.remove_edge(conn_edge.dagnode.id)
+                                self.graph.remove_edge(*conn_edge.ids)
 
                                 edge_line = conn_edge.getLine()
                                 p1 = edge_line.p1()
@@ -759,8 +790,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                     for edge in edges:
                         log.warning('forcing edge removal: "%s"' % edge.name)
-                        edge_id = str(edge.dagnode.id)
-                        if self.graph.remove_edge(edge_id):
+                        if self.graph.remove_edge(*edge.ids):
                             continue
                         log.warning('edge removal failed: "%s"' % edge.name)
                     return True
