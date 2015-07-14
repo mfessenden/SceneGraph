@@ -3,13 +3,13 @@ from SceneGraph import options
 from SceneGraph.core.nodes import DagNode
 
 
-SCENEGRAPH_NODE_TYPE = 'lookdev'
+SCENEGRAPH_NODE_TYPE = 'asset'
 
 
-class Lookdev(DagNode):
+class Asset(DagNode):
 
-    default_name  = 'lookdev'
-    default_color = [241, 118, 110, 255]
+    default_name  = 'asset'
+    default_color = [174, 188, 43, 255]
     
     def __init__(self, *args, **kwargs):        
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
@@ -18,5 +18,5 @@ class Lookdev(DagNode):
         self.remove_connection('input')
         
         # add two inputs
-        for i in ['model', 'shader', 'shader_mapping']:
+        for i in ['model', 'lookdev', 'rig', 'texture']:
             self.add_input(name=i)

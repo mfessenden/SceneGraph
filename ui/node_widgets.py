@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import math
+import weakref
 from PySide import QtCore, QtGui
 from SceneGraph.core import log
 from SceneGraph import options
@@ -75,6 +76,25 @@ class NodeWidget(QtGui.QGraphicsObject):
         # set node position
         self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
         self.drawConnections()
+
+    def close(self):
+        """
+        Cleanup and delete the node and children.
+        """
+        for item in [self.background, self.label]:
+            if item is not None:
+                if item.scene() is not None:
+                    item.scene().removeItem(item)
+
+        # clean up terminals
+        for conn in self.connections.values():
+            if conn is not None:
+                if conn.scene() is not None:
+                    conn.scene().removeItem(conn)
+
+        if self is not None:
+            if self.scene() is not None:
+                self.scene().removeItem(self)
 
     def __str__(self):
         return '%s("%s")' % (self.__class__.__name__, self.dagnode.name)
@@ -172,17 +192,6 @@ class NodeWidget(QtGui.QGraphicsObject):
         translate Y: height_expanded - base_height/2
         """
         expanded = self.dagnode.expanded        
-        ### DISABLING EXPANDED ###
-        '''
-        self.dagnode.expanded = not self.dagnode.expanded
-
-        # translate the node in relation to it's expanded height
-        diffy = (self.dagnode.height_expanded - self.dagnode.base_height)/2
-        if expanded:
-            diffy = -diffy
-        self.translate(0, diffy)
-        self.nodeChanged.emit(self)
-        '''
         QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
         self.update()
 
@@ -532,7 +541,6 @@ class NodeWidget(QtGui.QGraphicsObject):
             painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
             painter.drawEllipse(self.input_pos, 4, 4)
 
-
     def setDebug(self, val):
         """
         Set the debug value of all child nodes.
@@ -577,7 +585,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         source_item (Connection) - source node connection
         dest_item (Connection)   - destination node connection
     """
-    def __init__(self, edge, source_item, dest_item, *args, **kwargs):
+    def __init__(self, edge, source_item, dest_item, weight=1.0, *args, **kwargs):
         QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
 
         #edge: (id, id, {attributes})
@@ -599,14 +607,15 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.is_hover        = False                  # indicates that the node is under the cursor
         self._render_effects = True                   # enable fx
 
+        self.weight          = weight
         self.arrow_size      = 8 
         self.show_conn       = False                  # show connection string
         self.multi_conn      = False                  # multiple connections (future)
         self.edge_type       = 'bezier'
 
         # Connection widgets
-        self.source_item     = source_item
-        self.dest_item       = dest_item
+        self.source_item     = weakref.ref(source_item, self.callback_source_deleted)
+        self.dest_item       = weakref.ref(dest_item, self.callback_dest_deleted)
 
         # points
         self.source_point    = QtCore.QPointF(0,0)
@@ -629,6 +638,18 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
     def __del__(self):
         self.breakConnections()
+
+    def close(self):
+        """
+        Delete the edge and child items.
+        """
+        self.breakConnections()
+        for item in [self.gline]:
+            if item.scene() is not None:
+                item.scene().removeItem(item)
+
+        if self.scene() is not None:
+            self.scene().removeItem(self)
 
     @property 
     def ids(self):
@@ -686,9 +707,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         Disconnect all connection objects.
         """
         result = True
-        if not self.disconnect_terminal(self.source_item):
+        if not self.disconnect_terminal(self.source_item()):
             result = False
-        if not self.disconnect_terminal(self.source_item):
+
+        if not self.disconnect_terminal(self.dest_item()):
             result = False
         return result
 
@@ -697,6 +719,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
     def __repr__(self):
         return 'Edge("%s")' % self.name
+
+    def callback_source_deleted(self):
+        print 'Edge source deleted.'
+
+    def callback_dest_deleted(self):
+        print 'Edge destination deleted.'
 
     def setDebug(self, val):
         """
@@ -712,7 +740,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (tuple) - source Node widget, dest Node widget
         """
-        return (self.source_item.node, self.dest_item.node)
+        return (self.source_item().node, self.dest_item().node)
 
     @property
     def source_node(self):
@@ -722,7 +750,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (NodeWidget) - source node.
         """
-        return self.source_item.node
+        return self.source_item().node
 
     @property
     def dest_node(self):
@@ -732,7 +760,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (NodeWidget) - destination node.
         """
-        return self.dest_item.node
+        return self.dest_item().node
 
     @property
     def source_connection(self):
@@ -740,7 +768,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (str) - source connection name (ie: "node1.output").
         """
-        return '%s.%s' % (self.source_item.node.dagnode.name, self.source_item.name)
+        if not self.source_item():            
+            if hasattr(self.source_item(), 'node'):
+                return '%s.%s' % (self.source_item().node.dagnode.name, self.source_item().name)
+        return '(source broken)'
 
     @property
     def dest_connection(self):
@@ -748,7 +779,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (str) - destination connection name (ie: "node2.input").
         """
-        return '%s.%s' % (self.dest_item.node.dagnode.name, self.dest_item.name)
+        if not self.dest_item():            
+            if hasattr(self.dest_item(), 'node'):
+                return '%s.%s' % (self.dest_item().node.dagnode.name, self.dest_item().name)
+        return '(dest broken)'
 
     @property
     def name(self):
@@ -788,8 +822,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Return the line between two points.
         """
-        p1 = self.source_item.sceneBoundingRect().center()
-        p2 = self.dest_item.sceneBoundingRect().center()
+        p1 = self.source_item().sceneBoundingRect().center()
+        p2 = self.dest_item().sceneBoundingRect().center()
 
         # offset the end point a few pixels
         p2 = QtCore.QPointF(p2.x(), p2.y())
@@ -852,10 +886,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         return QtCore.QPointF(ep.x(), ep.y())
 
     def getEndItem(self):
-        return self.dest_item.parentItem()
+        return self.dest_item().parentItem()
 
     def getStartItem(self):
-        return self.source_item.parentItem()
+        return self.source_item().parentItem()
 
     def shape(self):
         """
@@ -892,6 +926,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
         epen = self.gline.pen()
         epen.setColor(self.line_color)
+        epen.setWidthF(float(self.weight))
         painter.setPen(epen)
 
         #self.cp.visible = False
@@ -1219,16 +1254,13 @@ class Connection(QtGui.QGraphicsObject):
                 start_angle = start_angle * -1
             painter.drawPie(self.drawRect(), start_angle, 16*180)
         
-        # visualize the bounding rect if _debug attribute is true
-        if self._debug:
-            painter.setBrush(QtCore.Qt.NoBrush)
-            painter.setPen(QtGui.QPen(self.bg_color, 0.5, QtCore.Qt.DashLine))
-            painter.drawRect(self.boundingRect())
-
         # label
+        label_color = self.label_color
+        if self._debug:
+            label_color = QtGui.QColor(*[170, 170, 170])
         self.label.hide()
         if self.is_expanded:
-            self.label.setBrush(self.label_color)
+            self.label.setBrush(label_color)
             self.label.setFont(QtGui.QFont(self.node._cfont, self.node._cfont_size))
             self.label.show()
             self.label.setText(self.name)
@@ -1241,6 +1273,25 @@ class Connection(QtGui.QGraphicsObject):
 
             self.label.setToolTip('%d, %d (%.2f)' % (self.label.pos().x(), self.label.pos().y(), self.label.boundingRect().width()))
 
+        # visualize the bounding rect if _debug attribute is true
+        if self._debug:
+            painter.setBrush(QtCore.Qt.NoBrush)
+            painter.setPen(QtGui.QPen(self.bg_color, 0.5, QtCore.Qt.DashLine))
+            painter.drawRect(self.boundingRect())
+
+            if self.is_expanded:
+                painter.setPen(QtGui.QPen(QtGui.QColor(*[140, 140, 140]), 0.5, QtCore.Qt.DashLine))
+                self.label.setToolTip("(%.2f, %.2f)" % (self.label.pos().x(), self.label.pos().y()))
+                rect = self.label.sceneBoundingRect()
+                rect.moveTo(self.label.pos().x(), self.label.pos().y())
+                painter.drawRect(rect)
+
+    def setDebug(self, val):
+        """
+        Set the widget debug modeself.
+        """
+        if val != self._debug:
+            self._debug = val
 
 #- Sub-Widgets ----
 
@@ -1341,16 +1392,17 @@ class NodeLabel(QtGui.QGraphicsObject):
         qfont.setFamily("Menlo")
         self.label.setFont(qfont)
 
-        self.label.setDefaultTextColor(label_color)
-        self.text = self.node.dagnode.name
-
         # debug
         if self._debug:
+            label_color = QtGui.QColor(*[200, 200, 200])
             qpen = QtGui.QPen(QtGui.QColor(125,125,125))
             qpen.setWidthF(0.5)
             qpen.setStyle(QtCore.Qt.DashLine)
             painter.setPen(qpen)
             painter.drawPolygon(self.boundingRect())
+
+        self.label.setDefaultTextColor(label_color)
+        self.text = self.node.dagnode.name
 
 
 class NodeBackground(QtGui.QGraphicsItem):
@@ -1369,7 +1421,9 @@ class NodeBackground(QtGui.QGraphicsItem):
         return self.node.pen_width
 
     def boundingRect(self):
-        return self.node.boundingRect()
+        if self.node:
+            return self.node.boundingRect()
+        return QtCore.QRectF(0,0,0,0)
 
     def labelLine(self, offset=0):
         """
@@ -1406,9 +1460,14 @@ class NodeBackground(QtGui.QGraphicsItem):
         pcolor = self.node.pen_color
         qpen = QtGui.QPen(pcolor)
         qpen.setWidthF(self.pen_width)
+        qbrush = QtGui.QBrush(gradient)
+        
+        if self._debug:
+            qpen = QtGui.QPen(QtGui.QColor(*[220, 220, 220]))
+            qbrush = QtGui.QBrush(QtCore.Qt.NoBrush)
 
-        painter.setBrush(QtGui.QBrush(gradient))
         painter.setPen(qpen)
+        painter.setBrush(qbrush)
         painter.drawRoundedRect(self.boundingRect(), 7, 7)
 
         # line pen #1
@@ -1416,6 +1475,9 @@ class NodeBackground(QtGui.QGraphicsItem):
         lcolor.setAlpha(80)
         lpen = QtGui.QPen(lcolor)
         lpen.setWidthF(0.5)
+
+        if self._debug:
+            lpen.setColor(QtGui.QColor(*[200, 200, 200, 150]))
 
         if self.dagnode.expanded:
             painter.setBrush(QtCore.Qt.NoBrush)

@@ -2,6 +2,7 @@
 from PySide import QtCore, QtGui
 from SceneGraph import util
 from SceneGraph.core import log, DataParser
+from SceneGraph.options import SCENEGRAPH_STYLESHEET_PATH, PLATFORM
 
 
 class AttributeEditor(QtGui.QWidget):
@@ -19,15 +20,22 @@ class AttributeEditor(QtGui.QWidget):
         self._add_dialog    = None
         self.icons          = self._handler.icons
 
+        self._ui            = kwargs.get('ui')
+        self.fonts          = self._ui.fonts
+
         self.setObjectName("AttributeEditor")
+        self.setFont(self.fonts.get("attr_editor"))
+
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
+        
 
         #self.mainGroup.setFlat(True)
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
+        self.mainGroupLayout.setContentsMargins(1, 1, 1, 1)
 
         # context menu
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -35,7 +43,8 @@ class AttributeEditor(QtGui.QWidget):
         
         # setup the main interface
         self.initializeUI()
-        self.connectSignals()
+        self.connectSignals()        
+        self.initializeStylesheet()
 
     def initializeUI(self):
         """
@@ -45,6 +54,18 @@ class AttributeEditor(QtGui.QWidget):
         self.clearLayout(self.mainGroupLayout)
         self._nodes = []
         self._parser.initialize()
+        
+
+    def initializeStylesheet(self):
+        """
+        Setup the stylehsheet.
+        """
+        import os        
+        self.stylesheet = os.path.join(SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        self.setStyleSheet(str(ssf.readAll()))
+        ssf.close()
 
     def updateChildEditors(self, attributes=[]):
         """
@@ -109,12 +130,13 @@ class AttributeEditor(QtGui.QWidget):
 
         for grp_name in self.parser._data.keys():
             group = QtGui.QGroupBox(self.mainGroup)
+            group.setFont(self.fonts.get("attr_editor_group"))
             group.setTitle('%s' % grp_name.title())
             group.setFlat(True)
             group.setObjectName("%s_group" % grp_name)
             grpLayout = QtGui.QFormLayout(group)
             grpLayout.setObjectName("%s_group_layout" % grp_name)
-            
+            grpLayout.setContentsMargins(1, 1, 1, 1)
             # grab data from the metadata parser
             attrs = self.parser._data.get(grp_name)
             row = 0
@@ -128,7 +150,7 @@ class AttributeEditor(QtGui.QWidget):
                     attr_label = QtGui.QLabel('%s: ' % attr_name, parent=group)
 
                     if 'attr_type' not in attr_attrs:
-                        log.warning('attribute "%s.%s" has no type.' % (self._nodes[0].name, attr_name))
+                        log.debug('attribute "%s.%s" has no type.' % (self._nodes[0].name, attr_name))
                         continue
 
                     attr_type = attr_attrs.pop('attr_type')
@@ -136,6 +158,7 @@ class AttributeEditor(QtGui.QWidget):
                     
                     # map the correct editor widget
                     editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
+                    editor.setFont(self.fonts.get("attr_editor"))
                     if editor:
                         editor.initializeEditor()
                         grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
@@ -181,7 +204,7 @@ class AttributeEditor(QtGui.QWidget):
             if hasattr(node, editor.attribute):
                 cur_val = getattr(node, editor.attribute)
                 if cur_val != editor.value:
-                    print '# DEBUG: setting "%s": "%s": ' % (node.name, editor.attribute), editor.value
+                    #print '# DEBUG: setting "%s": "%s": ' % (node.name, editor.attribute), editor.value
                     setattr(node, editor.attribute, editor.value)
                     updated_nodes.append(node)
         
@@ -442,7 +465,7 @@ class QFloatEditor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -543,7 +566,7 @@ class QIntEditor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -644,7 +667,7 @@ class QFloat2Editor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -755,7 +778,7 @@ class QFloat3Editor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -876,7 +899,7 @@ class QInt2Editor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -988,7 +1011,7 @@ class QInt3Editor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -1206,7 +1229,7 @@ class StringEditor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
 
         # value 1 editor
@@ -1322,7 +1345,7 @@ class FileEditor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setSpacing(3)
-        self.mainLayout.setContentsMargins(3, 3, 3, 3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainLayout.setObjectName("mainLayout")
         
         self.file_edit = QtGui.QLineEdit(self)

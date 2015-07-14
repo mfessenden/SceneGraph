@@ -18,11 +18,12 @@ def setup_platform_defaults():
 
 PACKAGE                     = 'SceneGraph'
 API_MAJOR_VERSION           = 0.63
-API_REVISION                = 3
+API_REVISION                = 5
 API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                    = setup_platform_defaults()
 API_MINIMUM                 = 0.630
+
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)
 SCENEGRAPH_PLUGIN_PATH      = os.path.join(SCENEGRAPH_PATH, 'plugins')
@@ -99,4 +100,5 @@ SCENEGRAPH_PREFERENCES = {
     'font_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.'},
     'font_mono' : {'default':'Menlo', 'desc':'Monospace font for UI.'},
     'font_nodes' : {'default':'Menlo', 'desc':'Font for node labels.'},
+    'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).'},
     }

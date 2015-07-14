@@ -2,6 +2,7 @@
 from PySide import QtCore
 from SceneGraph import core
 from . import node_widgets
+from . import commands
 
 log = core.log
 
@@ -29,9 +30,10 @@ class SceneHandler(QtCore.QObject):
         QtCore.QObject.__init__(self, parent)
         from SceneGraph.icn import icons
 
-        self.icons   = icons.ICONS
-        self.ui      = parent.ui 
-        self.graph   = None
+        self.icons          = icons.ICONS
+        self.ui             = parent.ui 
+        self.graph          = None
+        self._initialized   = False # set to false until the current scene has been read & built
 
         if parent is not None:
             self.ui.icons = self.icons
@@ -39,6 +41,9 @@ class SceneHandler(QtCore.QObject):
             if self.connectGraph(parent):
                 self.connectSignals()
     
+    def updateStatus(self, msg, level='info'):
+        self.ui.updateStatus(msg, level=level)
+
     @property 
     def scene(self):
         return self.parent()
@@ -65,7 +70,10 @@ class SceneHandler(QtCore.QObject):
                     log.info('SceneHandler: connecting Graph...')
 
                     # load the node widgets from disk
-                    self.graph.pmanager.load_widgets()
+                    self.graph.plug_mgr.load_widgets()
+
+                    # start the autosave timer for 2min (120s x 1000)
+                    self.ui.autosave_timer.start(30000)
                     return True
         return False
 
@@ -82,11 +90,17 @@ class SceneHandler(QtCore.QObject):
         # connect graph functions
         self.dagNodesUpdated.connect(self.graph.updateDagNodes)
 
+    def graphReadAction(self):
+        """
+        Graph -> Handler.
+        """
+        self._initialized = True
+
     def evaluate(self, dagnodes=[]):
         """
         Do cool shit here.
         """
-        print '# evaluating...'
+        #self.updateStatus('evaluating...')
         if dagnodes:
             self.updateConsole('evaluating %d nodes' % len(dagnodes))
             return self.graph.evaluate(dagnodes=dagnodes)
@@ -154,6 +168,7 @@ class SceneHandler(QtCore.QObject):
             src_attr = edge.get('src_attr')
             dest_attr = edge.get('dest_attr')
             wgt = edge.get('weight', 1)
+
         self.edgesAdded.emit(edges)
 
     def dagUpdated(self, dagids):
@@ -176,11 +191,10 @@ class SceneHandler(QtCore.QObject):
             if issubclass(type(node), node_widgets.EdgeWidget):
                 src_conn = node.source_item
                 dest_conn = node.dest_item
+                node.close()
 
-                if node.breakConnections():
-                    print 'disconnected edge: %s' % node.name
-
-            scene.removeItem(node)
+            if issubclass(type(node), node_widgets.NodeWidget):
+                node.close()
 
     def updateNodes(self, dagnodes):
         """
@@ -216,11 +230,13 @@ class SceneHandler(QtCore.QObject):
                 nid = dag.id
                 if self.graph.remove_node(nid):
                     log.debug('removing dag node: %s' % nid)
+                node.close()
 
             if issubclass(type(node), node_widgets.EdgeWidget):
                 if node.ids in self.graph.network.edges():
                     log.debug('removing edge: %s' % str(node.ids))
                     self.graph.remove_edge(*node.ids)
+                node.close()
 
     def sceneNodesUpdatedAction(self, nodes):
         """

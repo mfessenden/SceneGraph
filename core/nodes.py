@@ -11,13 +11,6 @@ from SceneGraph.options import SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
 
 
-"""
-from SceneGraph import core
-g=core.Graph('/Users/michael/graphs/connections.json')
-n2=g.get_node('node2')[0]
-"""
-
-
 class DagNode(MutableMapping):
 
     reserved      = ['_data', '_graph', '_widget', '_attributes', '_metadata', '_command']
@@ -429,36 +422,6 @@ class DagNode(MutableMapping):
         return base_classes
 
 
-'''
-class Connection(MutableMapping):
-    
-    reserved = ["_data", "_edges", "_node"]
-    def __init__(self, *args, **kwargs):
-
-        self._data             = dict()
-        self._edges            = []        # connected edges
-
-        self._node             = None
-        self.type              = kwargs.get('type', 'input') 
-        self.input_color       = kwargs.pop('input_color', [255, 255, 51])
-        self.output_color      = kwargs.pop('output_color', [0, 204, 0])
-        self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
-        self.is_input          = True if self.type == 'input' else False
-
-        # input nodes can have only one connection
-        if self.type == 'input':
-            self.max_connections = 1
-
-        for arg in args:
-            if isinstance(arg, DagNode):
-                self._node = arg
-
-        self.update(**kwargs)
-
-    def __str__(self):
-        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-'''
-
 class Attribute(MutableMapping):
     """
     Generic attribute container.
@@ -469,7 +432,7 @@ class Attribute(MutableMapping):
     
     Need to add:
     """
-    reserved = ["_data", "_node", "_name", "_type"]
+    reserved = ["_data", "_node", "_name", "_type", "_edges"]
     def __init__(self, *args, **kwargs):
 
         # attributes dictionary
@@ -482,9 +445,11 @@ class Attribute(MutableMapping):
 
         # stash argument passed to 'type' - overrides auto-type mechanism.
         self._type             = kwargs.get('type', None)
+        self._edges            = [] 
 
         # globals
         self.is_private        = kwargs.get('is_private', False)  # hidden
+        self.is_hidden         = kwargs.get('is_hidden', False) 
         self.is_connectable    = kwargs.get('is_connectable', False)
         self.is_user           = kwargs.get('is_user', False)
         self.is_locked         = kwargs.get('is_locked', False)
@@ -569,7 +534,7 @@ class Attribute(MutableMapping):
 
     __setattr__ = __setitem__
     __delattr__ = __delitem__
-    
+
     @property 
     def node(self):
         return self._node
@@ -586,6 +551,55 @@ class Attribute(MutableMapping):
     def is_output(self):
         return self.connection_type == 'output'
 
+    @property 
+    def is_connected(self):
+        """
+        Returns connection status.
+
+        returns:
+            (bool) - attribute has connected edges.
+        """
+        return bool(self._edges)
+
+    @property
+    def valid_connection(self):
+        """
+        Returns true if the connection is able to be 
+        connected to an edge.
+
+        returns:
+            (bool) - edge can be connected.
+        """
+        if self.max_connections == 0:
+            return True
+        return len(self._edges) < self.max_connections
+
+    def connected_edges(self):
+        """
+        Returns a list of connected edge ids.
+
+        returns:
+            (list) - list of edge ids.
+        """
+        if not self._edges:
+            return []
+        return [edge.id for edge in self._edges]
+
+    def add_edge(self, edge):
+        """
+        Add an edge to the connection.
+
+        params:
+            edge (DagEdge) - edge node.
+
+        returns:
+            (bool) - connection was successful.
+        """
+        if edge.id not in self.connectedEdges():
+            self._edges.append(edge.id)
+            return True
+        return False
+
     @property
     def data(self):
         """
@@ -597,6 +611,7 @@ class Attribute(MutableMapping):
         """
         data = copy.deepcopy(self._data)
         data.update(type=self.type)
+        data.update(edges=self._edges)
         return {k: data[k] for k in data.keys() if data[k] or k in ['value']}
 
     @property
@@ -632,155 +647,6 @@ class Attribute(MutableMapping):
                 base_classes.append(b.__name__)
                 base_classes.extend(self.ParentClasses(b))
         return base_classes
-
-
-class Connection(MutableMapping):
-    
-    reserved = ["_data", "_edges", "_node"]
-
-    def __init__(self, *args, **kwargs):
-
-        self._data             = dict()
-        self._edges            = []        # connected edges
-
-        self._node             = None
-        self.type              = kwargs.get('type', 'input') 
-        self.input_color       = kwargs.pop('input_color', [255, 255, 51])
-        self.output_color      = kwargs.pop('output_color', [0, 204, 0])
-        self.max_connections   = kwargs.pop('max_connections', 1)  # 0 = infinite
-        self.is_input          = True if self.type == 'input' else False
-
-        # input nodes can have only one connection
-        if self.type == 'input':
-            self.max_connections = 1
-
-        for arg in args:
-            if isinstance(arg, DagNode):
-                self._node = arg
-
-        self.update(**kwargs)
-
-    def __str__(self):
-        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-
-    def __repr__(self):
-        return '"%s.%s"' %  (self.node.name, self.type)
-
-    def __getitem__(self, key, default=None):
-        try:
-            return self._data[key]
-        except KeyError:
-            return default
-
-    def __setitem__(self, key, value):
-        if key in self.reserved:
-            super(Connection, self).__setattr__(key, value)
-        else:
-            self._data[key] = value
-
-    def __delitem__(self, key):
-        del self._data[key]
-
-    def __iter__(self):
-        return iter(self._data)
-
-    def __len__(self):
-        return len(self._data)
-
-    def __getattr__(self, key, default=None):
-        try:
-            return self.__getitem__(key, default)
-        except KeyError as e:
-            raise AttributeError(e.args[0])
-
-    def __contains__(self, key):
-        return key in self._data
-
-    __setattr__ = __setitem__
-    __delattr__ = __delitem__
-
-    @property
-    def node(self):
-        return self._node
-
-    @property
-    def data(self):
-        data = copy.deepcopy(self._data)
-        # breakage here, no doubt
-        data.update(_edges=self._edges)
-        return data
-
-    #- Connection Attributes ---
-    @property
-    def is_connectable(self):
-        """
-        Returns true if the connection is able to be 
-        connected to an edge.
-
-        returns:
-            (bool) - edge can be connected.
-        """
-        if self.max_connections == 0:
-            return True
-        return len(self._edges) < self.max_connections
-
-    def connectedEdges(self):
-        """
-        Returns a list of connected edge ids.
-
-        returns:
-            (list) - list of edge ids.
-        """
-        if not self._edges:
-            return []
-        return [edge.id for edge in self._edges]
-
-    def add_edge(self, edge):
-        """
-        Add an edge to the connection.
-
-        params:
-            edge (DagEdge) - edge node.
-
-        returns:
-            (bool) - connection was successful.
-        """
-        if edge.id not in self.connectedEdges():
-            self._edges.append(edge.id)
-            return True
-        return False
-
-    @classmethod
-    def node_from_meta(node, data):
-        """
-        Instantiate a new instance from a dictionary.
-        """
-        self = Connection(node, **data)
-        return self
-
-    @property
-    def color(self):
-        if self.type == 'input':
-            return self.input_color
-        return self.output_color
-
-    @color.setter
-    def color(self, value):
-        if self.type == 'input':
-            self.input_color = value
-            return self.color
-        self.output_color = val
-        return self.color
-
-    @property 
-    def node(self):
-        """
-        Return the parent node object.
-
-        returns:
-            (DagNode) - parent node object.
-        """
-        return self._node
 
 
 if __name__ == "__main__":

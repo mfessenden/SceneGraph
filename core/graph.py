@@ -33,12 +33,14 @@ class Graph(object):
         self.mode           = 'standalone'
         self.grid           = Grid(5, 5)
         self.handler        = None
-        self.pmanager       = PluginManager()
+        self.plug_mgr       = PluginManager()
+        self._initialized   = 0
 
         # attributes for current nodes/dynamically loaded nodes
         self._node_types     = dict() 
         self.dagnodes        = dict()
-        self.temp_scene      = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
+        self.autosave_path   = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
+        self._autosave_file  = None
 
         # testing mode only
         self.debug           = kwargs.pop('debug', False)
@@ -68,7 +70,6 @@ class Graph(object):
         """
         self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = scene
-        self.network.graph['autosave'] = self.temp_scene
         self.network.graph['environment'] = self.mode
         self.network.graph['preferences'] = dict()
 
@@ -108,14 +109,20 @@ class Graph(object):
         """
         Update the network graph attributes.
         """
+        self.clean_legacy_attrs()
         self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = self.getScene()
-        self.network.graph['autosave'] = self.temp_scene
         self.network.graph['environment'] = self.mode
         self.network.graph['preferences'] = dict()
 
         if self.handler is not None:
             self.network.graph.get('preferences').update(self.handler.updateGraphAttributes())
+
+    def clean_legacy_attrs(self, attributes=['autosave']):
+        for attr in attributes:
+            if attr in self.network.graph:
+                print '# DEBUG: Graph: removing old attribute: ', attr
+                self.network.graph.pop(attr)
 
     def updateDagNodes(self, dagnodes):
         """
@@ -172,7 +179,7 @@ class Graph(object):
         """
         Returns a list of node types.
         """
-        return self.pmanager.node_types(plugins=plugins, disabled=disabled)
+        return self.plug_mgr.node_types(plugins=plugins, disabled=disabled)
 
     #-- NetworkX Stuff -----
     def getScene(self):
@@ -328,7 +335,7 @@ class Graph(object):
         pos  = kwargs.pop('pos', self.grid.coords)
 
         # get the default name for the node type and validate it
-        name = self.get_valid_name(self.pmanager.default_name(node_type))
+        name = self.get_valid_name(self.plug_mgr.default_name(node_type))
 
         if 'name' in kwargs:
             name = kwargs.pop('name')
@@ -360,7 +367,7 @@ class Graph(object):
             kwargs.update(outputs=outputs)
 
         # get the dag node from the PluginManager 
-        dag = self.pmanager.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
+        dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()
@@ -433,6 +440,7 @@ class Graph(object):
         """
         src_attr = kwargs.pop('src_attr', 'output')
         dest_attr = kwargs.pop('dest_attr', 'input')
+        weight = kwargs.pop('weight', 1.0)
 
         if src is None or dest is None:
             log.warning('none type passed.')
@@ -451,19 +459,29 @@ class Graph(object):
         if conn_str in self.connections():
             log.warning('connection already exists: %s' % conn_str)
             return 
-  
+    
         edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr)
         
-        # add the nx edge        
-        self.network.add_edge(src.id, dest.id, key='attributes', weight=1, attr_dict=edge_attrs)
-        log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
+        src_conn = src.get_connection(src_attr)
+        dest_conn = dest.get_connection(dest_attr)
+        edge_id_str = '(%s,%s)' % (src.id, dest.id)
 
-        # new edge = {'attributes': {'dest_attr': 'input', 'src_attr': 'output', 'weight': 1}}
-        new_edge = self.network.edge[src.id][dest.id]
-        # update the scene
-        if self.handler is not None:
-            self.handler.dagEdgesAdded(new_edge.get('attributes'))
-        return new_edge
+        if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:
+            # add the nx edge        
+            self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)
+            log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
+
+            # new edge = {'attributes': {'dest_attr': 'input', 'src_attr': 'output', 'weight': 1}}
+            new_edge = self.network.edge[src.id][dest.id]
+            
+            src_conn._edges.append(edge_id_str)
+            dest_conn._edges.append(edge_id_str)
+
+            # update the scene
+            if self.handler is not None:
+                self.handler.dagEdgesAdded(new_edge.get('attributes'))
+            return new_edge
+        return
 
     def get_edge(self, *args):
         """
@@ -580,7 +598,6 @@ class Graph(object):
         return '%s.%s,%s.%s' % (source_name, edge[2].get('src_attr', 'output'),
                                 dest_name, edge[2].get('dest_attr', 'input'))
 
-
     def remove_edge(self, *args): 
         """
         Removes an edge from the graph
@@ -599,15 +616,28 @@ class Graph(object):
 
         for edge in edges:
             edge_id = (edge[0], edge[1])
+
             if edge_id in self.network.edges():
-                log.info('Removing edge: "%s"' % self.edge_nice_name(*edge_id))
-                self.network.remove_edge(*edge_id)
-                
+                log.debug('Removing edge: "%s"' % self.edge_nice_name(*edge_id))
+                self.network.remove_edge(*edge_id)                
+                self.remove_node_edge(*edge_id)        
+
                 # update the scene
                 if self.handler is not None:
                     self.handler.dagUpdated(edge_id)
                 return True
         return False
+
+    def remove_node_edge(self, src_id, dest_id):
+        """
+        Remove deleted edges from current dagnodes.
+        """
+        edge_id_str = '(%s,%s)' % (src_id, dest_id)
+        for id, dag in self.dagnodes.items():
+            for conn_name in dag.connections:
+                dagcon = dag.get_connection(conn_name)
+                if edge_id_str in dagcon._edges:
+                    dagcon._edges.remove(edge_id_str)
 
     def getNodeID(self, name):
         """
@@ -850,7 +880,7 @@ class Graph(object):
         # clear the Graph
         self.network.clear()
         self.dagnodes = dict()
-
+        self._initialized = 0
         if self.handler is not None:
             self.handler.resetScene()
 
@@ -998,16 +1028,6 @@ class Graph(object):
         result.update(links=link_data_filtered)
         return result
 
-    def write(self, filename):
-        """
-        Write the graph to scene file
-        """  
-        graph_data = self.snapshot()
-        fn = open(filename, 'w')
-        json.dump(graph_data, fn, indent=4)
-        fn.close()
-        return self.setScene(filename)
-
     def save(self):
         """
         Save the current scene.
@@ -1061,6 +1081,8 @@ class Graph(object):
                 src_attr = edge.get('src_attr')
                 dest_attr = edge.get('dest_attr')
 
+                weight = edge.get('weight', 1.0)
+
                 src_dag_nodes = self.get_node(src_id)
                 dest_dag_nodes = self.get_node(dest_id)
 
@@ -1075,7 +1097,7 @@ class Graph(object):
 
                 # TODO: need to get connection node here
                 log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))            
-                dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_attr=src_attr, dest_attr=dest_attr)
+                dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_attr=src_attr, dest_attr=dest_attr, weight=weight)
 
         #self.handler.scene.clear()
         scene_pos = self.network.graph.get('view_center', (0,0))
@@ -1088,6 +1110,29 @@ class Graph(object):
                 view.resetTransform()
                 view.setCenterPoint(scene_pos)
                 view.scale(*view_scale)
+        self._initialized = 1
+
+    def write(self, filename, auto=False, data={}):
+        """
+        Write the graph to scene file.
+
+        params:
+            filename (str)  - file to save.
+            auto     (bool) - file is an autosave, don't set
+                              it as the current scene.
+            data     (dict) - dictionary of graph data.
+        """  
+        if not data:
+            data = self.snapshot()
+
+        fn = open(filename, 'w')
+        json.dump(data, fn, indent=4)
+        fn.close()
+
+        if auto:
+            self._autosave_file = filename
+            filename = filename[:-1]
+        return self.setScene(filename)
 
     def read(self, filename, force=False):
         """
@@ -1097,7 +1142,6 @@ class Graph(object):
             filename - (str) file to read
         """
         graph_data = self.read_file(filename)
-
         if not graph_data:
             log.error('scene "%s" appears to be invalid.' % filename)
             return False
@@ -1110,19 +1154,28 @@ class Graph(object):
 
         # restore from state.
         self.restore(graph_data)
+        if self.handler is not None:
+            self.handler.graphReadAction()
         return self.setScene(filename)
     
     def read_file(self, filename):
         """
         Read a data file and return the data.
+
+        params:
+            filename - (str) file to read
         """
-        # substitute home variable.
-        if '~' in filename:
-            filename = re.sub('~', os.getenv('HOME'), filename)
+        # expand user home path.
+        filename = os.path.expanduser(filename)
+        autosave_file = '%s~' % filename
 
         if not os.path.exists(filename):
             log.error('file %s does not exist.' % filename)
             return False
+
+        if os.path.exists(autosave_file):
+            os.remove(autosave_file)
+            log.info('removing autosave "%s"' % autosave_file)
 
         log.info('reading scene file "%s"' % filename)
         raw_data = open(filename).read()
@@ -1217,11 +1270,11 @@ class Graph(object):
         """
         Prints a list of plugins.
         """
-        if self.pmanager._node_data:
+        if self.plug_mgr._node_data:
             print '#' * 35
-            print ' PLUGINS LOADED: %d' % (len(self.pmanager._node_data))
+            print ' PLUGINS LOADED: %d' % (len(self.plug_mgr._node_data))
             print '#' * 35
-        for node_type, data in self.pmanager._node_data.iteritems():
+        for node_type, data in self.plug_mgr._node_data.iteritems():
             print '\n%s\n%s\n%s' % ('#' *35, node_type, '#' * 35)
             print 'source file: %s' % data.get('source')
             print 'metadata:    %s' % data.get('metadata')

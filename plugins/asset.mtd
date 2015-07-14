@@ -10,5 +10,6 @@ color: color: 0,0,0;
 enabled: bool: true;
 [asset]
 model: file: -r;
-shader_mapping: file: -r;
-shader: file: -r;
+lookdev: file: -r;
+rig: file: -r;
+texture: file: -r;

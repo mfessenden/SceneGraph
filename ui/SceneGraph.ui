@@ -607,8 +607,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>145</width>
-              <height>119</height>
+              <width>371</width>
+              <height>315</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -699,8 +699,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>208</width>
-              <height>177</height>
+              <width>371</width>
+              <height>315</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -769,6 +769,16 @@
              </item>
              <item row="1" column="1">
               <widget class="QComboBox" name="antialiasing_menu"/>
+             </item>
+             <item row="6" column="0">
+              <widget class="QLabel" name="autosave_time_label">
+               <property name="text">
+                <string>Autosave Time:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="6" column="1">
+              <widget class="QLineEdit" name="autosave_time_edit"/>
              </item>
             </layout>
            </widget>

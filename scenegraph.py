@@ -71,7 +71,9 @@ class SceneGraphUI(form_class, base_class):
 
         # setup default user path
         self._work_path       = kwargs.get('start', options.SCENEGRAPH_USER_WORK_PATH)
-        self.timer            = QtCore.QTimer()
+        self.status_timer     = QtCore.QTimer()
+        self.autosave_inc     = 30000 
+        self.autosave_timer   = QtCore.QTimer()
 
         # stash temp selections here
         self._selected_nodes  = []
@@ -110,11 +112,11 @@ class SceneGraphUI(form_class, base_class):
 
         self.initializeUI()              
         self.connectSignals()
+        self.initializeStylesheet()
 
         self.resetStatus()        
         self.draw_scene = QtGui.QGraphicsScene()
-        self.draw_view.setScene(self.draw_scene)
-        self.initializeStylesheet()
+        self.draw_view.setScene(self.draw_scene)        
         #QtGui.QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
@@ -176,13 +178,13 @@ class SceneGraphUI(form_class, base_class):
         self.menu_edit.addAction(undo_action)
         self.menu_edit.addAction(redo_action)
 
-        #self.initializeNodesMenu()
-
         # validators for console widget
         self.scene_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posx))
         self.scene_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.scene_posy))
         self.view_posx.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posx))
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
+
+        self.autosave_time_edit.setValidator(QtGui.QDoubleValidator(0, 1000, 2, self.autosave_time_edit))
 
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
@@ -201,10 +203,10 @@ class SceneGraphUI(form_class, base_class):
         """
         Initializes the fonts attribute
         """
-        family = 'Consolas'
+        mono_family = 'Consolas'
         if options.PLATFORM == 'MacOSX':
             size = 14
-            family = 'Menlo'
+            mono_family = 'Menlo'
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
@@ -212,11 +214,18 @@ class SceneGraphUI(form_class, base_class):
 
         self.fonts["output"] = QtGui.QFont('Monospace')
         self.fonts["output"].setPointSize(size)
-        self.fonts["output"].setFamily(family)
+        self.fonts["output"].setFamily(mono_family)
 
         self.fonts["console"] = QtGui.QFont('Monospace')
         self.fonts["console"].setPointSize(size-1)
-        self.fonts["console"].setFamily(family)
+        self.fonts["console"].setFamily(mono_family)
+
+        self.fonts["attr_editor"] = QtGui.QFont('Monospace')
+        self.fonts["attr_editor"].setPointSize(size)
+
+        self.fonts["attr_editor_group"] = QtGui.QFont('Monospace')
+        self.fonts["attr_editor_group"].setPointSize(size)
+        self.fonts["attr_editor_group"].setItalic(True)
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -238,7 +247,10 @@ class SceneGraphUI(form_class, base_class):
         """
         Setup signals & slots.
         """
-        self.timer.timeout.connect(self.resetStatus)
+        # timers
+        self.status_timer.timeout.connect(self.resetStatus)
+        self.autosave_timer.timeout.connect(self.autoSaveAction)
+        
         self.view.tabPressed.connect(partial(self.createTabMenu, self.view))
         self.view.statusEvent.connect(self.updateConsole)
 
@@ -263,8 +275,6 @@ class SceneGraphUI(form_class, base_class):
         self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
 
-        # nodes menu
-        self.menu_nodes.aboutToShow.connect(partial(self.initializeNodesMenu, self.menu_nodes))
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -273,10 +283,14 @@ class SceneGraphUI(form_class, base_class):
         self.check_use_gl.toggled.connect(self.toggleOpenGLMode)
         self.logging_level_menu.currentIndexChanged.connect(self.toggleLoggingLevel)
         self.check_render_fx.toggled.connect(self.toggleEffectsRendering)
+        self.autosave_time_edit.editingFinished.connect(self.setAutosaveDelay)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
         pos_y = current_pos.y()
+
+        # nodes menu
+        self.menu_nodes.aboutToShow.connect(partial(self.initializeNodesMenu, self.menu_nodes, current_pos))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -316,7 +330,7 @@ class SceneGraphUI(form_class, base_class):
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
 
-    def initializeNodesMenu(self, parent, color=True):
+    def initializeNodesMenu(self, parent, pos, color=True):
         """
         Build a context menu at the current pointer pos.
         """
@@ -378,7 +392,7 @@ class SceneGraphUI(form_class, base_class):
                 if filename:
                     if i < self.qtsettings._max_files:
                         file_action = QtGui.QAction(filename, self.menu_recent_files)
-                        file_action.triggered.connect(partial(self.readRecentGraph, filename))
+                        file_action.triggered.connect(partial(self.readGraph, filename))
                         self.menu_recent_files.addAction(file_action)
                         i+=1
             self.menu_recent_files.setEnabled(True)
@@ -444,6 +458,9 @@ class SceneGraphUI(form_class, base_class):
         self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
         self.consoleTextEdit.setFont(self.fonts.get("console"))
 
+        # autosave prefs
+        self.autosave_time_edit.setText(str(self.autosave_inc/1000))
+
     def buildWindowTitle(self):
         """
         Build the window title
@@ -455,6 +472,8 @@ class SceneGraphUI(form_class, base_class):
         # add an asterisk if the current stack is dirty (scene is changed)
         if not self.undo_stack.isClean():
             title_str = '%s*' % title_str
+            #self.autosave_timer.start(self.autosave_inc)
+
         self.setWindowTitle(title_str)
         #self.initializeStylesheet()
 
@@ -465,20 +484,20 @@ class SceneGraphUI(form_class, base_class):
     def consoleOutput(self, msg):
         print 'message: ', msg
 
-    def updateStatus(self, val, level='info'):
+    def updateStatus(self, msg, level='info'):
         """
         Send output to logger/statusbar
         """
         if level == 'info':
-            self.statusBar().showMessage(self._getInfoStatus(val))
-            log.info(val)
+            self.statusBar().showMessage(self._getInfoStatus(msg))
+            log.info(msg)
         if level == 'error':
-            self.statusBar().showMessage(self._getErrorStatus(val))
-            log.error(val)
+            self.statusBar().showMessage(self._getErrorStatus(msg))
+            log.error(msg)
         if level == 'warning':
-            self.statusBar().showMessage(self._getWarningStatus(val))
-            log.warning(val)
-        self.timer.start(4000)
+            self.statusBar().showMessage(self._getWarningStatus(msg))
+            log.warning(msg)
+        self.status_timer.start(4000)
         self.statusBar().setFont(self.fonts.get("output"))     
 
     def resetStatus(self):
@@ -515,24 +534,28 @@ class SceneGraphUI(form_class, base_class):
             if not fext:
                 filename = '%s.json' % basename
 
-        self.undo_stack.clear()
+        self.undo_stack.setClean()
         filename = str(os.path.normpath(filename))
         self.updateStatus('saving current graph "%s"' % filename)
 
         self.graph.write(filename)
         #self.action_save_graph.setEnabled(True)
         self.action_revert.setEnabled(True)
-        self.buildWindowTitle()
 
-        self.graph.setScene(filename)
+        # remove autosave files
+        autosave_file = '%s~' % filename
+        if os.path.exists(autosave_file):
+            os.remove(autosave_file)
+
         self.qtsettings.addRecentFile(filename)
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
 
-    # TODO: figure out why this has to be a separate method from saveGraphAs
     def saveCurrentGraph(self):
         """
-        Save the current graph file
+        Save the current graph file.
+
+         * todo: combine this with saveGraphAs
         """
         if not self.graph.getScene():
             filename = self.saveDialog()
@@ -541,7 +564,7 @@ class SceneGraphUI(form_class, base_class):
             else:
                 return
 
-        self.undo_stack.clear()
+        self.undo_stack.setClean()
         filename = self.graph.getScene()
         self.updateStatus('saving current graph "%s"' % filename)
         self.graph.write(filename)
@@ -549,21 +572,39 @@ class SceneGraphUI(form_class, base_class):
 
         self.qtsettings.addRecentFile(filename)
         self.initializeRecentFilesMenu()
+
+        # remove autosave files
+        autosave_file = '%s~' % filename
+        if os.path.exists(autosave_file):
+            os.remove(autosave_file)
+
         return self.graph.getScene()      
 
-    def saveTempFile(self):
+    def autoSaveAction(self):
         """
         Save a temp file when the graph changes.
         """
-        temp_scene = self.graph.temp_scene
-        if 'autosave' not in self.graph.network.graph:
-            self.graph.network.graph['autosave'] = self.graph.temp_scene
-        self.graph.write(temp_scene)
-        return temp_scene
+        if self.undo_stack.isClean():
+            self.autosave_timer.start(self.autosave_inc)
+            return
+
+        if self.graph.getScene():
+            autosave = '%s~' % self.graph.getScene()
+        else:
+            # use the graph's autosave path
+            autosave = self.graph.autosave_path
+       
+        self.graph.write(autosave, auto=True)
+        self.updateStatus('autosaving "%s"...' % autosave)
+        #self.undo_stack.setClean()
+        return autosave
 
     def readGraph(self, filename=None):
         """
         Read the current graph from a json file.
+
+        params:
+            filename (str) - scene file to read.
         """
         if filename is None:
             filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._work_path, "JSON files (*.json)")
@@ -574,32 +615,49 @@ class SceneGraphUI(form_class, base_class):
             log.error('filename %s does not exist' % filename)
             return
 
-        self.resetGraph()
-        self.updateStatus('reading graph "%s"' % filename)
-        self.graph.read(filename)
-        #self.action_save_graph.setEnabled(True)
+        # stash a string for recent files menu
+        recent_file = filename
 
-        if filename != self.graph.temp_scene:
-            self.graph.setScene(filename)
-            self.qtsettings.addRecentFile(filename)
-            log.debug('adding recent file: "%s"' % filename)
-        self.buildWindowTitle()
-        self.view.scene().clearSelection()
-
-    # TODO: combine this with readGraph
-    def readRecentGraph(self, filename):
-        if not os.path.exists(filename):
-            log.error('file %s does not exist' % filename)
-            return
+        # check for autosave file
+        filename = self.autoSaveCheck(filename)
 
         self.resetGraph()
         self.updateStatus('reading graph "%s"' % filename)
         self.graph.read(filename)
         #self.action_save_graph.setEnabled(True)
-        self.graph.setScene(filename)
-        self.qtsettings.addRecentFile(filename)
+
+        self.qtsettings.addRecentFile(recent_file)
+        log.debug('adding recent file: "%s"' % filename)
+
         self.buildWindowTitle()
         self.view.scene().clearSelection()
+        self.undo_stack.setClean()
+        self.autosave_timer.start(self.autosave_inc)
+
+    def autoSaveCheck(self, filename):
+        """
+        Queries the user to choose if an autosave file exists.
+        Returns the file that the user chooses.
+
+         * todo: perform os check to see if the file is newer
+        
+        params:
+            filename (str) - file to check for autosave.
+
+        returns:
+            (str) - file to read.
+        """
+        autosave_file = '%s~' % filename
+        if os.path.exists(autosave_file):
+            use_autosave = self.promptDialog("Autosave exists: %s, use that?" % autosave_file)
+            if use_autosave:
+                try:
+                    import shutil
+                    shutil.copy(autosave_file, filename)
+                except:
+                    pass
+            os.remove(autosave_file)
+        return filename
 
     def revertGraph(self):
         """
@@ -655,7 +713,7 @@ class SceneGraphUI(form_class, base_class):
             log.info('initializing OpenGL renderer.')
         else:
             self.view.setViewport(QtGui.QWidget())
-        #self.initializeStylesheet()
+        self.initializeStylesheet()
         self.view.scene().update()
 
     def toggleEffectsRendering(self, val):
@@ -712,9 +770,21 @@ class SceneGraphUI(form_class, base_class):
         if edge_type:
             self.edge_type = edge_type
 
-        for edge in self.view.scene().getEdges():
+        for edge in self.view.scene().get_edges():
             edge.edge_type = self.edge_type
         self.view.scene().update()
+
+    def setAutosaveDelay(self):
+        """
+        Update the autosave increment time.
+
+        Time is in seconds, so mult X 1000
+        """
+        astime = int(self.autosave_time_edit.text())
+        log.info('updating autosave delay to: %d seconds.' % astime)
+        self.autosave_timer.stop()
+        self.autosave_inc = astime * 1000
+        self.autosave_timer.start(self.autosave_inc)
 
     #- ACTIONS ----
     def nodesSelectedAction(self):
@@ -797,7 +867,7 @@ class SceneGraphUI(form_class, base_class):
         attr_widget = self.getAttributeEditorWidget()
                 
         if not attr_widget:
-            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler)                
+            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler, ui=self)                
             self.attributeScrollAreaLayout.addWidget(attr_widget)
         attr_widget.setNodes(dagnodes)
 
@@ -937,8 +1007,8 @@ class SceneGraphUI(form_class, base_class):
         tab_menu.exec_(qcurs.pos())
 
     def spinAction(self):
-        self.timer.timeout.connect(self.rotateView)
-        self.timer.start(90)
+        self.status_timer.timeout.connect(self.rotateView)
+        self.status_timer.start(90)
 
     def rotateView(self):
         self.view.rotate(4)
@@ -986,6 +1056,12 @@ class SceneGraphUI(form_class, base_class):
         if logging_level is None:
             logging_level = 30 # warning
 
+        #autosave delay (global)
+        autosave_inc = self.qtsettings.value("autosave_inc")
+        if autosave_inc is None:
+            autosave_inc = 30000
+            
+        self.autosave_inc = int(autosave_inc)
         log.setLevel(int(logging_level))
         self.qtsettings.endGroup()
 
@@ -1015,6 +1091,7 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.setValue("edge_type", self.edge_type)
         self.qtsettings.setValue("use_gl", self.use_gl)
         self.qtsettings.setValue("logging_level", log.level)
+        self.qtsettings.setValue("autosave_inc", self.autosave_inc)
         self.qtsettings.endGroup()
 
         # write the dock settings

@@ -8,7 +8,7 @@ import inspect
 import time
 import simplejson as json
 
-from SceneGraph.core import log, DagNode, Connection
+from SceneGraph.core import log, DagNode
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH
 
 
