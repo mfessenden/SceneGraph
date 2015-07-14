@@ -9,8 +9,9 @@ from . import metadata
 
 
 # nodes
-Attribute           = nodes.Attribute
+Container           = nodes.Container
 DagNode             = nodes.DagNode
+Attribute           = nodes.Attribute
 
 
 # Observers/Managers
