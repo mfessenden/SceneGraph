@@ -9,6 +9,7 @@ from cStringIO import StringIO
 from SceneGraph import options
 from SceneGraph import core
 from SceneGraph import ui
+from SceneGraph import util
 
 
 log = core.log
@@ -261,7 +262,7 @@ class SceneGraphUI(form_class, base_class):
         # file & ui menu
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
-        self.menu_window.aboutToShow.connect(self.initializeUIMenu)
+        self.menu_window.aboutToShow.connect(self.initializeWindowMenu)
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -274,7 +275,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_restore_default_layout.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
-
+        self.action_save_layout.triggered.connect(self.saveLayoutAction)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -330,6 +331,25 @@ class SceneGraphUI(form_class, base_class):
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
 
+        global SCENEGRAPH_DEBUG
+        db_label = 'Debug on'
+        if SCENEGRAPH_DEBUG == '1':
+            db_label = 'Debug off'
+
+        self.action_debug_mode.setText(db_label)
+
+    def initializeWindowMenu(self):
+        """
+        Set up the Window menu.
+        """
+        menu = self.menu_restore_layout
+        menu.clear()
+        layout_names = self.qtsettings.get_layouts()
+
+        for layout in layout_names:
+            restore_action = menu.addAction(layout)
+            restore_action.triggered.connect(partial(self.qtsettings.restoreLayout, layout))
+
     def initializeNodesMenu(self, parent, pos, color=True):
         """
         Build a context menu at the current pointer pos.
@@ -366,17 +386,6 @@ class SceneGraphUI(form_class, base_class):
         ssf.open(QtCore.QFile.ReadOnly)
         parent.setStyleSheet(str(ssf.readAll()))
         #parent.exec_(qcurs.pos())
-
-    def initializeUIMenu(self):
-        """
-        Setup the ui menu before it is drawn.
-        """
-        global SCENEGRAPH_DEBUG
-        db_label = 'Debug on'
-        if SCENEGRAPH_DEBUG == '1':
-            db_label = 'Debug off'
-
-        self.action_debug_mode.setText(db_label)
 
     def initializeRecentFilesMenu(self):
         """
@@ -941,24 +950,6 @@ class SceneGraphUI(form_class, base_class):
             print 'text is valid!'
         #self.outputTextBrowser.clear()   
 
-    def promptDialog(self, msg):
-        """
-        Simple Qt prompt dialog.
-        """
-        result = QtGui.QMessageBox.question(self, 'Prompt', msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
-        if (result == QtGui.QMessageBox.Yes):
-            return True
-        return False
-
-    def saveDialog(self):
-        """
-        Simple Qt file dialog.
-        """
-        filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
-        if not filename:
-            return
-        return filename
-
     #- Events ----
     def closeEvent(self, event):
         """
@@ -1130,6 +1121,20 @@ class SceneGraphUI(form_class, base_class):
                 w.restoreGeometry(self.qtsettings.value(defaults_key))
         self.move(pos)
 
+    def getCurrentLayouts(self):
+        window_keys = self.qtsettings.window_keys()
+
+    def saveLayoutAction(self):
+        """
+        Prompts the user to save a named layout.
+        """
+        layout_name = self.inputDialog('Save current layout', 'Layout Name:')
+        if not layout_name:
+            return 
+
+        layout_name = util.clean_name(layout_name)
+        self.qtsettings.saveLayout(layout_name)
+
     def updateOutput(self):
         """
         Update the output text edit.
@@ -1275,14 +1280,38 @@ class SceneGraphUI(form_class, base_class):
         return filename
 
     #- Dialogs -----
-    def confirmDialog(self, msg):
+    def promptDialog(self, msg):
         """
-        Returns true if dialog 'yes' button is pressed.
+        Simple Qt prompt dialog.
         """
-        result = QtGui.QMessageBox.question(self, "Comfirm", msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
+        result = QtGui.QMessageBox.question(self, 'Prompt', msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
         if (result == QtGui.QMessageBox.Yes):
             return True
         return False
+
+    def saveDialog(self):
+        """
+        Simple Qt file dialog.
+        """
+        filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
+        if not filename:
+            return
+        return filename
+
+    def openDialog(self):
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open scene", self._work_path, "JSON files (*.json)")
+        if filename == "":
+            return
+        return filename
+
+    def inputDialog(self, msg, label):
+        """
+        Prompts the user for an input.
+        """
+        text, ok = QtGui.QInputDialog.getText(self, msg, label)
+        if text:
+            return text
+        return
 
 
 class Settings(QtCore.QSettings):
@@ -1303,12 +1332,17 @@ class Settings(QtCore.QSettings):
             if self._parent is not None:
                 self.setValue('MainWindow/geometry/default', self._parent.saveGeometry())
                 self.setValue('MainWindow/windowState/default', self._parent.saveState())
+                
 
         if 'RecentFiles' not in self.childGroups():
             self.beginWriteArray('RecentFiles', 0)
             self.endArray()
 
+        while self.group():
+            self.endGroup()
+
         self.initializePreferences()
+
 
     def initializePreferences(self):
         """
@@ -1319,29 +1353,95 @@ class Settings(QtCore.QSettings):
             # query the defauls from options.
             for option in options.SCENEGRAPH_PREFERENCES:
                 if 'default' in options.SCENEGRAPH_PREFERENCES.get(option):
-                    self.setValue('Preferences/default/%s' % option, options.SCENEGRAPH_PREFERENCES.get(option).get('default'))
-            self.endGroup()
+                    self.setValue('default/%s' % option, options.SCENEGRAPH_PREFERENCES.get(option).get('default'))
 
-    def getDefaultValue(self, group, key):
+            while self.group():
+                self.endGroup()
+
+    def window_keys(self):
+        """
+        Get all of the Parent UI keys.
+        """
+        if self._parent is None:
+            return []
+        result = ['MainWindow']
+        for dock in self._parent.findChildren(QtGui.QDockWidget):
+            dock_name = dock.objectName()
+            result.append(str(dock_name))
+        return result
+
+    def get_layouts(self):
+        """
+        Returns a list of window layout names.
+        """
+        layout_names = []
+        layout_keys = ['%s/geometry' % x for x in self.window_keys()]
+        
+
+        for k in self.allKeys():
+            if 'geometry' in k:
+                attrs = k.split('/geometry/')
+                if len(attrs) > 1:
+                    layout_names.append(str(attrs[-1]))
+
+        return sorted(list(set(layout_names)))
+
+    def saveLayout(self, layout):
+        """
+        Save a named layout.
+
+        params:
+            layout (str) - layout to save.
+        """
+        log.info('saving layout: "%s"' % layout)
+        self.setValue("MainWindow/geometry/%s" % layout, self._parent.saveGeometry())
+        self.setValue("MainWindow/windowState/%s" % layout, self._parent.saveState())
+        for dock in self._parent.findChildren(QtGui.QDockWidget):
+            dock_name = dock.objectName()
+            self.setValue("%s/geometry/%s" % (dock_name, layout), dock.saveGeometry())
+
+    def restoreLayout(self, layout):
+        """
+        Restore a named layout.
+
+        params:
+            layout (str) - layout to restore.
+        """
+        log.info('restoring layout: "%s"' % layout)
+        window_keys = self.window_keys()
+
+        for widget_name in window_keys:
+            
+            key_name = '%s/geometry/%s' % (widget_name, layout)
+            if widget_name != 'MainWindow':
+                if key_name in self.allKeys():                    
+                        value = self.value(key_name)
+                        dock = self._parent.findChildren(QtGui.QDockWidget, widget_name)
+                        if dock:
+                            dock[0].restoreGeometry(value)
+            else:
+                window_state = '%s/windowState/%s' % (widget_name, layout)
+                if window_state in self.allKeys():
+                    self._parent.restoreGeometry(self.value(key_name))
+                    self._parent.restoreState(self.value(window_state))
+
+    def getDefaultValue(self, key, *groups):
         """
         Return the default values for a group.
+
+        params:
+            key (str)    - key to look for.
         """
         result = None
-        if group not in self.childGroups():
-            log.warning('no settings saved for group "%s".' % group)
-            return
+        group_name = groups[0]
+        for group in groups[1:]:
+            group_name += "/%s" % group
 
-        self.beginGroup(group)
-        if not 'default' in self.childGroups():
-            log.warning('default settings for group "%s" do not exist.' % group)
-            return
+        group_name += "/%s" % "default"
+        group_name += "/%s" % key
 
-        self.beginGroup('default')
-        if key not in self.childKeys():
-            log.warning('key "%s" does not exist in "%s/default".' % (key, group))
-            return
-        result = self.value(key)
-        self.endGroup()
+        if group_name in self.allKeys():
+            result = self.value(group_name)
         return result
 
     def save(self, key='default'):

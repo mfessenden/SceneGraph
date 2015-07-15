@@ -50,7 +50,7 @@ class DagNode(Observable):
             if name in self._attributes:
                 attribute = self._attributes.get(name)
                 return attribute.value
-            return getattr(self, name)
+            return super(DagNode, self).__getattr__(name)
         raise AttributeError(name)
         
     def __setattr__(self, name, value):
@@ -67,7 +67,7 @@ class DagNode(Observable):
             return
 
         #setattr(self, name, value)
-        Observable.__setattr__(self, name, value)
+        super(DagNode, self).__setattr__(name, value)
 
     @property
     def data(self):
