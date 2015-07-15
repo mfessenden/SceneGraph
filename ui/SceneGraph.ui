@@ -159,7 +159,7 @@
      <property name="title">
       <string>Restore layout:</string>
      </property>
-     <addaction name="action_default_layout"/>
+     <addaction name="action_restore_default_layout"/>
     </widget>
     <addaction name="menu_view"/>
     <addaction name="separator"/>
@@ -614,8 +614,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>315</height>
+              <width>145</width>
+              <height>119</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -706,8 +706,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>315</height>
+              <width>208</width>
+              <height>211</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -930,7 +930,7 @@
     <string>Save layout</string>
    </property>
   </action>
-  <action name="action_default_layout">
+  <action name="action_restore_default_layout">
    <property name="text">
     <string>default</string>
    </property>

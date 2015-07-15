@@ -272,7 +272,7 @@ class SceneGraphUI(form_class, base_class):
 
         
         self.action_reset_scale.triggered.connect(self.resetScale)
-        self.action_reset_ui.triggered.connect(self.restoreDefaultSettings)
+        self.action_restore_default_layout.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
 
 

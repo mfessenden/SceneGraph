@@ -340,32 +340,6 @@ class Graph(object):
         if 'name' in kwargs:
             name = kwargs.pop('name')
 
-        # parse connections from data
-        inputs = dict()
-        outputs = dict()
-        poppers = []
-        for attr, val in kwargs.iteritems():
-            if hasattr(val, 'keys'):
-                if 'is_connectable' in val:
-                    if val.get('is_connectable'):
-                        if 'connection_type' in val:
-                            if val.get('connection_type') == 'input':
-                                inputs[attr] = val
-                                poppers.append(attr)
-
-                            if val.get('connection_type') == 'output':
-                                outputs[attr] = val
-                                poppers.append(attr)
-
-        if poppers:
-            for p in poppers:
-                kwargs.pop(p)
-
-        if inputs:
-            kwargs.update(inputs=inputs)
-        if outputs:
-            kwargs.update(outputs=outputs)
-
         # get the dag node from the PluginManager 
         dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
 

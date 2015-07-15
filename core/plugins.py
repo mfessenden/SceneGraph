@@ -8,7 +8,7 @@ import inspect
 import time
 import simplejson as json
 
-from SceneGraph.core import log, DagNode
+from SceneGraph.core import log
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH
 
 
@@ -86,16 +86,6 @@ class PluginManager(object):
         log.level = level
 
     #- Attributes ----
-
-    def dagTypes(self):
-        """
-        Returns a list of the currently loaded DagNodes.
-
-        returns:
-            (list) - list of DagNode classes.
-        """
-        return DagNode.__subclasses__()
-
     def node_types(self, plugins=[], disabled=False):
         """
         Return a list of loaded node types.
@@ -219,18 +209,17 @@ class PluginManager(object):
             # filter DagNode types
             for cname, obj in inspect.getmembers(module, inspect.isclass):
                 if not plugins or cname in plugins:
-                    if hasattr(obj, 'ParentClasses'):
-                        if 'DagNode' in obj.ParentClasses(obj):
-                            globals()[cname] = obj
-                            imported.append(cname)                
-                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
+                    if hasattr(obj, 'dag_types'):
+                        globals()[cname] = obj
+                        imported.append(cname)                
+                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
 
-                            # add source and metadata files
-                            if os.path.exists(src_file):
-                                self._node_data.get(node_type).update(source=src_file)
+                        # add source and metadata files
+                        if os.path.exists(src_file):
+                            self._node_data.get(node_type).update(source=src_file)
 
-                            if os.path.exists(md_file):
-                                self._node_data.get(node_type).update(metadata=md_file)
+                        if os.path.exists(md_file):
+                            self._node_data.get(node_type).update(metadata=md_file)
 
         return sorted(list(set(imported)))
 
@@ -332,7 +321,7 @@ class PluginManager(object):
                     result[plugin] = plugin_attrs
         return result
 
-    def get_dagnode(self, node_type, *args, **kwargs):
+    def get_dagnode(self, node_type, **kwargs):
         """
         Return the appropriate dag node type.
 
@@ -349,7 +338,7 @@ class PluginManager(object):
         dag = self._node_data.get(node_type).get('dagnode')
 
         # assign the node metadata file
-        return dag(*args, _metadata=self._node_data.get(node_type).get('metadata', None), **kwargs)
+        return dag(_metadata=self._node_data.get(node_type).get('metadata', None), **kwargs)
 
     def get_widget(self, dagnode, **kwargs):
         """
@@ -412,9 +401,8 @@ class PluginManager(object):
         for attr in globals():
             if not attr.startswith('__'):
                 obj = globals()[attr]
-                if hasattr(obj, 'ParentClasses'):
-                    if 'DagNode' in obj.ParentClasses(obj):
-                        flush.append(attr)
+                if hasattr(obj, 'dag_types'):
+                    flush.append(attr)
 
         if flush:
             for f in flush:

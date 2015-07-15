@@ -13,5 +13,5 @@ class LookdevNode(DagNode):
     node_type     = 'lookdev'
     
     def __init__(self, name=None, **kwargs):
-        super(LookdevNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)
         

@@ -13,5 +13,5 @@ class ModelNode(DagNode):
     node_type     = 'model'
 
     def __init__(self, name=None, **kwargs):
-        super(ModelNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)
 

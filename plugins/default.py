@@ -13,4 +13,4 @@ class DefaultNode(DagNode):
     node_type     = 'default'
 
     def __init__(self, name=None, **kwargs):
-        super(DefaultNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)

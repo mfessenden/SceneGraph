@@ -13,5 +13,5 @@ class TextureNode(DagNode):
     node_type     = 'texture'
 
     def __init__(self, name=None, **kwargs):
-        super(TextureNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)
 

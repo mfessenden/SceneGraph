@@ -13,7 +13,7 @@ class DotNode(DagNode):
     node_type     = 'dot'
 
     def __init__(self, name=None, **kwargs):
-        super(DotNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)
 
         self.width              = 10.0
         self.base_height        = 10.0        

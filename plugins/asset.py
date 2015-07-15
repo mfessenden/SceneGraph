@@ -13,4 +13,4 @@ class AssetNode(DagNode):
     node_type     = 'asset'
 
     def __init__(self, name=None, **kwargs):
-        super(AssetNode, self).__init__(name, **kwargs)
+        DagNode.__init__(self, name, **kwargs)
