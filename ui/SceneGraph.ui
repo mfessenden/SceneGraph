@@ -143,6 +143,7 @@
     <addaction name="action_draw_graph"/>
     <addaction name="separator"/>
     <addaction name="action_evaluate"/>
+    <addaction name="action_debug_mode"/>
    </widget>
    <widget class="QMenu" name="menu_window">
     <property name="title">
@@ -154,10 +155,16 @@
      </property>
      <addaction name="action_reset_scale"/>
     </widget>
+    <widget class="QMenu" name="menu_restore_layout">
+     <property name="title">
+      <string>Restore layout:</string>
+     </property>
+     <addaction name="action_default_layout"/>
+    </widget>
     <addaction name="menu_view"/>
     <addaction name="separator"/>
-    <addaction name="action_reset_ui"/>
-    <addaction name="action_debug_mode"/>
+    <addaction name="action_save_layout"/>
+    <addaction name="menu_restore_layout"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
@@ -853,19 +860,9 @@
     <string>Clear graph</string>
    </property>
   </action>
-  <action name="action_reset_ui">
-   <property name="text">
-    <string>Restore UI</string>
-   </property>
-  </action>
   <action name="action_reset_scale">
    <property name="text">
     <string>100%</string>
-   </property>
-  </action>
-  <action name="action_debug_mode">
-   <property name="text">
-    <string>Debug mode</string>
    </property>
   </action>
   <action name="action_edge_type">
@@ -926,6 +923,21 @@
   <action name="action_update_mode">
    <property name="text">
     <string>Update mode:</string>
+   </property>
+  </action>
+  <action name="action_save_layout">
+   <property name="text">
+    <string>Save layout</string>
+   </property>
+  </action>
+  <action name="action_default_layout">
+   <property name="text">
+    <string>default</string>
+   </property>
+  </action>
+  <action name="action_debug_mode">
+   <property name="text">
+    <string>Debug</string>
    </property>
   </action>
  </widget>

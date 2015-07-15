@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from SceneGraph.core import log
 
 
 class Observable(object):
@@ -10,7 +11,7 @@ class Observable(object):
         self._observers = []
         self._changed = 0
     
-    def addObserver(self, obs):
+    def add_observer(self, obs):
         """
         Add an observer.
 
@@ -20,7 +21,7 @@ class Observable(object):
         if obs not in self._observers:
             self._observers.append(obs)
     
-    def getObservers(self):
+    def get_observers(self):
         """
         Add an observer.
 
@@ -32,7 +33,7 @@ class Observable(object):
         """
         return self._observers
     
-    def observerCount(self):
+    def observer_count(self):
         """
         Returns the number of observers.
 
@@ -41,7 +42,7 @@ class Observable(object):
         """
         return len(self._observers)
     
-    def removeObserver(self, obs):
+    def remove_observer(self, obs):
         """
         Remove an observer.
 
@@ -56,49 +57,35 @@ class Observable(object):
             return True
         return False
             
-    def notifyObservers(self, *args, **kwargs):
+    def notify(self, *args, **kwargs):
         """
         Callback to update all observers.
         """
         if not self._changed:
             return
 
-        self.clearChanged()
+        log.info('updating observers...')
+        self.clear_changed()
         for obs in self._observers:
             obs.update(*args, **kwargs)
     
-    def clearChanged(self):
+    def clear_changed(self):
         """
         Clear the changed status.
         """
         self._changed = 0
         
-    def setChanged(self):
+    def set_changed(self):
         """
         Set the changed status.
         """
         self._changed = 1
     
-    def hasChanged(self):
+    def has_changed(self):
         """
         Indicates the observer changed status.
         """
         return self._changed
  
+  
  
-class Observer(object):
-    def __init__(self):
-        pass
-        
-    def update(self, *args):
-        pass
- 
- 
-class Event(object):
-    def __init__(self, name, parent, *args, **kwargs):        
-
-        self.name   = name
-        self.parent = parent
-
-        self._data  = dict()
-        self._data.update(*args, **kwargs)

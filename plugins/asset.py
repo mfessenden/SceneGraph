@@ -6,17 +6,11 @@ from SceneGraph.core.nodes import DagNode
 SCENEGRAPH_NODE_TYPE = 'asset'
 
 
-class Asset(DagNode):
+class AssetNode(DagNode):
 
     default_name  = 'asset'
     default_color = [174, 188, 43, 255]
-    
-    def __init__(self, *args, **kwargs):        
-        kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        DagNode.__init__(self, *args, **kwargs)
+    node_type     = 'asset'
 
-        self.remove_connection('input')
-        
-        # add two inputs
-        for i in ['model', 'lookdev', 'rig', 'texture']:
-            self.add_input(name=i)
+    def __init__(self, name=None, **kwargs):
+        super(AssetNode, self).__init__(name, **kwargs)

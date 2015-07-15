@@ -6,17 +6,12 @@ from SceneGraph.core.nodes import DagNode
 SCENEGRAPH_NODE_TYPE = 'lookdev'
 
 
-class Lookdev(DagNode):
+class LookdevNode(DagNode):
 
     default_name  = 'lookdev'
     default_color = [241, 118, 110, 255]
+    node_type     = 'lookdev'
     
-    def __init__(self, *args, **kwargs):        
-        kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        DagNode.__init__(self, *args, **kwargs)
-
-        self.remove_connection('input')
+    def __init__(self, name=None, **kwargs):
+        super(LookdevNode, self).__init__(name, **kwargs)
         
-        # add two inputs
-        for i in ['model', 'shader', 'shader_mapping']:
-            self.add_input(name=i)

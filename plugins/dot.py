@@ -6,26 +6,16 @@ from SceneGraph.core.nodes import DagNode
 SCENEGRAPH_NODE_TYPE = 'dot'
 
 
-class Dot(DagNode):
+class DotNode(DagNode):
 
     default_name  = 'dot'
     default_color = [172, 172, 172, 255]
+    node_type     = 'dot'
 
-    def __init__(self, *args, **kwargs):        
-        kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        DagNode.__init__(self, *args, **kwargs)
+    def __init__(self, name=None, **kwargs):
+        super(DotNode, self).__init__(name, **kwargs)
 
         self.width              = 10.0
-        self.base_height        = 10.0
-        self.height_expanded    = 10.0
-
-        
+        self.base_height        = 10.0        
         self.orientation        = 'dot'
 
-    @property
-    def height(self):
-        return 10.0
-
-    @property
-    def width(self):
-        return 10.0

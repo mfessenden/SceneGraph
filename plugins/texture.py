@@ -6,12 +6,12 @@ from SceneGraph.core.nodes import DagNode
 SCENEGRAPH_NODE_TYPE = 'texture'
 
 
-class Texture(DagNode):
+class TextureNode(DagNode):
 
     default_name  = 'texture'
     default_color = [111, 178, 68, 255]
+    node_type     = 'texture'
 
-    def __init__(self, *args, **kwargs):        
-        kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
-        DagNode.__init__(self, *args, **kwargs)
+    def __init__(self, name=None, **kwargs):
+        super(TextureNode, self).__init__(name, **kwargs)
 
