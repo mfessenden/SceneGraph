@@ -1,10 +1,8 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: node1;
-node_type: str: default: -p;
-color: color: 0,0,0;
-enabled: bool: true;
+# default node attributes
+[attr view_label]
+    default     STRING    "Base node type"
+
+[group Node Attributes]
+
+    [attr doctstring]
+        default     STRING    "default node"

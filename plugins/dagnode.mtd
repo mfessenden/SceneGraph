@@ -1,0 +1,40 @@
+# base DagNode metadata
+[group Node Transform]
+    [attr pos]
+        default             FLOAT2    [0.0, 0.0]
+        label               STRING    "Position"
+        label.0             STRING    "x"
+        label.1             STRING    "y"
+
+    [attr width]
+        default             FLOAT     100.0        
+
+    [attr base_height]
+        default             FLOAT     15.0
+        label               STRING    "Base Height"
+        desc                STRING    "node base height (multiplied by the number of connections)."
+
+    [attr enabled]
+        default             BOOL      true 
+
+[group Node Attributes]
+    [attr id]
+        default             STRING    ""
+        label               STRING    "Node ID"
+        private             BOOL      true
+
+    [attr name]
+        label               STRING    "Node Name"
+        default             STRING    "dagnode"
+
+    [attr node_type]
+        default             STRING    "dagnode"
+        label               STRING    "Node Type"
+        private             BOOL      true
+
+    [attr color]
+        default             COLOR     [172, 172, 172]
+        desc                STRING    "node background color."
+
+    [connection output]
+        connection_type     OUTPUT    ""

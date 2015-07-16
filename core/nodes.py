@@ -4,10 +4,11 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-
+from collections import MutableMapping
 from SceneGraph.core import log, Attribute, Observable
-from SceneGraph.options import SCENEGRAPH_PLUGIN_PATH
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
+
 
 
 class DagNode(Observable):
@@ -19,8 +20,9 @@ class DagNode(Observable):
     def __init__(self, name=None, **kwargs):        
         super(DagNode, self).__init__()
 
+        # todo: not loving this, look into solutions:
         self.__dict__['_attributes'] = dict()
-        self._metadata          = kwargs.pop('_metadata', None)
+        self._metadata          = Metadata(self)
 
         # basic node attributes        
         self.name               = name if name else self.default_name
@@ -33,11 +35,16 @@ class DagNode(Observable):
         self.enabled            = kwargs.pop('enabled', True)
         self.orientation        = kwargs.pop('orientation', 'horizontal')
 
+        # metadata
+        metadata                = kwargs.pop('metadata', dict())
+        if not metadata:
+            metadata = self.build_metadata()
         # ui
         self._widget            = None  
 
         UUID = kwargs.pop('id', None)
         self.id = UUID if UUID else str(uuid.uuid4())
+        self._metadata.update(metadata)
 
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
@@ -83,6 +90,17 @@ class DagNode(Observable):
                 data[attr] = getattr(self, attr)
         data.update(**self._attributes)
         return data
+
+    @property
+    def metadata(self):
+        """
+        Output metadata object.
+        """
+        return self._metadata
+
+    @property 
+    def mdata(self):
+        print json.dumps(self._metadata.data, indent=5)
 
     @property
     def graph(self):
@@ -386,6 +404,20 @@ class DagNode(Observable):
 
     #- Plugins/Metadata ----
     @property
+    def plugin_file(self):
+        """
+        Returns the plugin file associated with this node type.
+
+        returns:
+            (str) - plugin filename.
+        """
+        import inspect
+        src_file = inspect.getfile(self.__class__)
+        if os.path.exists(src_file.rstrip('c')):
+            plugin_file = src_file.rstrip('c')
+        return plugin_file
+    
+    @property
     def is_builtin(self):
         """
         Returns true if the node is a member for the is_builtin 
@@ -394,9 +426,49 @@ class DagNode(Observable):
         returns:
             (bool)  - plugin is a builtin.
         """
+        return SCENEGRAPH_PLUGIN_PATH in self.plugin_file
+
+    def build_metadata(self):
+        """
+        Build metadata
+        """
         import inspect
-        plugin_fn = inspect.getfile(self.__class__)
-        return SCENEGRAPH_PLUGIN_PATH in plugin_fn
+        from . import metadata
+        parser = metadata.MetadataParser()
+
+        node_metadata = dict()
+
+        # query the base classes
+        result = [self.__class__,]
+        for pc in self.ParentClasses():
+            result.append(pc)
+        
+        sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
+
+        for cls in reversed(result):
+            cname = cls.__name__
+            src_file = inspect.getfile(cls)
+            py_src = src_file.rstrip('c')
+
+            dirname = os.path.dirname(src_file)
+            basename = os.path.splitext(os.path.basename(src_file))[0]
+            
+            # return the source .py file if it exists
+            if os.path.exists(py_src):
+                src_file = py_src
+
+            metadata_filename = os.path.join(dirname, '%s.mtd' % basename)
+
+            # default DagNode type is special.
+            if py_src == sg_core_path:
+                metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
+            
+            if not os.path.exists(metadata_filename):
+                raise OSError('plugin description file "%s" does not exist.' % metadata_filename)
+
+            parsed = parser.parse(metadata_filename)
+            node_metadata.update(parsed)
+        return node_metadata
 
     def Class(self):
         return self.__class__.__name__
@@ -409,7 +481,7 @@ class DagNode(Observable):
         Returns all of this objects' parent classes.
 
         params:
-            p (obj) - parent object.
+            p (obj) - parent class.
 
         returns:
             (list) - list of parent class names.
@@ -417,7 +489,115 @@ class DagNode(Observable):
         base_classes = []
         cl = p if p is not None else self.__class__
         for b in cl.__bases__:
-            if b.__name__ != "object":
-                base_classes.append(b.__name__)
+            if b.__name__ not in ["object", "Observable"]:
+                base_classes.append(b)
                 base_classes.extend(self.ParentClasses(b))
         return base_classes
+
+
+#- Metadata -----
+
+class Metadata(object):
+
+    def __init__(self, parent=None, **kwargs):
+
+        self._parent         = parent
+        self._data           = dict()
+        self._default_xform  = "Node Transform"
+        self._default_attrs  = "Node Attributes" 
+
+        self._data.update(**kwargs)
+
+    def parentItem(self):
+        """
+        Returns the parent DagNode.
+
+        returns:
+            (DagNode) - parent DagNode.
+        """
+        return self._parent
+
+    def clear(self):
+        """
+        Clears the parsed metadata.
+        """
+        self._data = dict()
+
+    def sections(self):
+        """
+        Returns the metadata "sections" (top-level groups).
+
+        returns:
+            (list) - list of metadata group sections.
+        """
+        return self._data.keys()
+
+    def attributes(self, section):
+        """
+        Returns the metadata attributes in a given section.
+
+        returns:
+            (list) - list of metadata attribute names.
+        """
+        if section in self.sections():
+            return self._data.get(section).keys()
+        return []
+
+    def getAttr(self, section, attr):
+        """
+        Returns a metadata attribute.
+
+        returns:
+            (dict) - attribute dictionary.
+        """
+        if attr in self.attributes(section):
+            return self._data.get(section).get(attr)
+        return {}
+
+    def defaults(self):
+        """
+        Returns default node attributes.
+
+        returns:
+            (dict) - attributes dictionary.
+        """
+        if self._default_attrs is None:
+            return {}
+
+        if self._default_attrs in self._data.keys():
+            return self._data.get(self._default_attrs)
+        return {}
+
+    def transformAttrs(self):
+        """
+        Returns default transform attributes.
+
+        returns:
+            (dict) - attributes dictionary.
+        """
+        if self._default_xform is None:
+            return {}
+        if self._default_xform in self._data.keys():
+            return self._data.get(self._default_xform)
+        return {}
+
+    def update(self, data):
+        """
+        Update the data dictionary.
+
+        * todo: can't pass as **kwargs else we lose the order (why is that?)
+        """
+        for k, v in data.iteritems():
+            self._data.update({k:v})
+
+    @property
+    def data(self):
+        return self._data
+
+    def __str__(self):
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
+
+    def __repr__(self):
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
+
+

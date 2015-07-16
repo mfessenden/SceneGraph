@@ -14,20 +14,14 @@ regex = dict(
      properties     = re.compile("(?P<name>[\.\w]*)\s*(?P<type>\w*)\s*(?P<value>.*)$"),
      )
 
-"""
-p = 'private'
-c = 'connectable'
-u = 'user'
-l = 'locked'
-r = 'required'
-"""
 
 PROPERTIES = dict(
-    min = 'minimum value',
-    max = 'maximum value',
-    default = 'default value',
-    label = 'node label',
-    private = 'attribute is private (hidden)',
+    min         = 'minimum value',
+    max         = 'maximum value',
+    default     = 'default value',
+    label       = 'node label',
+    private     = 'attribute is private (hidden)',
+    desc        = 'attribute description,'
 )
 
 
@@ -41,11 +35,13 @@ class MetadataParser(object):
     """
     def __init__(self, filename=None, **kwargs):
 
-        self._template  = filename
-        self._data      = dict()
+        self._template      = filename
+        self._data          = dict()
+        self._initialized   = False
 
         if filename:
             self._data = self.parse(filename)
+            self._initialized = True
 
     def initialize(self):
         """
@@ -67,6 +63,9 @@ class MetadataParser(object):
         params:
             filename (str) - file on disk to read.
         """
+        if self._initialized:
+            self.initialize()
+
         data = dict()
         if filename is not None:
             if os.path.exists(filename):
@@ -106,21 +105,29 @@ class MetadataParser(object):
                                     parent[section_value] = attr_data
                                     attr_name = section_value
                                     #print '   Attribute: ', attr_name
+
+                                if section_type == 'connection':            
+                                    conn_data = dict()
+                                    parent[section_value] = conn_data
+                                    attr_name = section_value
+                                    #print '   Attribute: ', attr_name
+
                         else:
                             prop_obj = re.search(regex.get("properties"), rline)
 
                             if prop_obj:
+                                pname = prop_obj.group('name')
                                 ptype = prop_obj.group('type')
-                                value = prop_obj.group('value')
+                                pvalu = prop_obj.group('value')
 
                                 # try and get the actual value
                                 if ptype not in ['BOOL']:
                                     try:
-                                        value = eval(value)
+                                        value = eval(pvalu)
                                     except:
-                                        pass
+                                        log.warning('cannot parse default value of "%s.%s": "%s" (%s)' % (attr_name, pname, pvalu, filename))
                                 #print '     property: %s (%s)' % (prop_obj.group('name'), attr_name)
-                                properties = {prop_obj.group('name'): {'type':ptype, 'value':value}}
+                                properties = {pname: {'type':ptype, 'value':pvalu}}
                                 parent[attr_name].update(properties)
 
         return data

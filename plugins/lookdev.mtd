@@ -1,14 +1,23 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: node1;
-node_type: str: lookdev: -p;
-color: color: 0,0,0;
-enabled: bool: true;
-[asset]
-model: file: -r;
-shader_mapping: file: -r;
-shader: file: -r;
+# lookdev node attributes
+[group Asset]
+    [connection model]
+        default            FILE      ""
+        label              STRING    "Model"
+        connection_type    INPUT     FILE
+
+    [connection shader_mapping]
+        default            FILE      ""
+        label              STRING    "Mapping"
+        desc               STRING    "shaders mapping file."
+        connection_type    INPUT     FILE
+
+    [connection shader]
+        default            FILE      ""
+        label              STRING    "Shaders"
+        desc               STRING    "shaders file."
+        connection_type    INPUT     FILE
+
+    [connection texture]
+        default            FILE      ""
+        label              STRING    "Textures"
+        connection_type    INPUT     DIRECTORY

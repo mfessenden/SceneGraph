@@ -410,6 +410,24 @@ class PluginManager(object):
                     return cls.default_name
         return
 
+    def metadata_file(self, filename):
+        """
+        Returns the metadata description associated the given plugin.
+
+        returns:
+            (str) - plugin source file.
+        """
+        sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
+        if filename == sg_core_path:
+            metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
+        else:
+            basename = os.path.splitext(os.path.basename(filename))[0]
+            metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, '%s.mtd' % basename)
+
+        if not os.path.exists(metadata_filename):
+            raise OSError('plugin description file "%s" does not exist.' % metadata_filename)
+        return metadata_filename
+
     def enable(self, plugin, enabled=True):
         """
         Enable/disable plugins.

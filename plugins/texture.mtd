@@ -1,10 +1,19 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: node1;
-node_type: str: model: -p;
-color: color: 0,0,0;
-enabled: bool: true;
+# texture node attributes
+[group Texture Attributes]
+    [connection diffuse]
+        connection_type     INPUT   DIRECTORY
+
+    [connection specular]
+        connection_type     INPUT   DIRECTORY
+
+    [connection gloss]
+        connection_type     INPUT   DIRECTORY
+
+    [connection bump]
+        connection_type     INPUT   DIRECTORY
+
+    [connection normal]
+        connection_type     INPUT   DIRECTORY
+
+    [connection disp]
+        connection_type     INPUT   DIRECTORY

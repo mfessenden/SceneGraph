@@ -1,12 +1,7 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: merge1;
-node_type: str: merge: -p;
-inputA: str: -c;
-inputB: str: -c;
-color: color: 0,0,0;
-enabled: bool: true;
+# marge node attributes
+[group Inputs]
+    [connection inputA]
+        connection_type    INPUT     ""
+
+    [connection inputB]
+        connection_type    INPUT     ""

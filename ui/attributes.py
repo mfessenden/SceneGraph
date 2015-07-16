@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from PySide import QtCore, QtGui
 from SceneGraph import util
-from SceneGraph.core import log, DataParser
+from SceneGraph.core import log, MetadataParser
 from SceneGraph.options import SCENEGRAPH_STYLESHEET_PATH, PLATFORM
 
 
@@ -14,7 +14,7 @@ class AttributeEditor(QtGui.QWidget):
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
         self._nodes         = []
-        self._parser        = DataParser()
+        self._parser        = MetadataParser()
         self._show_private  = False
         self._handler       = kwargs.get('handler', None)
         self._add_dialog    = None

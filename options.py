@@ -18,7 +18,7 @@ def setup_platform_defaults():
 
 PACKAGE                     = 'SceneGraph'
 API_MAJOR_VERSION           = 0.64
-API_REVISION                = 0
+API_REVISION                = 1
 API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                    = setup_platform_defaults()

@@ -1,10 +1,4 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: node1;
-node_type: str: model: -p;
-color: color: 0,0,0;
-enabled: bool: true;
+# model node attributes
+[group Node Attributes]
+    [connection file]
+        connection_type     INPUT   FILE

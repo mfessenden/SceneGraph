@@ -1,15 +1,23 @@
-[transform]
-pos: short2: 0,0;
-width: int8: 100;
-base_height: int8: 15: -p;
-[attributes]
-id: str: -p;
-name: str: node1;
-node_type: str: lookdev: -p;
-color: color: 0,0,0;
-enabled: bool: true;
-[asset]
-model: file: -r;
-lookdev: file: -r;
-rig: file: -r;
-texture: file: -r;
+# asset node attributes
+[group Asset]
+    [connection model]
+        default            FILE      ""
+        label              STRING    "Model"
+        connection_type    INPUT     [FILE, "model"]
+
+    [connection lookdev]
+        default            FILE      ""
+        label              STRING    "Lookdev"
+        desc               STRING    "lookdev node."
+        connection_type    INPUT     "lookdev"
+        
+    [connection rig]
+        default            FILE      ""
+        label              STRING    "Rig"
+        desc               STRING    "rigging file."
+        connection_type    INPUT     FILE
+
+    [connection texture]
+        default            FILE      ""
+        label              STRING    "Textures"
+        connection_type    INPUT     ["texture", FILE]
