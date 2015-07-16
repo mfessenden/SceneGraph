@@ -29,9 +29,9 @@ MousePressEvent         = events.MousePressEvent
 DagNode                 = nodes.DagNode
 
 
-# Observers/Managers
+# Parsers/Managers
 NodeManager             = manager.NodeManager
-DataParser              = metadata.DataParser 
+MetadataParser          = metadata.MetadataParser 
 
 
 # Plugin Manager

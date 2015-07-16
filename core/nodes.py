@@ -15,7 +15,7 @@ class DagNode(Observable):
     default_name  = 'node'
     default_color = [172, 172, 172, 255]
     node_type     = 'dagnode'
-
+    PRIVATE       = ['node_type']
     def __init__(self, name=None, **kwargs):        
         super(DagNode, self).__init__()
 
@@ -54,6 +54,9 @@ class DagNode(Observable):
         raise AttributeError(name)
         
     def __setattr__(self, name, value):
+        if name in self.PRIVATE:
+            raise AttributeError('"%s" is a private attribute and cannot be modified.' % name)
+
         if hasattr(self, '_attributes'):
             if name in self._attributes:
                 attribute = self._attributes.get(name)
@@ -80,6 +83,55 @@ class DagNode(Observable):
                 data[attr] = getattr(self, attr)
         data.update(**self._attributes)
         return data
+
+    @property
+    def graph(self):
+        return self._graph
+
+    @graph.setter
+    def graph(self, value):
+        self._graph = value
+        return self.graph
+
+    #- Virtual ----
+    def evaluate(self):
+        """
+        Evalutate the node.
+        """
+        return True
+
+    #- Transform ----
+    @property
+    def expanded(self):
+        height = max(len(self.inputs), len(self.outputs))
+        return height > 1
+
+    @property
+    def height(self):
+        """
+        Returns the height of the node (height is determined 
+        as base height * max number of connectable attributes)
+
+        returns:
+            (float) - total height of the node.
+        """
+        btm_buffer = 0
+        max_conn = max(len(self.inputs), len(self.outputs))
+        height = max_conn if max_conn else 1
+        if height > 1:
+            height+=1
+            btm_buffer = self.base_height/2
+        return (height * self.base_height) + btm_buffer
+
+    @height.setter
+    def height(self, value):
+        """
+        Set the base height value.
+
+        params:
+            value (float) = base height.
+        """
+        self.base_height=value
 
     #- Attributes ----
     def attributes(self, *args):
@@ -136,9 +188,236 @@ class DagNode(Observable):
         attr.name = new_name
         self._attributes.update({attr.name:attr})
 
-     #- Connections ----
+    #- Connections ----
+    @property
+    def connections(self):
+        """
+        Returns a list of connections (input & output)
 
-     #- Plugins ----
-    @staticmethod
-    def dag_types():
-        return DagNode.__subclasses__()
+        returns:
+            (list) - list of connection names.
+        """
+        conn_names = []
+        for name in self._attributes:
+            if self._attributes.get(name).get('is_connectable'):
+                conn_names.append(name)
+        return conn_names
+
+    @property
+    def inputs(self):
+        """
+        Returns a list of input connection names.
+
+        returns:
+            (list) - list of input connection names.
+        """
+        inputs = []
+        for name in self._attributes:
+            data = self._attributes.get(name)
+            if data.get('connectable') and data.get('connection_type') == 'input':
+                inputs.append(name)
+        return inputs
+
+    @property
+    def outputs(self):
+        """
+        Returns a list of output connection names.
+
+        returns:
+            (list) - list of output connection names.
+        """
+        inputs = []
+        for name in self._attributes:
+            data = self._attributes.get(name)
+            if data.get('connectable') and data.get('connection_type') == 'output':
+                inputs.append(name)
+        return inputs
+
+    def get_input(self, name='input'):
+        """
+        Return a named node input.
+
+        params:
+            name (str) - name of input.
+
+        returns:
+            (Connection) - connection node.
+        """
+        if not name in self._attributes:
+            return
+
+        data = self._attributes.get(name)
+        if data.get('is_connectable') and data.get('connection_type') == 'input':
+            return self._attributes.get(name)
+        return
+
+    def get_output(self, name='output'):
+        """
+        Return a named node output.
+
+        params:
+            name (str) - name of output.
+
+        returns:
+            (Connection) - connection node.
+        """
+        if not name in self._attributes:
+            return
+
+        data = self._attributes.get(name)
+        if data.get('is_connectable') and data.get('connection_type') == 'output':
+            return self._attributes.get(name)
+        return
+
+    def is_connected(self, name):
+        """
+        Returns true if the named connection has 
+        a connection.
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (bool) - connection status.
+        """
+        conn = self.get_connection(name)
+        if not conn:
+            return False
+        return not conn.is_connectable
+
+    def input_connections(self):
+        """
+        Returns a list of connected DagNodes.
+
+        returns:
+            (list) - list of DagNode objects.
+        """
+        connected_nodes = []
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if destid == self.id:
+                if srcid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(srcid))
+        return connected_nodes
+
+    def output_connections(self):
+        """
+        Returns a list of connected DagNodes.
+
+        returns:
+            (list) - list of DagNode objects.
+        """
+        connected_nodes = []
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if srcid == self.id:
+                if destid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(destid))
+        return connected_nodes
+
+    @property
+    def is_input_connection(self):
+        """
+        Returns true if the node is an input connection.
+        """
+        return bool(self.output_connections())
+ 
+    @property
+    def is_output_connection(self):
+        """
+        Returns true if the node is an output connection.
+        """
+        return bool(self.input_connections())   
+
+    def get_connection(self, name):
+        """
+        Returns a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (Attribute) - connection object.
+        """
+        conn = None
+        if name not in self._attributes:
+            return 
+
+        data = self._attributes.get(name)
+        if data.get('is_connectable'):
+            return self._attributes.get(name)
+        return
+
+    def rename_connection(self, old, new):
+        """
+        Rename a connection.
+
+        params:
+            old (str) - old connection name.
+            new (new) - new connection name.
+
+        returns:
+            (bool) - rename was successful.
+        """
+        conn = self.get_connection(old)
+        if conn:
+            conn.name = new
+            return True
+        return False
+
+    def remove_connection(self, name):
+        """
+        Remove a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (bool) - connection was removed.
+        """
+        if name in self._attributes:
+            if self._attributes.get(name).get('is_connectable'):
+                conn = self._attributes.pop(name)
+                del conn 
+                return True 
+        return False
+
+    #- Plugins/Metadata ----
+    @property
+    def is_builtin(self):
+        """
+        Returns true if the node is a member for the is_builtin 
+        plugins.
+
+        returns:
+            (bool)  - plugin is a builtin.
+        """
+        import inspect
+        plugin_fn = inspect.getfile(self.__class__)
+        return SCENEGRAPH_PLUGIN_PATH in plugin_fn
+
+    def Class(self):
+        return self.__class__.__name__
+
+    def dag_types(self):
+        return [c.__name__ for c in DagNode.__subclasses__()]
+
+    def ParentClasses(self, p=None):
+        """
+        Returns all of this objects' parent classes.
+
+        params:
+            p (obj) - parent object.
+
+        returns:
+            (list) - list of parent class names.
+        """
+        base_classes = []
+        cl = p if p is not None else self.__class__
+        for b in cl.__bases__:
+            if b.__name__ != "object":
+                base_classes.append(b.__name__)
+                base_classes.extend(self.ParentClasses(b))
+        return base_classes

@@ -28,6 +28,7 @@ class AttributeEditor(QtGui.QWidget):
 
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
         
@@ -44,7 +45,7 @@ class AttributeEditor(QtGui.QWidget):
         # setup the main interface
         self.initializeUI()
         self.connectSignals()        
-        self.initializeStylesheet()
+        #self.initializeStylesheet()
 
     def initializeUI(self):
         """
@@ -66,58 +67,6 @@ class AttributeEditor(QtGui.QWidget):
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
-
-    def updateChildEditors(self, attributes=[]):
-        """
-        Refresh the current editors. Optionally
-        update certain named attributes (default is all)
-
-        params:
-            attributes (list) - list of attribute strings.
-        """
-        editors = self.childEditors()
-        if attributes:
-            editors = []
-            for attribute in attributes:
-                editor = self.getEditor(attribute)
-                if editor:
-                    editors.append(editor)
-
-        if editors:
-            editors = list(set(editors))
-
-            for e in editors:
-                e.initializeEditor()
-
-    def togglePrivate(self):
-        """
-        **Debug
-        """
-        self._show_private = not self._show_private
-        self.clearLayout(self.mainGroupLayout)
-        self.buildLayout()
-
-    def sizeHint(self):
-        return QtCore.QSize(270, 550)
-
-    def connectSignals(self):
-        pass
-
-    def createContextMenu(self):
-        """
-        Build a context menu at the current pointer pos.
-
-        params:
-            parent (QWidget) - parent widget.
-        """
-        popup_menu = QtGui.QMenu(self)
-        popup_menu.clear()
-        qcurs = QtGui.QCursor()
-        add_action = QtGui.QAction('Add attribute', self) 
-        add_action.triggered.connect(self.launchAddAttributeDialog)
-
-        popup_menu.addAction(add_action)
-        popup_menu.exec_(qcurs.pos())
 
     def buildLayout(self):
         """
@@ -187,6 +136,58 @@ class AttributeEditor(QtGui.QWidget):
         if len(self._nodes) == 1:
             group_title = '%s: %s:' % (node_type, self._nodes[0].name)
         self.mainGroup.setTitle(group_title)
+
+    def updateChildEditors(self, attributes=[]):
+        """
+        Refresh the current editors. Optionally
+        update certain named attributes (default is all)
+
+        params:
+            attributes (list) - list of attribute strings.
+        """
+        editors = self.childEditors()
+        if attributes:
+            editors = []
+            for attribute in attributes:
+                editor = self.getEditor(attribute)
+                if editor:
+                    editors.append(editor)
+
+        if editors:
+            editors = list(set(editors))
+
+            for e in editors:
+                e.initializeEditor()
+
+    def togglePrivate(self):
+        """
+        **Debug
+        """
+        self._show_private = not self._show_private
+        self.clearLayout(self.mainGroupLayout)
+        self.buildLayout()
+
+    def sizeHint(self):
+        return QtCore.QSize(270, 550)
+
+    def connectSignals(self):
+        pass
+
+    def createContextMenu(self):
+        """
+        Build a context menu at the current pointer pos.
+
+        params:
+            parent (QWidget) - parent widget.
+        """
+        popup_menu = QtGui.QMenu(self)
+        popup_menu.clear()
+        qcurs = QtGui.QCursor()
+        add_action = QtGui.QAction('Add attribute', self) 
+        add_action.triggered.connect(self.launchAddAttributeDialog)
+
+        popup_menu.addAction(add_action)
+        popup_menu.exec_(qcurs.pos())
 
     #- Events -----
     def nodeAttributeChanged(self, editor):

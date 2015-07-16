@@ -59,7 +59,7 @@ class Observable(object):
             self._observers.remove(obs)
             return True
         return False
-            
+
     def notify(self, *args, **kwargs):
         """
         Callback to update all observers.

@@ -8,24 +8,32 @@ import re
 from SceneGraph.core import log
 
 
-DATA_EXPRS = dict(
-     group_name = re.compile("\[(?P<group_name>\w+)\]"),
-     attribute  = re.compile("^(?P<attr_name>\w+):\s?(?P<attr_type>\w+):?\s?(?P<tail>.+);$"),
+regex = dict(
+     section        = re.compile(r"^\[[^\]\r\n]+]"),
+     section_value  = re.compile(r"\[(?P<attr>[\w]*?) (?P<value>[\w\s]*?)\]$"),
+     properties     = re.compile("(?P<name>[\.\w]*)\s*(?P<type>\w*)\s*(?P<value>.*)$"),
      )
 
+"""
+p = 'private'
+c = 'connectable'
+u = 'user'
+l = 'locked'
+r = 'required'
+"""
 
-ATTR_FLAGS = dict(
-    p = 'private',
-    c = 'connectable',
-    u = 'user',
-    l = 'locked',
-    r = 'required',
-    )
+PROPERTIES = dict(
+    min = 'minimum value',
+    max = 'maximum value',
+    default = 'default value',
+    label = 'node label',
+    private = 'attribute is private (hidden)',
+)
 
 
-class DataParser(object):
+class MetadataParser(object):
     """
-    class DataParser:
+    class MetadataParser:
 
         DESCRIPTION:
             read and parse node metadata (.mtd) files to build a 
@@ -35,6 +43,9 @@ class DataParser(object):
 
         self._template  = filename
         self._data      = dict()
+
+        if filename:
+            self._data = self.parse(filename)
 
     def initialize(self):
         """
@@ -48,7 +59,7 @@ class DataParser(object):
         import simplejson as json
         return json.dumps(self._data, indent=4)
 
-    def read(self, filename):
+    def parse(self, filename):
         """
         Read a template file. Data is structured into groups
         of attributes (ie: 'Transform', 'Attributes')
@@ -56,73 +67,63 @@ class DataParser(object):
         params:
             filename (str) - file on disk to read.
         """
+        data = dict()
         if filename is not None:
             if os.path.exists(filename):
-                data = open(filename).read()
 
-                log.debug('reading metadata file "%s".' % filename)
-                current_category = None
-                for line in data.split('\n'):
-                    val = self._parse_line(line)
-                    if val:
-                        
-                        # parse the 
-                        if 'group_name' in val:
-                            current_category = val.get('group_name')
-                            if current_category not in self._data:
-                                self._data[current_category]=dict()
+                parent = data
+                attr_name = None  
+
+                for line in open(filename,'r'):
+                    
+                    #remove newlines
+                    line = line.rstrip('\n')
+                    if not line.startswith("#") and not line.startswith(';') and line.strip() != "":
+                        # parse sections
+                        # remove leading spaces
+                        rline = line.lstrip(' ')
+
+                        if re.match(regex.get("section"), rline):                            
+                              
+                            section_obj = re.search(regex.get("section_value"), rline)
+
+                            if section_obj:
+                                section_type = section_obj.group('attr')
+                                section_value = section_obj.group('value')
+
+                                # parse groups
+                                if section_type == 'group':
+                                    if section_value not in parent:
+                                        parent = data
+                                        group_data = dict()
+                                        # set the current parent
+                                        parent[section_value] = group_data
+                                        parent = parent[section_value]
+                                        #print '\nGroup: ', section_value
+
+                                if section_type == 'attr':            
+                                    attr_data = dict()
+                                    parent[section_value] = attr_data
+                                    attr_name = section_value
+                                    #print '   Attribute: ', attr_name
                         else:
-                            self._data.get(current_category).update(val)
+                            prop_obj = re.search(regex.get("properties"), rline)
 
-    def _parse_line(self, l):
-        """
-        parse a line of data.
+                            if prop_obj:
+                                ptype = prop_obj.group('type')
+                                value = prop_obj.group('value')
 
-        params:
-            l (str) - line from a data file.
+                                # try and get the actual value
+                                if ptype not in ['BOOL']:
+                                    try:
+                                        value = eval(value)
+                                    except:
+                                        pass
+                                #print '     property: %s (%s)' % (prop_obj.group('name'), attr_name)
+                                properties = {prop_obj.group('name'): {'type':ptype, 'value':value}}
+                                parent[attr_name].update(properties)
 
-        returns:
-            (dict) - current line parsed.
-        """
-        result = dict()
-        for ftyp, fexpr in DATA_EXPRS.items():
-            attr_match = re.search(fexpr, l)
-            if attr_match:
-                data = attr_match.groupdict()
-                if 'attr_name' in data:
-                    attr_name = data.pop('attr_name')
-                    result[attr_name] = dict()
-                    if 'tail' in data:
-                        tail_data = data.pop('tail')
-                        attrs = self._parse_tail(tail_data)
-                        if attrs:
-                            result.get(attr_name).update(**attrs)
-                    result.get(attr_name).update(**data)
-                else:
-                    result.update(data)
-        return result
+        return data
 
-    def _parse_tail(self, l):
-        """
-        Parse attribute flags from the end of the string.
 
-        params:
-            l (str) - line of data.
 
-        returns:
-            (dict) - attribute parameters.
-        """
-        attributes = dict()
-        l=l.replace(" ", "")
-        values = l.split(':')
-        if values:
-            for v in values:
-                if '-' in v:
-                    attrs = [x for x in list(v) if x!="-"]
-                    if attrs:
-                        for attr in attrs:
-                            if attr in ATTR_FLAGS:
-                                attributes[ATTR_FLAGS[attr]] = True
-                else:
-                    attributes.update(default_value=v)
-        return attributes

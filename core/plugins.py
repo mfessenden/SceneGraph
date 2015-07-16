@@ -34,12 +34,43 @@ class PluginManager(object):
         self._default_modules        = get_modules(self._default_plugin_path)
 
         # external paths & module
-        self._external_plugin_paths  = paths if paths else self._get_external_plugin_paths()
+        self._external_plugin_paths  = paths
         self._external_modules       = []
 
         # auto-load default plugins
         self.load_plugins(self._default_plugin_path)
         self.load_widgets(self._default_plugin_path)
+
+        # setup external paths
+        if not self._external_plugin_paths:
+            self._external_plugin_paths = self.initializeExternalPaths()
+
+    def initializeExternalPaths(self):
+        """
+        Builds a list of external plugins paths. 
+
+        returns:
+            (tuple) - plugin scan paths.
+        """
+        result = ()
+        ext_pp = os.getenv('SCENEGRAPH_PLUGIN_PATH')
+        if ext_pp:
+            for path in ext_pp.split(':'):
+                result = result + (path,)
+        return list(result)
+
+    def plugin_paths(self):
+        """
+        Returns a list of all plugin paths, starting with builting.
+
+        returns:
+            (tuple) - plugin scan paths.
+        """
+        result = (self._default_plugin_path,)
+        if self._external_plugin_paths:
+            for path in self._external_plugin_paths:
+                result = result + (path,)
+        return result
 
     @property
     def globals(self):

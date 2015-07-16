@@ -9,6 +9,8 @@ class Attribute(object):
     """
     Generic Attribute class.
     """
+    attribute_type = 'generic'
+
     def __init__(self, name, value, dagnode=None, **kwargs):
 
         # private attributes
@@ -22,11 +24,11 @@ class Attribute(object):
         self._type             = kwargs.get('type', None)           # 
 
         # globals
-        self.private        = kwargs.get('private', False)  # hidden
-        self.hidden         = kwargs.get('hidden', False) 
-        self.connectable    = kwargs.get('connectable', False)
-        self.locked         = kwargs.get('locked', False)
-        self.required       = kwargs.get('required', False)
+        self.private           = kwargs.get('private', False)  # hidden
+        self.hidden            = kwargs.get('hidden', False) 
+        self.connectable       = kwargs.get('connectable', False)
+        self.locked            = kwargs.get('locked', False)
+        self.required          = kwargs.get('required', False)
 
         # connection
         self.connection_type   = kwargs.get('connection_type', 'input')
