@@ -7,7 +7,8 @@
         label.1             STRING    "y"
 
     [attr width]
-        default             FLOAT     100.0        
+        default             FLOAT     100.0
+        label               STRING    "Width"     
 
     [attr base_height]
         default             FLOAT     15.0
@@ -15,7 +16,8 @@
         desc                STRING    "node base height (multiplied by the number of connections)."
 
     [attr enabled]
-        default             BOOL      true 
+        default             BOOL      true
+        label               STRING    "Enabled"
 
 [group Node Attributes]
     [attr id]
@@ -24,8 +26,8 @@
         private             BOOL      true
 
     [attr name]
-        label               STRING    "Node Name"
         default             STRING    "dagnode"
+        label               STRING    "Node Name"        
 
     [attr node_type]
         default             STRING    "dagnode"
@@ -35,6 +37,7 @@
     [attr color]
         default             COLOR     [172, 172, 172]
         desc                STRING    "node background color."
+        label               STRING    "Color"
 
     [connection output]
         connection_type     OUTPUT    ""

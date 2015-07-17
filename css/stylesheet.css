@@ -317,22 +317,33 @@ QTabBar::tab::bottom:!selected {
 QTabBar::tab::top:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
 }
-/*
+
 QGroupBox {
-    font-weight: bold;
+    border: 1px solid #292929;
+    color: #949494;
+    border-radius: 0px;  
+    margin-top: 0.5em;
+    border-left-style: none;
+    border-right-style: none;
+    border-bottom-style: none;
 }
 
 QGroupBox::title {
-    subcontrol-position: top left;
     subcontrol-origin: margin;
-    padding-left: 3px;
-    font-weight: bold;
+    subcontrol-position: top left;
+    left: 10px;
+    top: 4px;
 }
 
-QGroupBox::title:flat {
-    font-style: italic;
+QGroupBox.AttributeEditor {
+    color: #d5d5d5;
+    border: 1px solid #292929;
+    border-left: 1px solid #505050;
+    border-bottom: 1px solid #505050;
+    font-weight: bold;
+    border-radius: 4px;
 }
-*/
+
 QListView {
     alternate-background-color: yellow;
 }
@@ -355,3 +366,23 @@ QGraphicsView {
     background-color: #222222;
     
 }
+
+/*
+
+QGroupBox {
+    border: 1px solid #444444;
+    border-radius: 0px;  
+    margin-top: 0.5em;
+    border-left-style: none;
+    border-right-style: none;
+    border-bottom-style: none;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px 0 3px;
+    margin-top: 1ex;
+}
+
+*/

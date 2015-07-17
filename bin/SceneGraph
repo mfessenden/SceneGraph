@@ -17,6 +17,8 @@ if __name__ == "__main__":
         #app.setStyle('plastique')
         app.setStyle('cleanlooks')
 
+    # oxygen looks better in linux overall, but plastique groupBoxes look better
+    # Designer previews in GTK+
     if 'linux' in sys.platform:
         app.setStyle("oxygen")
 

@@ -17,11 +17,11 @@ class DagNode(Observable):
     default_color = [172, 172, 172, 255]
     node_type     = 'dagnode'
     PRIVATE       = ['node_type']
+
     def __init__(self, name=None, **kwargs):        
         super(DagNode, self).__init__()
 
-        # todo: not loving this, look into solutions:
-        self.__dict__['_attributes'] = dict()
+        self._attributes        = dict()
         self._metadata          = Metadata(self)
 
         # basic node attributes        
@@ -46,6 +46,9 @@ class DagNode(Observable):
         self.id = UUID if UUID else str(uuid.uuid4())
         self._metadata.update(metadata)
 
+        # build connections
+        self.buildConnections()
+
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
@@ -53,12 +56,18 @@ class DagNode(Observable):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
     def __getattr__(self, name):
-        if hasattr(self, '_attributes'):
-            if name in self._attributes:
-                attribute = self._attributes.get(name)
-                return attribute.value
-            return super(DagNode, self).__getattr__(name)
-        raise AttributeError(name)
+        if '_attributes' not in self.__dict__:
+            raise AttributeError(attr)
+
+        if name in self._attributes:
+            attr = self._attributes.get(name)
+            return attr.value
+
+        elif hasattr(self, name):
+            print 'attr match: ', name
+            return getattr(self, name)
+        else:
+            raise AttributeError(name)        
         
     def __setattr__(self, name, value):
         if name in self.PRIVATE:
@@ -69,11 +78,15 @@ class DagNode(Observable):
                 attribute = self._attributes.get(name)
                 if value != attribte.value:
                     attribute.value = value
+                    Observable.set_changed()
+                    Observable.notify()
                 return
 
         # auto-add attributes
         if issubclass(type(value), Attribute):
             self.add_attr(name, **value)
+            Observable.set_changed()
+            Observable.notify()
             return
 
         #setattr(self, name, value)
@@ -173,6 +186,7 @@ class DagNode(Observable):
 
          * todo: add attribute type mapper.
         """
+        print 'attribute name: ', name
         attr = Attribute(name, value, dagnode=self, **kwargs)
         self._attributes.update({attr.name:attr})
         return attr
@@ -207,6 +221,18 @@ class DagNode(Observable):
         self._attributes.update({attr.name:attr})
 
     #- Connections ----
+    def buildConnections(self):
+        """
+        Build connections from metadata.
+        """
+        for i in self.metadata.input_connections():
+            conn_data = self.metadata.get_connection(i)
+            self.add_attr(i, conn_data, connectable=True, connection_type='input')
+
+        for o in self.metadata.output_connections():
+            conn_data = self.metadata.get_connection(o)
+            self.add_attr(o, conn_data, connectable=True, connection_type='output')
+
     @property
     def connections(self):
         """
@@ -581,6 +607,35 @@ class Metadata(object):
             return self._data.get(self._default_xform)
         return {}
 
+    def get_connection(self, name):
+        return {}
+
+    def input_connections(self):
+        connections = []
+        for section in self.sections():
+            for attribute in self.attributes(section):
+                attr_data = self.getAttr(section, attribute)
+                if 'connection_type' in attr_data:
+                    conn_attrs = attr_data.get('connection_type')
+                    conn_type = conn_attrs.get('type')
+                    if conn_type == 'INPUT':
+                        #connections.append({attribute:{'type':conn_type}})
+                        connections.append(attribute)
+        return connections
+
+    def output_connections(self):
+        connections = []
+        for section in self.sections():
+            for attribute in self.attributes(section):
+                attr_data = self.getAttr(section, attribute)
+                if 'connection_type' in attr_data:
+                    conn_attrs = attr_data.get('connection_type')
+                    conn_type = conn_attrs.get('type')
+                    if conn_type == 'OUTPUT':
+                        #connections.append({attribute:{'type':conn_type}})
+                        connections.append(attribute)
+        return connections
+
     def update(self, data):
         """
         Update the data dictionary.
@@ -588,7 +643,10 @@ class Metadata(object):
         * todo: can't pass as **kwargs else we lose the order (why is that?)
         """
         for k, v in data.iteritems():
-            self._data.update({k:v})
+            if k in self._data:
+                self._data.get(k).update(**v)
+            else:
+                self._data.update({k:v})
 
     @property
     def data(self):

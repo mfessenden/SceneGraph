@@ -120,14 +120,22 @@ class MetadataParser(object):
                                 ptype = prop_obj.group('type')
                                 pvalu = prop_obj.group('value')
 
+                                value = pvalu
+                                if ptype in ['BOOL', 'INPUT', 'OUTPUT']:
+                                    if ptype == 'BOOL':
+                                        value = True if pvalu == 'true' else False
+
+                                    if ptype in ['INPUT', 'OUTPUT']:
+                                        value = pvalu.lower()
+
                                 # try and get the actual value
-                                if ptype not in ['BOOL']:
+                                else:
                                     try:
                                         value = eval(pvalu)
                                     except:
                                         log.warning('cannot parse default value of "%s.%s": "%s" (%s)' % (attr_name, pname, pvalu, filename))
                                 #print '     property: %s (%s)' % (prop_obj.group('name'), attr_name)
-                                properties = {pname: {'type':ptype, 'value':pvalu}}
+                                properties = {pname: {'type':ptype, 'value':value}}
                                 parent[attr_name].update(properties)
 
         return data

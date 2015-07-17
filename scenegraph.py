@@ -221,12 +221,12 @@ class SceneGraphUI(form_class, base_class):
         self.fonts["console"].setPointSize(size-1)
         self.fonts["console"].setFamily(mono_family)
 
-        self.fonts["attr_editor"] = QtGui.QFont('Monospace')
-        self.fonts["attr_editor"].setPointSize(size)
+        self.fonts["attr_editor"] = QtGui.QFont(font)
+        self.fonts["attr_editor"].setPointSize(size+1)
 
-        self.fonts["attr_editor_group"] = QtGui.QFont('Monospace')
+        self.fonts["attr_editor_group"] = QtGui.QFont(font)
         self.fonts["attr_editor_group"].setPointSize(size)
-        self.fonts["attr_editor_group"].setItalic(True)
+        self.fonts["attr_editor_group"].setBold(True)
 
     def initializeGraphicsView(self, filter=False):
         """

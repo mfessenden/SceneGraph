@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from collections import OrderedDict as dict
 from PySide import QtCore, QtGui
 from SceneGraph import util
 from SceneGraph.core import log, MetadataParser
@@ -14,7 +15,7 @@ class AttributeEditor(QtGui.QWidget):
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
         self._nodes         = []
-        self._parser        = MetadataParser()
+        self._sections      = []        # node metadata sections
         self._show_private  = False
         self._handler       = kwargs.get('handler', None)
         self._add_dialog    = None
@@ -31,12 +32,13 @@ class AttributeEditor(QtGui.QWidget):
         self.mainLayout.setContentsMargins(1, 1, 1, 1)
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
-        
+        self.mainGroup.setProperty("class", "AttributeEditor") 
+        self.mainGroup.setFont(self.fonts.get("attr_editor"))
+        self.mainGroup.setFlat(True)
 
-        #self.mainGroup.setFlat(True)
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
-        self.mainGroupLayout.setContentsMargins(1, 1, 1, 1)
+        self.mainGroupLayout.setContentsMargins(5, 15, 5, 5)
 
         # context menu
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -45,7 +47,7 @@ class AttributeEditor(QtGui.QWidget):
         # setup the main interface
         self.initializeUI()
         self.connectSignals()        
-        #self.initializeStylesheet()
+        self.initializeStylesheet()
 
     def initializeUI(self):
         """
@@ -53,9 +55,7 @@ class AttributeEditor(QtGui.QWidget):
         """
         self.mainGroup.setHidden(True)
         self.clearLayout(self.mainGroupLayout)
-        self._nodes = []
-        self._parser.initialize()
-        
+        self._nodes = []       
 
     def initializeStylesheet(self):
         """
@@ -72,51 +72,62 @@ class AttributeEditor(QtGui.QWidget):
         """
         Build the layout dynamically
         """
-        # add user attributes to the parser data.
-        user_attrs = self.userAttributes()
-        if user_attrs:
-            self.parser._data.update(user=user_attrs)
-
-        for grp_name in self.parser._data.keys():
+        for section in self._sections:            
+            
             group = QtGui.QGroupBox(self.mainGroup)
             group.setFont(self.fonts.get("attr_editor_group"))
-            group.setTitle('%s' % grp_name.title())
+            group.setTitle('%s' % section)
             group.setFlat(True)
-            group.setObjectName("%s_group" % grp_name)
+            group.setObjectName("%s_group" % section)
             grpLayout = QtGui.QFormLayout(group)
-            grpLayout.setObjectName("%s_group_layout" % grp_name)
-            grpLayout.setContentsMargins(1, 1, 1, 1)
-            # grab data from the metadata parser
-            attrs = self.parser._data.get(grp_name)
-            row = 0
+            grpLayout.setObjectName("%s_group_layout" % section)
+            grpLayout.setContentsMargins(9, 15, 9, 9)
 
-            for attr_name, attr_attrs in attrs.iteritems(): 
-                private = attr_attrs.pop('private', False)
-                locked = attr_attrs.pop('locked', False)
+            # grab data from the metadata parser
+            row = 0
+            attrs = self.getNodeSectionAttrs(section)
+
+            for attr_name, attr_attrs in attrs.iteritems():
+
+                private = attr_attrs.get('private', False)
+                label = attr_attrs.get('label', None)
+                desc = attr_attrs.get('desc', None)
+
+                # use label from metadata, if available
+                if not label:
+                    label = attr_name
 
                 if not private or self._show_private:
                     # create a label
-                    attr_label = QtGui.QLabel('%s: ' % attr_name, parent=group)
+                    attr_label = QtGui.QLabel('%s: ' % label, parent=group)
 
                     if 'attr_type' not in attr_attrs:
                         log.debug('attribute "%s.%s" has no type.' % (self._nodes[0].name, attr_name))
                         continue
 
-                    attr_type = attr_attrs.pop('attr_type')
-                    default_value = attr_attrs.pop('default_value', None)
-                    
+                    attr_type = attr_attrs.get('attr_type')
+                    default_value = attr_attrs.get('default_value', None)
+
+                    #print 'attribute type: ', attr_type
                     # map the correct editor widget
                     editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
-                    editor.setFont(self.fonts.get("attr_editor"))
-                    if editor:
-                        editor.initializeEditor()
-                        grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
-                        grpLayout.setWidget(row, QtGui.QFormLayout.FieldRole, editor)
 
-                        # signal here when editor changes
-                        editor.valueChanged.connect(self.nodeAttributeChanged)
-                        editor.setEnabled(not locked)
-                        row += 1 
+                    if editor:
+                        editor.setFont(self.fonts.get("attr_editor"))
+                        if editor:
+                            editor.initializeEditor()
+                            grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
+                            grpLayout.setWidget(row, QtGui.QFormLayout.FieldRole, editor)
+
+                            # add the description
+                            if desc is not None:
+                                editor.setToolTip(desc)
+                                attr_label.setToolTip(desc)
+                                
+                            # signal here when editor changes
+                            editor.valueChanged.connect(self.nodeAttributeChanged)
+                            #editor.setEnabled(not locked)
+                            row += 1 
 
             
             self.mainGroupLayout.addWidget(group)
@@ -125,16 +136,7 @@ class AttributeEditor(QtGui.QWidget):
         self.mainLayout.addWidget(self.mainGroup)
         self.mainGroup.setHidden(False)
 
-        # update the main group title
-        node_types = list(set([x.node_type for x in self._nodes]))
-        node_type = None
-        group_title = '( %d nodes )' % len(self._nodes)
-        if len(node_types) == 1:
-            node_type = node_types[0]
-            group_title = '( %d %s nodes )' % (len(self._nodes), node_type)
-
-        if len(self._nodes) == 1:
-            group_title = '%s: %s:' % (node_type, self._nodes[0].name)
+        group_title = self.getNodeGroupTitle()
         self.mainGroup.setTitle(group_title)
 
     def updateChildEditors(self, attributes=[]):
@@ -269,11 +271,7 @@ class AttributeEditor(QtGui.QWidget):
     @property
     def handler(self):
         return self._handler
-    
-    @property
-    def parser(self):
-        return self._parser
-    
+        
     def setNodes(self, dagnodes):
         """
         Add nodes to the current editor.
@@ -281,16 +279,68 @@ class AttributeEditor(QtGui.QWidget):
         params:
             dagnodes (list) - list of dag node objects.
         """
-        metadata=[]
-
+        self._sections=[]
         for d in dagnodes:
-            if d._metadata not in metadata:
-                metadata.append(d._metadata)
+            for section in d.metadata.sections():
+                if section not in self._sections:
+                    self._sections.append(section)
 
         self._nodes = dagnodes
         self.clearLayout(self.mainGroupLayout)
-        self.parser.read(metadata[0])
         self.buildLayout()
+
+    def getNodeSectionAttrs(self, section):
+        """
+        Return the current section data from the nodes.
+        """
+        attributes = dict()
+        for node in self._nodes:
+            if section in node.metadata.sections():
+                for attribute in node.metadata.attributes(section):
+                    if attribute not in attributes:
+                        attr_data = node.metadata.getAttr(section, attribute)
+                        attr_dict = dict()
+
+                        if 'connection_type' in attr_data:
+                            continue
+
+                        # "default" is manadatory, so pop it
+                        if 'default' not in attr_data:
+                            log.warning('attribute "%s" has no default value. ' % attribute)
+                            continue
+
+                        attr_type = attr_data.get('default').get('type').lower()
+                        attr_dict.update(attr_type=attr_type)
+
+                        if 'label' in attr_data:
+                            attr_dict.update(label=attr_data.get('label').get('value'))
+
+                        if 'private' in attr_data:
+                            attr_dict.update(private=attr_data.get('private').get('value'))
+
+                        if 'desc' in attr_data:
+                            attr_dict.update(desc=attr_data.get('desc').get('value'))
+
+                        #print attr_data.keys()
+                        #attr_dict.update(**attr_data)
+                        attributes[attribute] = attr_dict
+        return attributes
+
+    def getNodeGroupTitle(self):
+        """
+        Returns a title string for the main attribute group.
+        """
+        # update the main group title
+        node_types = list(set([x.node_type for x in self._nodes]))
+        node_type = None
+        group_title = '( %d nodes )' % len(self._nodes)
+        if len(node_types) == 1:
+            node_type = node_types[0]
+            group_title = '( %d %s nodes )' % (len(self._nodes), node_type)
+
+        if len(self._nodes) == 1:
+            group_title = '%s: %s:' % (node_type, self._nodes[0].name)
+        return group_title
 
     def childEditors(self):
         """
@@ -461,6 +511,7 @@ class QFloatEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = 0.0
         self._current_value = None
 
@@ -562,6 +613,7 @@ class QIntEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = 0
         self._current_value = None
 
@@ -663,6 +715,7 @@ class QFloat2Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = (0,0)
         self._current_value = None
 
@@ -775,6 +828,7 @@ class QFloat3Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = (0.0, 0.0, 0.0)
 
         self.mainLayout = QtGui.QHBoxLayout(self)
@@ -895,6 +949,7 @@ class QInt2Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = (0, 0)
         self._current_value = None
 
@@ -1007,6 +1062,7 @@ class QInt3Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = (0, 0, 0)
         self._current_value = None
 
@@ -1135,6 +1191,7 @@ class QBoolEditor(QtGui.QCheckBox):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = False
         self._current_value = None
 
@@ -1225,6 +1282,7 @@ class StringEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+
         self._default_value = ""
         self._current_value = None
 
@@ -1341,6 +1399,7 @@ class FileEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'file')
+
         self._default_value = ""
         self._current_value = None
 
@@ -1463,6 +1522,7 @@ class ColorPicker(QtGui.QWidget):
 
         self._ui            = kwargs.get('ui', None)
         self._attribute     = kwargs.get('name', 'color')
+
         self._default_value = (125, 125, 125)
         self._current_value = None
 
@@ -1814,34 +1874,36 @@ class QIntLineEdit(QtGui.QLineEdit):
 
 
 WIDGET_MAPPER = dict(
-    float   = QFloatEditor,
-    float2  = QFloat2Editor,
-    float3  = QFloat3Editor,
-    bool    = QBoolEditor,
-    str     = StringEditor,
-    file    = FileEditor,
-    int     = QIntEditor,
-    int2    = QInt2Editor,
-    int3    = QInt3Editor,
-    int8    = QIntEditor,
-    color   = ColorPicker,
-    short2  = QFloat2Editor,
+    float       = QFloatEditor,
+    float2      = QFloat2Editor,
+    float3      = QFloat3Editor,
+    bool        = QBoolEditor,
+    string      = StringEditor,
+    file        = FileEditor,
+    directory   = FileEditor,
+    int         = QIntEditor,
+    int2        = QInt2Editor,
+    int3        = QInt3Editor,
+    int8        = QIntEditor,
+    color       = ColorPicker,
+    short2      = QFloat2Editor,
     )
 
 
 ATTRIBUTE_DEFAULTS = dict(
-    float   = 0.0,
-    float2  = [0.0, 0.0],
-    float3  = [0.0, 0.0, 0.0],
-    bool    = False,
-    str     = "",
-    file    = "",
-    int     = 0,
-    int2    = [0,0],
-    int3    = [0,0,0],
-    int8    = 0,
-    color   = [172, 172, 172, 255],
-    short2  = [0.0, 0.0],
+    float       = 0.0,
+    float2      = [0.0, 0.0],
+    float3      = [0.0, 0.0, 0.0],
+    bool        = False,
+    string      = "",
+    file        = "",
+    directory   = "",
+    int         = 0,
+    int2        = [0,0],
+    int3        = [0,0,0],
+    int8        = 0,
+    color       = [172, 172, 172, 255],
+    short2      = [0.0, 0.0],
     )
 
 
