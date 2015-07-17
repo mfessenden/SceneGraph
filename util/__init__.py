@@ -111,7 +111,7 @@ def is_string(s):
 
 def is_number(s):
     """
-    Check if a string is a int/float 
+    Check if a string is a int/float
     """
     if is_bool(s):
         return False
@@ -119,11 +119,26 @@ def is_number(s):
 
 
 def is_bool(s):
+    """
+    Returns true if the object is a boolean value. 
+    * Updated to support custom decoders.
+    """
     return isinstance(s, bool) or str(s).lower() in ['true', 'false']
 
 
 def is_list(s):
+    """
+    Returns true if the object is a list type.
+    """
     return type(s) in [list, tuple]
+
+
+def is_dict(s):
+    """
+    Returns true if the object is a dict type.
+    """
+    from collections import OrderedDict
+    return type(s) in [dict, OrderedDict]
 
 
 def nodeParse(node):

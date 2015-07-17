@@ -1,7 +1,9 @@
 # marge node attributes
 [group Inputs]
     [connection inputA]
+        default            ""        ""
         connection_type    INPUT     ""
 
     [connection inputB]
+        default            ""        ""
         connection_type    INPUT     ""

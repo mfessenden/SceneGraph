@@ -10,6 +10,7 @@ class Attribute(object):
     Generic Attribute class.
     """
     attribute_type = 'generic'
+    REQUIRED       = ['name', 'attr_type', 'value', '_edges'] 
 
     def __init__(self, name, value, dagnode=None, **kwargs):
 
@@ -21,7 +22,9 @@ class Attribute(object):
         self.value             = value
 
         # stash argument passed to 'type' - overrides auto-type mechanism.
+        # * this will become data_type
         self._type             = kwargs.get('type', None)           # 
+        self._edges            = kwargs.get('edges', [])
 
         # globals
         self.private           = kwargs.get('private', False)  # hidden
@@ -52,7 +55,9 @@ class Attribute(object):
         data = dict()
         for attr in ['name', 'value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required']:
             if hasattr(self, attr):
-                data[attr] = getattr(self, attr)
+                value = getattr(self, attr)
+                if value or attr in self.REQUIRED:
+                    data[attr] = value
         return data
 
     @property
@@ -64,6 +69,18 @@ class Attribute(object):
         if self._type is not None:
             return self._type
         return util.attr_type(self.value)
+
+    @property
+    def is_input(self):
+        if not self.connectable:
+            return False
+        return self.connection_type == 'input'
+
+    @property
+    def is_output(self):
+        if not self.connectable:
+            return False
+        return self.connection_type == 'output'
 
     def rename(self, name):
         """

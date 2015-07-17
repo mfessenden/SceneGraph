@@ -469,7 +469,7 @@ class NodeWidget(QtGui.QGraphicsObject):
 
 
             if conn_widget is None:
-                conn_widget = Connection(self, conn_dag, conn_name, **conn_dag)
+                conn_widget = Connection(self, conn_dag, conn_name)
                 self.connections[conn_name] = conn_widget
 
             if conn_widget.is_input:

@@ -1,5 +1,6 @@
 # default node attributes
 [attr view_label]
+    label       STRING    "View label"
     default     STRING    "Base node type"
 
 [group Node Attributes]

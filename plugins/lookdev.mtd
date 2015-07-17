@@ -1,5 +1,6 @@
 # lookdev node attributes
 [group Asset]
+
     [connection model]
         default            FILE      ""
         label              STRING    "Model"

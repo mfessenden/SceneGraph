@@ -125,7 +125,10 @@ class MetadataParser(object):
                                     if ptype == 'BOOL':
                                         value = True if pvalu == 'true' else False
 
+                                    # return connection types
                                     if ptype in ['INPUT', 'OUTPUT']:
+
+                                        # data type: pvalu = FILE, DIRECTORY, ETC.
                                         value = pvalu.lower()
 
                                 # try and get the actual value

@@ -79,27 +79,28 @@ class AttributeEditor(QtGui.QWidget):
             group.setTitle('%s' % section)
             group.setFlat(True)
             group.setObjectName("%s_group" % section)
-            grpLayout = QtGui.QFormLayout(group)
-            grpLayout.setObjectName("%s_group_layout" % section)
-            grpLayout.setContentsMargins(9, 15, 9, 9)
+
+            # build a formlayout
+            formLayout = QtGui.QFormLayout(group)
+            #formLayout.setFormAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            formLayout.setLabelAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+            formLayout.setObjectName("%s_group_layout" % section)
+            formLayout.setContentsMargins(9, 15, 9, 9)
 
             # grab data from the metadata parser
             row = 0
             attrs = self.getNodeSectionAttrs(section)
 
             for attr_name, attr_attrs in attrs.iteritems():
-
                 private = attr_attrs.get('private', False)
-                label = attr_attrs.get('label', None)
+                attr_label = attr_attrs.get('label', None)
                 desc = attr_attrs.get('desc', None)
 
                 # use label from metadata, if available
-                if not label:
-                    label = attr_name
+                if not attr_label:
+                    attr_label = attr_name
 
                 if not private or self._show_private:
-                    # create a label
-                    attr_label = QtGui.QLabel('%s: ' % label, parent=group)
 
                     if 'attr_type' not in attr_attrs:
                         log.debug('attribute "%s.%s" has no type.' % (self._nodes[0].name, attr_name))
@@ -108,7 +109,6 @@ class AttributeEditor(QtGui.QWidget):
                     attr_type = attr_attrs.get('attr_type')
                     default_value = attr_attrs.get('default_value', None)
 
-                    #print 'attribute type: ', attr_type
                     # map the correct editor widget
                     editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
@@ -116,13 +116,17 @@ class AttributeEditor(QtGui.QWidget):
                         editor.setFont(self.fonts.get("attr_editor"))
                         if editor:
                             editor.initializeEditor()
-                            grpLayout.setWidget(row, QtGui.QFormLayout.LabelRole, attr_label)
-                            grpLayout.setWidget(row, QtGui.QFormLayout.FieldRole, editor)
 
+                            formLayout.addRow("%s:" % attr_label, editor)
+                            label_widget = formLayout.itemAt(row, QtGui.QFormLayout.LabelRole)
+
+                            label = label_widget.widget()
+                            label.setFont(self.fonts.get("attr_editor_label"))
+                            formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
                             # add the description
                             if desc is not None:
                                 editor.setToolTip(desc)
-                                attr_label.setToolTip(desc)
+                                #attr_label.setToolTip(desc)
                                 
                             # signal here when editor changes
                             editor.valueChanged.connect(self.nodeAttributeChanged)
@@ -148,6 +152,8 @@ class AttributeEditor(QtGui.QWidget):
             attributes (list) - list of attribute strings.
         """
         editors = self.childEditors()
+
+        # add new attributes here
         if attributes:
             editors = []
             for attribute in attributes:
@@ -245,29 +251,6 @@ class AttributeEditor(QtGui.QWidget):
                     node_values.append(cur_val)
         return node_values
 
-    def userAttributes(self):
-        """
-        Returns a dictionary of user attributes for the current nodes.
-
-        returns:
-            (dict) - dictionary of attr name: attr value, attr type
-        """
-        # set the nodes
-        user_attrs = dict()
-        for n in self.nodes:
-            attributes = n.attributes()
-            if attributes:
-                for attr in attributes:
-                    if attr.is_user:
-                        # ['default_value', 'is_user', 'is_locked', 'value', 'connection_type', 
-                        # 'is_required', 'is_connectable', 'is_private', 'max_connections']
-
-                        user_attrs[attr.name]=dict()
-                        user_attrs.get(attr.name).update(value=attr.value)
-                        user_attrs.get(attr.name).update(attr_type=attr.type)
-                        user_attrs.get(attr.name).update(private=attr.is_private)
-        return user_attrs
-
     @property
     def handler(self):
         return self._handler
@@ -292,6 +275,12 @@ class AttributeEditor(QtGui.QWidget):
     def getNodeSectionAttrs(self, section):
         """
         Return the current section data from the nodes.
+
+        params:
+            section (str) - node metadata section name.
+
+        returns:
+            (dict) - dictionary of section sub-attributes.
         """
         attributes = dict()
         for node in self._nodes:
@@ -301,12 +290,24 @@ class AttributeEditor(QtGui.QWidget):
                         attr_data = node.metadata.getAttr(section, attribute)
                         attr_dict = dict()
 
+                        # default, label, connection_type, desc
                         if 'connection_type' in attr_data:
-                            continue
+                            if not 'default' in attr_data:
+                                log.debug('connection "%s" has no default attributes.' % attribute)
+                                continue
+                            
+                            defaults = attr_data.get('default')
+                            conn_type = defaults.get('type')
+
+                            if 'label' in attr_data:
+                                attr_dict.update(label=attr_data.get('label').get('value'))
+
+                            # FILE == file
+                            attr_dict.update(attr_type=conn_type.lower())
 
                         # "default" is manadatory, so pop it
                         if 'default' not in attr_data:
-                            log.warning('attribute "%s" has no default value. ' % attribute)
+                            log.debug('attribute "%s" has no default value. ' % attribute)
                             continue
 
                         attr_type = attr_data.get('default').get('type').lower()
@@ -487,10 +488,11 @@ class AddAttributeDialog(QtGui.QDialog):
         if attr_name:
             for node in self._nodes:
                 log.info('adding "%s" to node "%s" (%s)' % (attr_name, node.name, attr_type))
-                node.addAttr(attr_name, value=def_value, type=attr_type, is_connectable=connectable, 
-                                is_user=True, connection_type=connection_type)
+                node.add_attr(attr_name, value=def_value, type=attr_type, connectable=connectable, 
+                                connection_type=connection_type)
 
         #self.parent().updateChildEditors([attr_name])
+        self.parent().clearLayout(self.parent().mainGroupLayout)
         self.parent().buildLayout()
         self.parent().handler.dagNodesUpdatedAction(self._nodes)
         self.close()
@@ -1424,6 +1426,8 @@ class FileEditor(QtGui.QWidget):
         self.button_browse.setAutoRaise(True)
         self.button_browse.setIcon(self.icons.get("folder_horizontal_open"))
         self.button_browse.clicked.connect(self.browseAction)
+
+        self.mainLayout.setAlignment(self.file_edit, QtCore.Qt.AlignVCenter)
 
     def browseAction(self):
         """

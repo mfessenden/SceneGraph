@@ -284,12 +284,14 @@ QTabBar::tab::top{
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
     padding-top: 3px;
+    padding-bottom: 3px;
 }
 
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #343434, stop: 1.0 #434343);
     padding-bottom: 3px;
+    padding-top: 3px;
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
 }

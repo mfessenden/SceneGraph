@@ -18,10 +18,10 @@ class DagNode(Observable):
     node_type     = 'dagnode'
     PRIVATE       = ['node_type']
 
-    def __init__(self, name=None, **kwargs):        
+    def __init__(self, name=None, **kwargs):
         super(DagNode, self).__init__()
 
-        self._attributes        = dict()
+        self._attributes        = dict()   
         self._metadata          = Metadata(self)
 
         # basic node attributes        
@@ -38,7 +38,7 @@ class DagNode(Observable):
         # metadata
         metadata                = kwargs.pop('metadata', dict())
         if not metadata:
-            metadata = self.build_metadata()
+            metadata = self.parse_metadata()
         # ui
         self._widget            = None  
 
@@ -55,26 +55,23 @@ class DagNode(Observable):
     def __repr__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
+    """
     def __getattr__(self, name):
-        if '_attributes' not in self.__dict__:
-            raise AttributeError(attr)
-
-        if name in self._attributes:
-            attr = self._attributes.get(name)
-            return attr.value
-
-        elif hasattr(self, name):
-            print 'attr match: ', name
-            return getattr(self, name)
-        else:
-            raise AttributeError(name)        
+        try:
+            if name in self._attributes:
+                attr = self._attributes.get(name)
+                return attr.value
+        except:
+            return super(DagNode, self).__getattr__(name)
         
     def __setattr__(self, name, value):
         if name in self.PRIVATE:
             raise AttributeError('"%s" is a private attribute and cannot be modified.' % name)
-
-        if hasattr(self, '_attributes'):
+        try:
+            return super(DagNode, self).__setattr__(name, value)
+        except:
             if name in self._attributes:
+                print 'setting Attribute "%s"' % name
                 attribute = self._attributes.get(name)
                 if value != attribte.value:
                     attribute.value = value
@@ -87,11 +84,7 @@ class DagNode(Observable):
             self.add_attr(name, **value)
             Observable.set_changed()
             Observable.notify()
-            return
-
-        #setattr(self, name, value)
-        super(DagNode, self).__setattr__(name, value)
-
+    """
     @property
     def data(self):
         """
@@ -186,7 +179,6 @@ class DagNode(Observable):
 
          * todo: add attribute type mapper.
         """
-        print 'attribute name: ', name
         attr = Attribute(name, value, dagnode=self, **kwargs)
         self._attributes.update({attr.name:attr})
         return attr
@@ -221,17 +213,22 @@ class DagNode(Observable):
         self._attributes.update({attr.name:attr})
 
     #- Connections ----
-    def buildConnections(self):
+    def buildConnections(self, data={}):
         """
         Build connections from metadata.
         """
-        for i in self.metadata.input_connections():
-            conn_data = self.metadata.get_connection(i)
-            self.add_attr(i, conn_data, connectable=True, connection_type='input')
+        if not data:
+            for input_data in self.metadata.input_connections():
+                # input_data = {input:{data_type:FILE}}
+                conn_name = input_data.keys()[0]
+                conn_attrs = input_data.pop(conn_name)
+                self.add_attr(conn_name, connectable=True, connection_type='input', **conn_attrs)
 
-        for o in self.metadata.output_connections():
-            conn_data = self.metadata.get_connection(o)
-            self.add_attr(o, conn_data, connectable=True, connection_type='output')
+            for output_data in self.metadata.output_connections():
+                # output_data = {input:{data_type:FILE}}
+                conn_name = output_data.keys()[0]
+                conn_attrs = output_data.pop(conn_name)
+                self.add_attr(conn_name, connectable=True, connection_type='output', **conn_attrs)
 
     @property
     def connections(self):
@@ -243,7 +240,7 @@ class DagNode(Observable):
         """
         conn_names = []
         for name in self._attributes:
-            if self._attributes.get(name).get('is_connectable'):
+            if self._attributes.get(name).connectable:
                 conn_names.append(name)
         return conn_names
 
@@ -255,12 +252,13 @@ class DagNode(Observable):
         returns:
             (list) - list of input connection names.
         """
-        inputs = []
+        connections = []
         for name in self._attributes:
             data = self._attributes.get(name)
-            if data.get('connectable') and data.get('connection_type') == 'input':
-                inputs.append(name)
-        return inputs
+            #if data.get('connectable') and data.get('connection_type') == 'output':
+            if data.connectable and data.connection_type == 'input':
+                connections.append(name)
+        return connections
 
     @property
     def outputs(self):
@@ -270,12 +268,13 @@ class DagNode(Observable):
         returns:
             (list) - list of output connection names.
         """
-        inputs = []
+        connections = []
         for name in self._attributes:
             data = self._attributes.get(name)
-            if data.get('connectable') and data.get('connection_type') == 'output':
-                inputs.append(name)
-        return inputs
+            #if data.get('connectable') and data.get('connection_type') == 'output':
+            if data.connectable and data.connection_type == 'output':
+                connections.append(name)
+        return connections
 
     def get_input(self, name='input'):
         """
@@ -291,7 +290,7 @@ class DagNode(Observable):
             return
 
         data = self._attributes.get(name)
-        if data.get('is_connectable') and data.get('connection_type') == 'input':
+        if data.connectable and data.connection_type == 'input':
             return self._attributes.get(name)
         return
 
@@ -309,7 +308,7 @@ class DagNode(Observable):
             return
 
         data = self._attributes.get(name)
-        if data.get('is_connectable') and data.get('connection_type') == 'output':
+        if data.connectable and data.connection_type == 'output':
             return self._attributes.get(name)
         return
 
@@ -327,7 +326,7 @@ class DagNode(Observable):
         conn = self.get_connection(name)
         if not conn:
             return False
-        return not conn.is_connectable
+        return not conn.connectable
 
     def input_connections(self):
         """
@@ -365,6 +364,9 @@ class DagNode(Observable):
     def is_input_connection(self):
         """
         Returns true if the node is an input connection.
+
+        returns:
+            (bool) - node has input connections.
         """
         return bool(self.output_connections())
  
@@ -372,6 +374,9 @@ class DagNode(Observable):
     def is_output_connection(self):
         """
         Returns true if the node is an output connection.
+
+        returns:
+            (bool) - node has output connections.
         """
         return bool(self.input_connections())   
 
@@ -390,8 +395,8 @@ class DagNode(Observable):
             return 
 
         data = self._attributes.get(name)
-        if data.get('is_connectable'):
-            return self._attributes.get(name)
+        if data.connectable:
+            return data
         return
 
     def rename_connection(self, old, new):
@@ -421,11 +426,11 @@ class DagNode(Observable):
         returns:
             (bool) - connection was removed.
         """
-        if name in self._attributes:
-            if self._attributes.get(name).get('is_connectable'):
-                conn = self._attributes.pop(name)
-                del conn 
-                return True 
+        conn = self.get_connection(name)
+        if conn:
+            self._attributes.pop(name)
+            del conn 
+            return True 
         return False
 
     #- Plugins/Metadata ----
@@ -454,9 +459,12 @@ class DagNode(Observable):
         """
         return SCENEGRAPH_PLUGIN_PATH in self.plugin_file
 
-    def build_metadata(self):
+    def parse_metadata(self):
         """
-        Build metadata
+        Initialize node metadata from metadata files on disk.
+        Metadata is parsed by looking at the __bases__ of each node
+        class (ie: all DagNode subclasses will inherit all of the default
+        DagNode attributes).
         """
         import inspect
         from . import metadata
@@ -611,29 +619,51 @@ class Metadata(object):
         return {}
 
     def input_connections(self):
+        """
+        Parse the metadata and return input connections.
+
+        returns:
+            (list) - list of connection dictionaries.
+                     * todo: should we return an attribute object here?
+        """
         connections = []
         for section in self.sections():
             for attribute in self.attributes(section):
                 attr_data = self.getAttr(section, attribute)
+                #print 'attr: ', attr_data.keys()
                 if 'connection_type' in attr_data:
-                    conn_attrs = attr_data.get('connection_type')
-                    conn_type = conn_attrs.get('type')
+                    conn_data = attr_data.get('connection_type')
+                    conn_type = conn_data.get('type')
+                    data_type = conn_data.get('value', None)
+
+                    cdata = dict(data_type=data_type)
                     if conn_type == 'INPUT':
                         #connections.append({attribute:{'type':conn_type}})
-                        connections.append(attribute)
+                        connections.append({attribute:cdata})
         return connections
 
     def output_connections(self):
+        """
+        Parse the metadata and return output connections.
+
+        returns:
+            (list) - list of connection dictionaries.
+                     * todo: should we return an attribute object here?
+        """
         connections = []
         for section in self.sections():
             for attribute in self.attributes(section):
                 attr_data = self.getAttr(section, attribute)
+                #print 'attr: ', attr_data.keys()
                 if 'connection_type' in attr_data:
-                    conn_attrs = attr_data.get('connection_type')
-                    conn_type = conn_attrs.get('type')
+                    conn_data = attr_data.get('connection_type')
+                    conn_type = conn_data.get('type')
+                    data_type = conn_data.get('value', None)
+
+                    cdata = dict(data_type=data_type)
                     if conn_type == 'OUTPUT':
                         #connections.append({attribute:{'type':conn_type}})
-                        connections.append(attribute)
+                        connections.append({attribute:cdata})
         return connections
 
     def update(self, data):

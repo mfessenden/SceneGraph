@@ -11,9 +11,6 @@ class Observable(object):
         self._observers = []
         self._changed = 0
 
-    def __getattr__(self, name):
-        raise AttributeError(name)
-
     def add_observer(self, obs):
         """
         Add an observer.

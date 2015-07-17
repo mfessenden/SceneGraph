@@ -134,3 +134,7 @@ m1=g.get_node('merge1')[0]
 e1=g.edges()[0]
 c=m1.get_input('input')
 
+from SceneGraph import core
+g=core.Graph()
+m=g.add_node('lookdev')
+

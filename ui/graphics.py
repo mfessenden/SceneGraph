@@ -437,6 +437,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     if dag_id not in self.scenenodes:
                         
                         widget = self.plug_mgr.get_widget(dag)
+
+                        if not widget:
+                            log.warning('invalid widget: "%s"' % dag.name)
+                            continue
+                            
                         widget._render_effects = self.ui.render_fx
 
                         # set the debug mode

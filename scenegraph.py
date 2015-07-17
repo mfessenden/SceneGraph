@@ -205,28 +205,34 @@ class SceneGraphUI(form_class, base_class):
         Initializes the fonts attribute
         """
         mono_family = 'Consolas'
+        ui_size = size
+        mono_size = size
         if options.PLATFORM == 'MacOSX':
-            size = 14
+            ui_size = size + 4
             mono_family = 'Menlo'
+            mono_size = size + 2
 
         self.fonts = dict()
         self.fonts["ui"] = QtGui.QFont(font)
-        self.fonts["ui"].setPointSize(size)
+        self.fonts["ui"].setPointSize(ui_size)
 
         self.fonts["output"] = QtGui.QFont('Monospace')
-        self.fonts["output"].setPointSize(size)
+        self.fonts["output"].setPointSize(mono_size)
         self.fonts["output"].setFamily(mono_family)
 
         self.fonts["console"] = QtGui.QFont('Monospace')
-        self.fonts["console"].setPointSize(size-1)
+        self.fonts["console"].setPointSize(mono_size-1)
         self.fonts["console"].setFamily(mono_family)
 
         self.fonts["attr_editor"] = QtGui.QFont(font)
-        self.fonts["attr_editor"].setPointSize(size+1)
+        self.fonts["attr_editor"].setPointSize(ui_size+1)
 
         self.fonts["attr_editor_group"] = QtGui.QFont(font)
-        self.fonts["attr_editor_group"].setPointSize(size)
+        self.fonts["attr_editor_group"].setPointSize(ui_size)
         self.fonts["attr_editor_group"].setBold(True)
+
+        self.fonts["attr_editor_label"] = QtGui.QFont(font)
+        self.fonts["attr_editor_label"].setPointSize(ui_size-1)
 
     def initializeGraphicsView(self, filter=False):
         """
