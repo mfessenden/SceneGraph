@@ -99,8 +99,6 @@ class AttributeEditor(QtGui.QWidget):
                 attrs = user_attributes
 
             for attr_name, attr_attrs in attrs.iteritems():
-                if verbose:
-                    print '# building "%s": ' % attr_name
 
                 private = attr_attrs.get('private', False)
                 attr_label = attr_attrs.get('label', None)
@@ -118,6 +116,9 @@ class AttributeEditor(QtGui.QWidget):
                         continue
 
                     attr_type = attr_attrs.get('attr_type')
+                    if verbose:
+                        print '# building %s attribute: "%s"' % (attr_type, attr_name)
+
                     default_value = attr_attrs.get('default_value', None)
 
                     # map the correct editor widget
@@ -337,53 +338,39 @@ class AttributeEditor(QtGui.QWidget):
         returns:
             (dict) - dictionary of section sub-attributes.
         """
-        attributes = dict()
+        result = dict()
         for node in self._nodes:
-            if section in node.metadata.sections():
-                for attribute in node.metadata.attributes(section):
-                    if attribute not in attributes:
-                        attr_data = node.metadata.getAttr(section, attribute)
+            if section in node.metadata.data:
 
+                attributes = node.metadata.data.get(section)
+
+                for attribute in attributes:
+
+                    if attribute not in result:
+                        properties = attributes.get(attribute)
                         attr_dict = dict()
 
-                        #print 'attr data: ',attr_data.keys()
-                        # default, label, required, connection_type, desc
-                        if 'connection_type' in attr_data:
+                        # TODO: need to figure this out
+                        attr_dict['attr_type'] = properties.get('type', None)
+                        attr_dict['default_value'] = properties.get('value', None)
 
-                            defaults = attr_data.get('default')
-                            print 'connection defaults: ', defaults.keys()
-                            conn_type = attr_data.get('connection_type')
-                            print '\n# %s connection type: "%s"' % (attribute, conn_type)
+                        #print
 
-                            if 'label' in attr_data:
-                                attr_dict.update(label=attr_data.get('label').get('value'))
+                        if 'default' in properties:
+                            defaults = properties.get('default')
+                            attr_dict['attr_type'] = defaults.get('type')
+                            attr_dict['default_value'] = defaults.get('value')
 
-                            # FILE == file
-                            attr_dict.update(attr_type=conn_type)
-                            attr_dict.update(**attr_dict)
 
-                        # "default" is manadatory, so pop it
-                        if 'default' not in attr_data:
-                            log.debug('attribute "%s" has no default value. ' % attribute)
-                            continue
-
-                        '''
-                        attr_type = attr_data.get('default').get('type').lower()
-                        attr_dict.update(attr_type=attr_type)
-
-                        if 'label' in attr_data:
-                            attr_dict.update(label=attr_data.get('label').get('value'))
-
-                        if 'private' in attr_data:
-                            attr_dict.update(private=attr_data.get('private').get('value'))
-
-                        if 'desc' in attr_data:
-                            attr_dict.update(desc=attr_data.get('desc').get('value'))
-                        '''
-                        #print attr_data.keys()
-                        #attr_dict.update(**attr_data)
-                        attributes[attribute] = attr_dict
-        return attributes
+                        attr_dict['private'] = properties.get('private', False)
+                        attr_dict['label'] = properties.get('label', {}).get('value', None)
+                        attr_dict['desc'] = properties.get('desc', {}).get('value', None)
+                        attr_dict['_edges'] = properties.get('_edges', [])
+                        
+                        
+                        # need: private, label, desc, _edges
+                        result[attribute] = attr_dict
+        return result
 
     def getNodeGroupTitle(self):
         """
@@ -2093,7 +2080,7 @@ WIDGET_MAPPER = dict(
     str         = StringEditor,
     string      = StringEditor,
     file        = FileEditor,
-    directory   = FileEditor,
+    dir         = FileEditor,
     int         = QIntEditor,
     int2        = QInt2Editor,
     int3        = QInt3Editor,
@@ -2111,7 +2098,7 @@ ATTRIBUTE_DEFAULTS = dict(
     str         = "",
     string      = "",
     file        = "",
-    directory   = "",
+    dir         = "",
     int         = 0,
     int2        = [0,0],
     int3        = [0,0,0],
@@ -2126,6 +2113,7 @@ def map_widget(typ, parent, name, ui, icons):
     Map the widget to the attribute type.
     """
     typ=typ.replace(" ", "")
+    typ=typ.lower()
     if typ not in WIDGET_MAPPER:
         log.warning('invalid editor class: "%s" ("%s")' % (typ, name))
     if typ in WIDGET_MAPPER:

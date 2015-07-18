@@ -43,6 +43,10 @@ class Attribute(object):
         self.data_type         = kwargs.get('data_type', None) 
         self.max_connections   = kwargs.get('max_connections', 1)  # 0 = infinite
 
+        if self.connectable:
+            print 'Connection "%s" attr_type:  %s' %  (self.name, self._type)
+            print 'Connection "%s" data_type:  %s' % (self.name, self.data_type)
+
     def __str__(self):
         return json.dumps({self.name:self.data}, indent=4)
 

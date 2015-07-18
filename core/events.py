@@ -10,6 +10,20 @@ class Event(object):
         self._data  = dict()
         self._data.update(**kwargs)
 
+    @property
+    def type(self):
+        return self.event_type    
+
+    @property
+    def data(self):
+        return self._data   
+
+
+class NodePositionChanged(Event):
+    event_type = 'positionChanged'
+    def __init__(self, name, parent, *args, **kwargs):
+        super(NodePositionChanged, self, *args, **kwargs)
+
 
 class AttributeUpdatedEvent(Event):
     event_type = 'attributeUpdated'

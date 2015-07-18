@@ -8,19 +8,19 @@
 [group Asset]
 
     [input model]
-        default            NODE       ""
+        default            FILE       ""
         label              STRING     "Model"
 
     [input shader_mapping]
-        default            NODE       ""
+        default            FILE       ""
         label              STRING     "Mapping"
         desc               STRING     "shaders mapping file."
 
     [input shader]
-        default            NODE       ""
+        default            FILE       ""
         label              STRING     "Shaders"
         desc               STRING     "shaders file."
 
     [input texture]
-        default            NODE       ""
+        default            FILE       ""
         label              STRING     "Textures"
