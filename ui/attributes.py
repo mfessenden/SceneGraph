@@ -25,11 +25,10 @@ class AttributeEditor(QtGui.QWidget):
         self.fonts          = self._ui.fonts
 
         self.setObjectName("AttributeEditor")
-        self.setFont(self.fonts.get("attr_editor"))
-
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
         self.mainLayout.setContentsMargins(1, 1, 1, 1)
+
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
         self.mainGroup.setProperty("class", "AttributeEditor") 
@@ -46,8 +45,8 @@ class AttributeEditor(QtGui.QWidget):
         
         # setup the main interface
         self.initializeUI()
-        self.connectSignals()        
-        self.initializeStylesheet()
+        self.connectSignals()      
+        self.setFont(self.fonts.get("ui"))
 
     def initializeUI(self):
         """
@@ -142,6 +141,7 @@ class AttributeEditor(QtGui.QWidget):
 
         group_title = self.getNodeGroupTitle()
         self.mainGroup.setTitle(group_title)
+        self.initializeStylesheet()
 
     def updateChildEditors(self, attributes=[]):
         """
@@ -527,6 +527,8 @@ class QFloatEditor(QtGui.QWidget):
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+
     @property
     def attribute(self):
         return self._attribute
@@ -628,6 +630,8 @@ class QIntEditor(QtGui.QWidget):
         self.val1_edit = QFloatLineEdit(self)
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
+
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -735,6 +739,9 @@ class QFloat2Editor(QtGui.QWidget):
         self.val2_edit = QFloatLineEdit(self)
         self.val2_edit.setObjectName("val2_edit")
         self.mainLayout.addWidget(self.val2_edit)
+
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -853,6 +860,10 @@ class QFloat3Editor(QtGui.QWidget):
         self.val3_edit.setObjectName("val3_edit")
         self.mainLayout.addWidget(self.val3_edit)
 
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
+
     @property
     def attribute(self):
         return self._attribute
@@ -969,6 +980,9 @@ class QInt2Editor(QtGui.QWidget):
         self.val2_edit = QIntLineEdit(self)
         self.val2_edit.setObjectName("val2_edit")
         self.mainLayout.addWidget(self.val2_edit)
+
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1088,6 +1102,10 @@ class QInt3Editor(QtGui.QWidget):
         self.val3_edit.setObjectName("val3_edit")
         self.mainLayout.addWidget(self.val3_edit)
 
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
+
     @property
     def attribute(self):
         return self._attribute
@@ -1198,6 +1216,7 @@ class QBoolEditor(QtGui.QCheckBox):
         self._current_value = None
 
         self.toggled.connect(self.valueUpdatedAction)
+        self.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1305,6 +1324,8 @@ class StringEditor(QtGui.QWidget):
         self.val1_edit.textEdited.connect(self.validate_text)
         self.val1_edit.editingFinished.connect(self.valueUpdatedAction)
         self.val1_edit.returnPressed.connect(self.valueUpdatedAction)
+
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     def validate_text(self, text):
         validator = self.val1_edit.validator()
@@ -1428,6 +1449,8 @@ class FileEditor(QtGui.QWidget):
         self.button_browse.clicked.connect(self.browseAction)
 
         self.mainLayout.setAlignment(self.file_edit, QtCore.Qt.AlignVCenter)
+        self.file_edit.setFont(self._ui.fonts.get("attr_editor"))
+
 
     def browseAction(self):
         """

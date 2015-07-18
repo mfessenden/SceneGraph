@@ -1245,14 +1245,29 @@ class Graph(object):
         Prints a list of plugins.
         """
         if self.plug_mgr._node_data:
-            print '#' * 35
-            print ' PLUGINS LOADED: %d' % (len(self.plug_mgr._node_data))
-            print '#' * 35
+            print '-' * 35
+            print 'PLUGINS LOADED: %d' % (len(self.plug_mgr._node_data)) 
+
+        row = 0          
         for node_type, data in self.plug_mgr._node_data.iteritems():
-            print '\n%s\n%s\n%s' % ('#' *35, node_type, '#' * 35)
+            widget = data.get('widget', None)
+
+            if widget is not None:
+                widget = widget.__name__
+            dagnode = data.get('dagnode', None)
+
+            if dagnode is not None:
+                dagnode = dagnode.__name__
+            if not row:
+                print '%s\nPlugin: %s\n%s' % ('-' *35, node_type, '-' * 35)
+            else:
+                print '\n%s\nPlugin: %s\n%s' % ('-' *35, node_type, '-' * 35)
             print 'source file: %s' % data.get('source')
             print 'metadata:    %s' % data.get('metadata')
-            print 'widget:      %s' % data.get('widget', '(none)')
+            print 'dagnode:     %s' % dagnode
+            print 'widget:      %s' % widget
+            row+=1
+
 
 
 class Array(object):

@@ -57,8 +57,10 @@ class SceneGraphUI(form_class, base_class):
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+        self.fonts            = dict()  
         self.icons            = None  
         self.view             = None
+        self.pmanager         = None
 
         # preferences
         self.debug            = kwargs.get('debug', bool(SCENEGRAPH_DEBUG))
@@ -154,9 +156,6 @@ class SceneGraphUI(form_class, base_class):
         """
         Set up the main UI
         """
-        self.setupFonts()
-        self.setFont(self.fonts.get("ui"))
-
         # build the graph
         self.initializeGraphicsView()
         self.initializePreferencesUI()
@@ -190,6 +189,8 @@ class SceneGraphUI(form_class, base_class):
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
 
+        self.setFont(self.fonts.get("ui"))
+
     def initializeStylesheet(self):
         """
         Setup the stylehsheet.
@@ -199,40 +200,6 @@ class SceneGraphUI(form_class, base_class):
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
-
-    def setupFonts(self, font='SansSerif', size=8):
-        """
-        Initializes the fonts attribute
-        """
-        mono_family = 'Consolas'
-        ui_size = size
-        mono_size = size
-        if options.PLATFORM == 'MacOSX':
-            ui_size = size + 4
-            mono_family = 'Menlo'
-            mono_size = size + 2
-
-        self.fonts = dict()
-        self.fonts["ui"] = QtGui.QFont(font)
-        self.fonts["ui"].setPointSize(ui_size)
-
-        self.fonts["output"] = QtGui.QFont('Monospace')
-        self.fonts["output"].setPointSize(mono_size)
-        self.fonts["output"].setFamily(mono_family)
-
-        self.fonts["console"] = QtGui.QFont('Monospace')
-        self.fonts["console"].setPointSize(mono_size-1)
-        self.fonts["console"].setFamily(mono_family)
-
-        self.fonts["attr_editor"] = QtGui.QFont(font)
-        self.fonts["attr_editor"].setPointSize(ui_size+1)
-
-        self.fonts["attr_editor_group"] = QtGui.QFont(font)
-        self.fonts["attr_editor_group"].setPointSize(ui_size)
-        self.fonts["attr_editor_group"].setBold(True)
-
-        self.fonts["attr_editor_label"] = QtGui.QFont(font)
-        self.fonts["attr_editor_label"].setPointSize(ui_size-1)
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -282,6 +249,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_restore_default_layout.triggered.connect(self.restoreDefaultSettings)
         self.action_exit.triggered.connect(self.close)
         self.action_save_layout.triggered.connect(self.saveLayoutAction)
+        self.action_plugins.triggered.connect(self.pluginManagerAction)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -882,7 +850,7 @@ class SceneGraphUI(form_class, base_class):
         attr_widget = self.getAttributeEditorWidget()
                 
         if not attr_widget:
-            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler, ui=self)                
+            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler, ui=self)
             self.attributeScrollAreaLayout.addWidget(attr_widget)
         attr_widget.setNodes(dagnodes)
 
@@ -1140,6 +1108,18 @@ class SceneGraphUI(form_class, base_class):
 
         layout_name = util.clean_name(layout_name)
         self.qtsettings.saveLayout(layout_name)
+
+    def pluginManagerAction(self):
+        """
+        Launches the PluginManager.
+        """
+        try:
+            self.pmanager.close()
+        except:
+            from SceneGraph.ui import PluginManager
+            reload(PluginManager)
+            self.pmanager=PluginManager.PluginManager(self)
+            self.pmanager.show()
 
     def updateOutput(self):
         """

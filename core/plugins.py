@@ -239,18 +239,21 @@ class PluginManager(object):
             
             # filter DagNode types
             for cname, obj in inspect.getmembers(module, inspect.isclass):
+                
                 if not plugins or cname in plugins:
-                    if hasattr(obj, 'dag_types'):
-                        globals()[cname] = obj
-                        imported.append(cname)                
-                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
+                    if hasattr(obj, 'node_type'):
+                        if getattr(obj, 'node_type') != 'dagnode':
+                            #print '# DEBUG: Loading "%s" from plugin "%s"' % (cname, src_file)
+                            globals()[cname] = obj
+                            imported.append(cname)                
+                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
 
-                        # add source and metadata files
-                        if os.path.exists(src_file):
-                            self._node_data.get(node_type).update(source=src_file)
+                            # add source and metadata files
+                            if os.path.exists(src_file):
+                                self._node_data.get(node_type).update(source=src_file)
 
-                        if os.path.exists(md_file):
-                            self._node_data.get(node_type).update(metadata=md_file)
+                            if os.path.exists(md_file):
+                                self._node_data.get(node_type).update(metadata=md_file)
 
         return sorted(list(set(imported)))
 
@@ -438,6 +441,7 @@ class PluginManager(object):
 
         for plug, plugin_attrs in self._node_data.iteritems():
             if plug == plugin:
+                log.info('setting plugin "%s" enabled: %s' % (plugin, str(enabled)))
                 self._node_data.get(plugin).update(enabled=enabled)
                 return True
         return False

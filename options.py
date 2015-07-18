@@ -2,26 +2,12 @@
 import os
 
 
-def setup_platform_defaults():
-    """
-    Setup globals for a specific platform.
-    """
-    import sys
-    plaform = 'Windows'
-    if 'linux' in sys.platform:
-        plaform = 'Linux'
-
-    if sys.platform == 'darwin':
-        plaform = 'MacOSX'
-    return plaform
-
-
 PACKAGE                     = 'SceneGraph'
 API_MAJOR_VERSION           = 0.64
-API_REVISION                = 1
+API_REVISION                = 2
 API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
-PLATFORM                    = setup_platform_defaults()
+PLATFORM                    = None
 API_MINIMUM                 = 0.640
 
 
@@ -34,6 +20,7 @@ SCENEGRAPH_STYLESHEET_PATH  = os.path.join(SCENEGRAPH_PATH, 'css')
 SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE)
 SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
 SCENEGRAPH_USER_WORK_PATH   = os.path.join(os.getenv('HOME'), 'graphs')
+SCENEGRAPH_FONTS            = dict()
 
 
 SCENEGRAPH_COLORS = {
@@ -102,3 +89,69 @@ SCENEGRAPH_PREFERENCES = {
     'font_nodes' : {'default':'Menlo', 'desc':'Font for node labels.'},
     'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).'},
     }
+
+
+
+def setup_platform_defaults():
+    """
+    Setup globals for a specific platform.
+    """
+    import sys
+    plaform = 'Windows'
+    if 'linux' in sys.platform:
+        plaform = 'Linux'
+
+    if sys.platform == 'darwin':
+        plaform = 'MacOSX'
+    return plaform
+
+
+def setup_fonts(font='SansSerif', size=8, platform=None):
+    """
+    Initializes the global fonts attribute.
+    """
+    from PySide import QtGui
+    fonts = dict()
+    mono_family = 'Consolas'
+
+    # standard sizes
+    size_ui = size
+    size_mn = size
+    size_sm = size
+
+    if platform == 'MacOSX':
+        size_ui = size + 4
+        size_mn = size + 2
+        size_sm = size_ui - 1        
+        mono_family = 'Menlo'
+
+    fonts["ui"] = QtGui.QFont(font)
+    fonts["ui"].setPointSize(size_ui)
+
+    fonts["output"] = QtGui.QFont('Monospace')
+    fonts["output"].setPointSize(size_mn)
+    fonts["output"].setFamily(mono_family)
+
+    fonts["console"] = QtGui.QFont('Monospace')
+    fonts["console"].setPointSize(size_mn)
+    fonts["console"].setFamily(mono_family)
+
+    fonts["attr_editor"] = QtGui.QFont(font)
+    fonts["attr_editor"].setPointSize(size_ui)
+
+    fonts["attr_editor_group"] = QtGui.QFont(font)
+    fonts["attr_editor_group"].setPointSize(size_ui)
+    fonts["attr_editor_group"].setBold(True)
+
+    fonts["attr_editor_label"] = QtGui.QFont(font)
+    fonts["attr_editor_label"].setPointSize(size_sm)
+
+    fonts["disabled"] = QtGui.QFont(font)
+    fonts["disabled"].setPointSize(size_ui)
+    fonts["disabled"].setItalic(True)
+    return fonts
+
+
+# initialize globals
+PLATFORM         = setup_platform_defaults()
+SCENEGRAPH_FONTS = setup_fonts(platform=PLATFORM)

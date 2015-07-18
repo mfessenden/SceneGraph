@@ -164,6 +164,8 @@
     <addaction name="separator"/>
     <addaction name="action_save_layout"/>
     <addaction name="menu_restore_layout"/>
+    <addaction name="separator"/>
+    <addaction name="action_plugins"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
@@ -937,6 +939,11 @@
   <action name="action_debug_mode">
    <property name="text">
     <string>Debug</string>
+   </property>
+  </action>
+  <action name="action_plugins">
+   <property name="text">
+    <string>Plugins...</string>
    </property>
   </action>
  </widget>

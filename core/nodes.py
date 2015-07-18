@@ -513,10 +513,8 @@ class DagNode(Observable):
     def ParentClasses(self, p=None):
         """
         Returns all of this objects' parent classes.
-
         params:
             p (obj) - parent class.
-
         returns:
             (list) - list of parent class names.
         """
@@ -527,6 +525,7 @@ class DagNode(Observable):
                 base_classes.append(b)
                 base_classes.extend(self.ParentClasses(b))
         return base_classes
+
 
 
 #- Metadata -----
@@ -689,3 +688,22 @@ class Metadata(object):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
 
+'''
+    def ParentClasses(self, p=None):
+        """
+        Returns all of this objects' parent classes.
+
+        params:
+            p (obj) - parent class.
+
+        returns:
+            (list) - list of parent class names.
+        """
+        base_classes = []
+        cl = p if p is not None else self.__class__
+        for b in cl.__bases__:
+            if b.__name__ not in ["object", "Observable"]:
+                base_classes.append(b)
+                base_classes.extend(self.ParentClasses(b))
+        return base_classes
+'''

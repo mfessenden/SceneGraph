@@ -75,6 +75,10 @@ QPushButton.Console{
     min-height: 20px;
 }
 
+QPushButton:!enabled{
+    background-color: #595959;
+}
+
 QLineEdit{
     background-color: #3a3a3a;
 }
@@ -211,7 +215,10 @@ QTableView {
     selection-background-color: #707070;
     border-radius: 2px;
     border: 1px solid #2e2e2d;
+}
 
+QTableView.Plugins {
+    background-color: #4a4a4a;
 }
 
 QHeaderView::section {
@@ -321,13 +328,14 @@ QTabBar::tab::top:!selected {
 }
 
 QGroupBox {
-    border: 1px solid #292929;
-    color: #949494;
+    border: 1px solid #454545;
+    color: #aeaeae;
     border-radius: 0px;  
-    margin-top: 0.5em;
     border-left-style: none;
     border-right-style: none;
     border-bottom-style: none;
+    /* positions the title vertically between the top border lines */
+    margin-top: 0.5em;
 }
 
 QGroupBox::title {
@@ -339,11 +347,29 @@ QGroupBox::title {
 
 QGroupBox.AttributeEditor {
     color: #d5d5d5;
-    border: 1px solid #292929;
-    border-left: 1px solid #505050;
+    border-top: 1px solid #212121;
+    border-right: 1px solid #292929;
+    border-left: 1px solid #454545;
     border-bottom: 1px solid #505050;
     font-weight: bold;
     border-radius: 4px;
+}
+
+QGroupBox.Plugins {
+    border-top: 1px solid #212121;
+    border-right: 1px solid #292929;
+    border-left: 1px solid #454545;
+    border-bottom: 1px solid #505050;
+    border-radius: 4px;
+    /* positions the title vertically between the top border lines */
+    margin-top: 2.5ex;
+}
+
+QGroupBox::title.Plugins {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    top: 4px;
 }
 
 QListView {
