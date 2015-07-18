@@ -18,8 +18,9 @@ class NodeWidget(QtGui.QGraphicsObject):
     def __init__(self, dagnode, parent=None):
         super(NodeWidget, self).__init__(parent)
 
+        # connect the dag node
         self.dagnode         = dagnode
-        self.dagnode._widget = self
+        self.dagnode.connect_widget(self)
         
         # attributes
         self.bufferX         = 3
@@ -175,6 +176,12 @@ class NodeWidget(QtGui.QGraphicsObject):
         #self.label.setTextEditable(not val)
 
     #- Events ----
+    def dagnodeUpdated(self, *args, **kwargs):
+        """
+        Callback from the dag node.
+        """
+        pass
+
     def itemChange(self, change, value):
         """
         Default node 'changed' signal.

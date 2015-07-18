@@ -1,9 +1,10 @@
 # default node attributes
-[attr view_label]
-    label       STRING    "View label"
-    default     STRING    "Base node type"
-
-[group Node Attributes]
+# todo: these should MERGE with DagNode Node Attributes
+[group Default Attributes]
 
     [attr doctstring]
-        default     STRING    "default node"
+        default             STRING    "default node"
+
+    [connection input]
+        default             ""        ""  
+        connection_type     INPUT     ""

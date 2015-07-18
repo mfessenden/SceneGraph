@@ -9,7 +9,8 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, DagNode, PluginManager
+from SceneGraph.core import log, DagNode, PluginManager, Attribute
+from SceneGraph import util
 
 
 class Graph(object):
@@ -340,8 +341,14 @@ class Graph(object):
         if 'name' in kwargs:
             name = kwargs.pop('name')
 
-        # get the dag node from the PluginManager 
-        dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, **kwargs)
+        # parse attributes
+        attributes = dict()
+        for attr, val in kwargs.iteritems():
+            if util.is_dict(val):
+                attributes[attr]=val
+                
+        # get the dag node from the PluginManager
+        dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, attributes=attributes, **kwargs)
 
         # advance the grid to the next value.
         self.grid.next()

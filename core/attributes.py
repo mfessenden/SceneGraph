@@ -12,14 +12,16 @@ class Attribute(object):
     attribute_type = 'generic'
     REQUIRED       = ['name', 'attr_type', 'value', '_edges'] 
 
-    def __init__(self, name, value, dagnode=None, **kwargs):
+    def __init__(self, name, value, dagnode=None, user=True, **kwargs):
 
         # private attributes
         self._dag              = weakref.ref(dagnode) if dagnode else None
 
         self.name              = name
+        self.label             = kwargs.get('label', "") 
         self.default_value     = kwargs.get('default_value', "")
         self.value             = value
+        self.user              = user
 
         # stash argument passed to 'type' - overrides auto-type mechanism.
         # * this will become data_type
@@ -43,17 +45,27 @@ class Attribute(object):
     def __repr__(self):
         return json.dumps({self.name:self.data}, indent=4)
 
+    def update(self, **kwargs):
+        """
+        Update the data dictionary.
+
+        * todo: can't pass as **kwargs else we lose the order (why is that?)
+        """
+        for name, value in kwargs.iteritems():
+            #print '# adding attribute: "%s"' % name
+            setattr(self, name, value)
+
     @property
     def data(self):
         """
         Output data for writing.
         """
         data = dict()
-        for attr in ['value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required']:
+        for attr in ['label', 'value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required', 'user']:
             if hasattr(self, attr):
                 value = getattr(self, attr)
-                if value or attr in self.REQUIRED:
-                    data[attr] = value
+                #if value or attr in self.REQUIRED:
+                data[attr] = value
         return data
 
     @property
@@ -65,6 +77,10 @@ class Attribute(object):
         if self._type is not None:
             return self._type
         return util.attr_type(self.value)
+
+    @attr_type.setter
+    def attr_type(self, val):
+        self._type = val
 
     @property
     def is_input(self):

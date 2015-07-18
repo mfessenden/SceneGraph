@@ -4,8 +4,8 @@ class Event(object):
     event_type = 'generic'
     def __init__(self, name, parent, *args, **kwargs):        
 
-        self.name   = name
-        self.parent = parent
+        self.name    = name
+        self.dagnode = parent
 
         self._data  = dict()
         self._data.update(**kwargs)

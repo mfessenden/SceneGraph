@@ -18,17 +18,15 @@ class DagNode(Observable):
     PRIVATE       = ['node_type']
 
     def __init__(self, name=None, **kwargs):
-
         self._attributes        = dict()
 
         Observable.__init__(self)
-        #self.__dict__['_attributes'] = dict()
-        
         self._metadata          = Metadata(self)
 
         # basic node attributes        
         self.name               = name if name else self.default_name
         self.color              = kwargs.pop('color', self.default_color)
+        self._graph             = kwargs.pop('_graph', None)
 
         self.width              = kwargs.pop('width', 100.0)
         self.base_height        = kwargs.pop('base_height', 15.0)
@@ -39,6 +37,8 @@ class DagNode(Observable):
 
         # metadata
         metadata                = kwargs.pop('metadata', dict())
+        attributes              = kwargs.pop('attributes', dict())
+
         if not metadata:
             metadata = self.parse_metadata()
         # ui
@@ -50,6 +50,14 @@ class DagNode(Observable):
 
         # build connections
         self.buildConnections()
+
+        # add attributes
+        if attributes:
+            for attr_name, properties in attributes.iteritems():
+                if attr_name in self._attributes:
+                    self._attributes.get(attr_name).update(**properties)
+                else:
+                    self.add_attr(attr_name, **properties)
 
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
@@ -93,6 +101,19 @@ class DagNode(Observable):
                 data[attr] = getattr(self, attr)
         data.update(**self._attributes)
         return data
+
+    def connect_widget(self, widget):
+        """
+        Connect a widget to the dag.
+
+        params:
+            widget (obj) - NodeWidget class
+        """
+        if not self._widget:
+            self._widget = widget
+            self.add_observer(widget)
+            return True
+        return False
 
     @property
     def metadata(self):
@@ -219,13 +240,13 @@ class DagNode(Observable):
                 # input_data = {input:{data_type:FILE}}
                 conn_name = input_data.keys()[0]
                 conn_attrs = input_data.pop(conn_name)
-                self.add_attr(conn_name, connectable=True, connection_type='input', **conn_attrs)
+                self.add_attr(conn_name, connectable=True, connection_type='input', user=False, **conn_attrs)
 
             for output_data in self.metadata.output_connections():
                 # output_data = {input:{data_type:FILE}}
                 conn_name = output_data.keys()[0]
                 conn_attrs = output_data.pop(conn_name)
-                self.add_attr(conn_name, connectable=True, connection_type='output', **conn_attrs)
+                self.add_attr(conn_name, connectable=True, connection_type='output', user=False, **conn_attrs)
 
     @property
     def connections(self):

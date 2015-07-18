@@ -67,7 +67,7 @@ class Observable(object):
         log.debug('updating observers...')
         self.clear_changed()
         for obs in self._observers:
-            obs.update(*args, **kwargs)
+            obs.dagnodeUpdated(*args, **kwargs)
     
     def clear_changed(self):
         """

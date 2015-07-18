@@ -71,6 +71,10 @@ class AttributeEditor(QtGui.QWidget):
         """
         Build the layout dynamically
         """
+        user_attributes = self.getUserAttributes()
+        if user_attributes:
+            self._sections.append("User")
+
         for section in self._sections:            
             
             group = QtGui.QGroupBox(self.mainGroup)
@@ -88,9 +92,13 @@ class AttributeEditor(QtGui.QWidget):
 
             # grab data from the metadata parser
             row = 0
-            attrs = self.getNodeSectionAttrs(section)
+            if section != 'User':
+                attrs = self.getNodeSectionAttrs(section)
+            else:
+                attrs = user_attributes
 
             for attr_name, attr_attrs in attrs.iteritems():
+                
                 private = attr_attrs.get('private', False)
                 attr_label = attr_attrs.get('label', None)
                 desc = attr_attrs.get('desc', None)
@@ -109,9 +117,12 @@ class AttributeEditor(QtGui.QWidget):
                     default_value = attr_attrs.get('default_value', None)
 
                     # map the correct editor widget
+
                     editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
                     if editor:
+                        print '\n# attribute:      ', attr_name
+                        print '# getting editor: ', attr_type
                         editor.setFont(self.fonts.get("attr_editor"))
                         if editor:
                             editor.initializeEditor()
@@ -272,6 +283,31 @@ class AttributeEditor(QtGui.QWidget):
         self.clearLayout(self.mainGroupLayout)
         self.buildLayout()
 
+    def getUserAttributes(self):
+        """
+        Return the current user attribute data from the nodes.
+
+        returns:
+            (dict) - dictionary of user attributes.
+        """
+        attributes = dict()
+        for node in self._nodes:
+            for name in node._attributes:
+
+                attribute = node._attributes.get(name)
+
+                if attribute.user:
+                    print '# user attribute: "%s"' % name
+                    if name not in attributes:
+                        attributes[name] = dict()
+
+                    for pname, pval in attribute.data.iteritems():
+                        if pname not in attributes.get(name):
+                            print '# adding user property: "%s": %s' % (pname, pval)
+                            attributes.get(name)[pname]=pval
+
+        return attributes
+
     def getNodeSectionAttrs(self, section):
         """
         Return the current section data from the nodes.
@@ -393,7 +429,8 @@ class AddAttributeDialog(QtGui.QDialog):
 
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
-        
+        self.mainLayout.setContentsMargins(6, 6, 6, 6)
+
         # main group
         self.groupBox = QtGui.QGroupBox(self)
         self.groupBox.setObjectName("groupBox")
@@ -401,7 +438,9 @@ class AddAttributeDialog(QtGui.QDialog):
         self.groupBoxLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
         self.groupBoxLayout.setFormAlignment(QtCore.Qt.AlignCenter)
         self.groupBoxLayout.setObjectName("groupBoxLayout")
-        
+        self.groupBox.setProperty("class", "AttributeEditor")
+        self.groupBoxLayout.setContentsMargins(3, 15, 3, 3)
+
         # name editor
         self.nameLabel = QtGui.QLabel(self.groupBox)
         self.nameLabel.setMinimumSize(QtCore.QSize(110, 0))
@@ -449,6 +488,7 @@ class AddAttributeDialog(QtGui.QDialog):
         self.buttonBox.setObjectName("buttonBox")
         self.mainLayout.addWidget(self.buttonBox)
 
+        # signals/slots
         self.checkbox_connectable.toggled.connect(self.connectionTypeMenu.setVisible)
         self.checkbox_connectable.toggled.connect(self.connectionTypeLabel.setVisible)
         self.buttonBox.accepted.connect(self.acceptedAction)
@@ -1553,7 +1593,7 @@ class ColorPicker(QtGui.QWidget):
         self._default_value = (125, 125, 125)
         self._current_value = None
 
-        self.normalized     = kwargs.get('norm', True)
+        self.normalized     = kwargs.get('norm', False)
         self.min            = kwargs.get('min', 0)
         self.max            = kwargs.get('max', 99)
         self.color          = kwargs.get('color', [1.0, 1.0, 1.0])
@@ -1585,6 +1625,9 @@ class ColorPicker(QtGui.QWidget):
         self.slider.valueChanged.connect(self.sliderChangedAction)
         self.colorSwatch.clicked.connect(self.colorPickedAction)
         self.slider.sliderReleased.connect(self.sliderReleasedAction)
+
+        #print 'initial color: ', self.colorSwatch.color
+        #print 'cached:        ', self._current_value
 
     @property
     def attribute(self):
@@ -1677,15 +1720,15 @@ class ColorPicker(QtGui.QWidget):
         """
         sval = float(self.slider.value())
 
-        # normalize the slider value
-        n = float(((sval - float(self.min)) / (float(self.max) - float(self.min))))
+        if not self._current_value:
+            log.debug('caching color: (%d, %d, %d)' %(self.colorSwatch.color[0], self.colorSwatch.color[1], self.colorSwatch.color[2]))
+            self._current_value = self.colorSwatch.color
 
-        red = float(self.color[0])
-        green = float(self.color[1])
-        blue = float(self.color[2])
-        rgb = (red*n, green*n, blue*n)
-        #rgb = expandNormRGB(red*n, green*n, blue*n)
-        new_color = QtGui.QColor(*rgb)
+        current_color = QtGui.QColor(*self._current_value)
+
+        darker = 200-sval
+        #print 'darker: ', darker
+        new_color = current_color.darker(darker)
         self.colorSwatch.qcolor = new_color
         self.colorSwatch._update()
 
@@ -1905,6 +1948,7 @@ WIDGET_MAPPER = dict(
     float2      = QFloat2Editor,
     float3      = QFloat3Editor,
     bool        = QBoolEditor,
+    str         = StringEditor,
     string      = StringEditor,
     file        = FileEditor,
     directory   = FileEditor,
@@ -1922,6 +1966,7 @@ ATTRIBUTE_DEFAULTS = dict(
     float2      = [0.0, 0.0],
     float3      = [0.0, 0.0, 0.0],
     bool        = False,
+    str         = "",
     string      = "",
     file        = "",
     directory   = "",
@@ -1939,6 +1984,8 @@ def map_widget(typ, parent, name, ui, icons):
     Map the widget to the attribute type.
     """
     typ=typ.replace(" ", "")
+    if typ not in WIDGET_MAPPER:
+        log.warning('invalid editor class: "%s" ("%s")' % (typ, name))
     if typ in WIDGET_MAPPER:
         cls = WIDGET_MAPPER.get(typ)
         return cls(parent, name=name, ui=ui, icons=icons)
