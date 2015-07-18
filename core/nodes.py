@@ -8,9 +8,11 @@ from collections import MutableMapping
 from SceneGraph.core import log, Attribute, Observable
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
-
-
-
+'''
+from SceneGraph import core
+g=core.Graph()
+m=g.add_node('lookdev')
+'''
 class DagNode(Observable):
 
     default_name  = 'node'
@@ -19,9 +21,12 @@ class DagNode(Observable):
     PRIVATE       = ['node_type']
 
     def __init__(self, name=None, **kwargs):
-        super(DagNode, self).__init__()
 
-        self._attributes        = dict()   
+        self._attributes        = dict()
+
+        Observable.__init__(self)
+        #self.__dict__['_attributes'] = dict()
+        
         self._metadata          = Metadata(self)
 
         # basic node attributes        
@@ -54,37 +59,17 @@ class DagNode(Observable):
 
     def __repr__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-
-    """
+    
     def __getattr__(self, name):
-        try:
-            if name in self._attributes:
-                attr = self._attributes.get(name)
-                return attr.value
-        except:
-            return super(DagNode, self).__getattr__(name)
-        
-    def __setattr__(self, name, value):
-        if name in self.PRIVATE:
-            raise AttributeError('"%s" is a private attribute and cannot be modified.' % name)
-        try:
-            return super(DagNode, self).__setattr__(name, value)
-        except:
-            if name in self._attributes:
-                print 'setting Attribute "%s"' % name
-                attribute = self._attributes.get(name)
-                if value != attribte.value:
-                    attribute.value = value
-                    Observable.set_changed()
-                    Observable.notify()
-                return
+        if name in self._attributes:
+            attribute = self._attributes.get(name)
+            print 'querying Attribute: "%s"' % name
+            return attribute.value
+        elif hasattr(self, name):
+            return getattr(self, name)
+        raise AttributeError('no attribute exists "%s"' % name)
 
-        # auto-add attributes
-        if issubclass(type(value), Attribute):
-            self.add_attr(name, **value)
-            Observable.set_changed()
-            Observable.notify()
-    """
+
     @property
     def data(self):
         """

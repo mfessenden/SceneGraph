@@ -38,14 +38,10 @@ class Attribute(object):
         self.max_connections   = kwargs.get('max_connections', 1)  # 0 = infinite
 
     def __str__(self):
-        d = self.data
-        name = d.pop('name')
-        return json.dumps({name:d}, indent=4)
+        return json.dumps({self.name:self.data}, indent=4)
 
     def __repr__(self):
-        d = self.data
-        name = d.pop('name')
-        return json.dumps({name:d}, indent=4)
+        return json.dumps({self.name:self.data}, indent=4)
 
     @property
     def data(self):
@@ -53,7 +49,7 @@ class Attribute(object):
         Output data for writing.
         """
         data = dict()
-        for attr in ['name', 'value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required']:
+        for attr in ['value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required']:
             if hasattr(self, attr):
                 value = getattr(self, attr)
                 if value or attr in self.REQUIRED:

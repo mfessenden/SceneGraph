@@ -138,3 +138,4 @@ from SceneGraph import core
 g=core.Graph()
 m=g.add_node('lookdev')
 
+m.model = '/home/michael/graphs/connections.json'
