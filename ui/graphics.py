@@ -723,7 +723,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 dest_items.pop(0)
 
             self.removeItem(self.line)
-
+            print 'source: ', source_items
+            print 'dest:   ', dest_items
             if len(source_items) and len(dest_items):
                 # these are connection widgets
                 source_conn = source_items[0]
@@ -731,6 +732,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                 # if we're not dealing with two connections, return 
                 if not isinstance(source_conn, node_widgets.Connection) or not isinstance(dest_conn, node_widgets.Connection):
+                    print 'wrong type'
                     return
 
                 if source_conn == dest_conn:
@@ -740,6 +742,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     src_dag = source_conn.dagnode
                     dest_dag = dest_conn.dagnode                 
                     edge = self.graph.add_edge(src_dag, dest_dag, src_attr=source_conn.name, dest_attr=dest_conn.name)
+                else:
+                    print 'oops'
+            else:
+                print 'double oops'
 
         self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)

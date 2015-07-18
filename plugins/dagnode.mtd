@@ -2,42 +2,57 @@
 [group Node Transform]
     [attr pos]
         default             FLOAT2    [0.0, 0.0]
+        required            BOOL      true
         label               STRING    "Position"
         label.0             STRING    "x"
         label.1             STRING    "y"
 
     [attr width]
         default             FLOAT     100.0
+        required            BOOL      true
         label               STRING    "Width"     
 
+[group Node Attributes]
     [attr base_height]
         default             FLOAT     15.0
+        required            BOOL      true
         label               STRING    "Base Height"
         desc                STRING    "node base height (multiplied by the number of connections)."
 
-    [attr enabled]
-        default             BOOL      true
-        label               STRING    "Enabled"
-
-[group Node Attributes]
     [attr id]
         default             STRING    ""
+        required            BOOL      true
         label               STRING    "Node ID"
         private             BOOL      true
 
     [attr name]
         default             STRING    "dagnode"
-        label               STRING    "Node Name"        
+        required            BOOL      true
+        label               STRING    "Node Name" 
 
     [attr node_type]
         default             STRING    "dagnode"
+        required            BOOL      true
         label               STRING    "Node Type"
         private             BOOL      true
 
+    [attr docstring]
+        default             STRING    ""
+        required            BOOL      true
+        label               STRING    "Doc"
+        desc                STRING    "node docstring."
+
     [attr color]
         default             COLOR     [172, 172, 172]
+        required            BOOL      true
         desc                STRING    "node background color."
         label               STRING    "Color"
 
-    [connection output]
-        connection_type     OUTPUT    ""
+    [attr enabled]
+        default             BOOL      true
+        required            BOOL      true
+        label               STRING    "Enabled"
+
+    [output output]
+        default             MULTI     ""
+        

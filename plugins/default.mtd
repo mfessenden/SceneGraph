@@ -5,6 +5,5 @@
     [attr doctstring]
         default             STRING    "default node"
 
-    [connection input]
-        default             ""        ""  
-        connection_type     INPUT     ""
+    [input input]
+        default             MULTI     ""  

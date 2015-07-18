@@ -18,6 +18,7 @@ class AttributeEditor(QtGui.QWidget):
         self._sections      = []        # node metadata sections
         self._show_private  = False
         self._handler       = kwargs.get('handler', None)
+        self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
 
@@ -67,7 +68,7 @@ class AttributeEditor(QtGui.QWidget):
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
-    def buildLayout(self):
+    def buildLayout(self, verbose=False):
         """
         Build the layout dynamically
         """
@@ -98,10 +99,13 @@ class AttributeEditor(QtGui.QWidget):
                 attrs = user_attributes
 
             for attr_name, attr_attrs in attrs.iteritems():
-                
+                if verbose:
+                    print '# building "%s": ' % attr_name
+
                 private = attr_attrs.get('private', False)
                 attr_label = attr_attrs.get('label', None)
                 desc = attr_attrs.get('desc', None)
+                edges = attr_attrs.get('_edges', [])
 
                 # use label from metadata, if available
                 if not attr_label:
@@ -117,34 +121,49 @@ class AttributeEditor(QtGui.QWidget):
                     default_value = attr_attrs.get('default_value', None)
 
                     # map the correct editor widget
+                    if attr_type:
+                        editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
-                    editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
-
-                    if editor:
-                        print '\n# attribute:      ', attr_name
-                        print '# getting editor: ', attr_type
-                        editor.setFont(self.fonts.get("attr_editor"))
                         if editor:
-                            editor.initializeEditor()
+                            if verbose:
+                                print '\n# attribute:      ', attr_name
+                                print '# getting editor: ', attr_type
+                            editor.setFont(self.fonts.get("attr_editor"))
+                            if editor:
+                                editor.initializeEditor()
 
-                            formLayout.addRow("%s:" % attr_label, editor)
-                            label_widget = formLayout.itemAt(row, QtGui.QFormLayout.LabelRole)
+                                formLayout.addRow("%s:" % attr_label, editor)
+                                label_widget = formLayout.itemAt(row, QtGui.QFormLayout.LabelRole)
 
-                            label = label_widget.widget()
-                            label.setFont(self.fonts.get("attr_editor_label"))
-                            formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
-                            # add the description
-                            if desc is not None:
-                                editor.setToolTip(desc)
-                                #attr_label.setToolTip(desc)
-                                
-                            # signal here when editor changes
-                            editor.valueChanged.connect(self.nodeAttributeChanged)
-                            #editor.setEnabled(not locked)
-                            row += 1 
+                                label = label_widget.widget()
+                                label.setFont(self.fonts.get("attr_editor_label"))
+                                formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
+                                # add the description
+                                if desc is not None:
+                                    editor.setToolTip(desc)
+                                    #attr_label.setToolTip(desc)
+                                    
+                                # signal here when editor changes
+                                editor.valueChanged.connect(self.nodeAttributeChanged)
+                                #editor.setEnabled(not locked)
 
-            
-            self.mainGroupLayout.addWidget(group)
+                                # connected edges
+                                if edges:
+                                    for edge in edges:
+                                        src_id, dest_id = edge.strip('()').split(',')
+                                        if self._graph.get_edge(src_id, dest_id):
+                                            src_id, dest_id, edge_attrs = self._graph.get_edge(src_id, dest_id)[0]
+                                            dagnode = self._graph.get_node(src_id)[0]
+                                            conn_str = '%s.%s' % (dagnode.name, edge_attrs.get('src_attr'))
+                                            print 'connection: ', conn_str
+                                            editor.setConnected(conn_str)
+
+                                row += 1 
+
+            if row:
+                self.mainGroupLayout.addWidget(group)
+            else:
+                group.deleteLater()
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.mainGroupLayout.addItem(spacerItem)
         self.mainLayout.addWidget(self.mainGroup)
@@ -324,28 +343,31 @@ class AttributeEditor(QtGui.QWidget):
                 for attribute in node.metadata.attributes(section):
                     if attribute not in attributes:
                         attr_data = node.metadata.getAttr(section, attribute)
+
                         attr_dict = dict()
 
-                        # default, label, connection_type, desc
+                        #print 'attr data: ',attr_data.keys()
+                        # default, label, required, connection_type, desc
                         if 'connection_type' in attr_data:
-                            if not 'default' in attr_data:
-                                log.debug('connection "%s" has no default attributes.' % attribute)
-                                continue
-                            
+
                             defaults = attr_data.get('default')
-                            conn_type = defaults.get('type')
+                            print 'connection defaults: ', defaults.keys()
+                            conn_type = attr_data.get('connection_type')
+                            print '\n# %s connection type: "%s"' % (attribute, conn_type)
 
                             if 'label' in attr_data:
                                 attr_dict.update(label=attr_data.get('label').get('value'))
 
                             # FILE == file
-                            attr_dict.update(attr_type=conn_type.lower())
+                            attr_dict.update(attr_type=conn_type)
+                            attr_dict.update(**attr_dict)
 
                         # "default" is manadatory, so pop it
                         if 'default' not in attr_data:
                             log.debug('attribute "%s" has no default value. ' % attribute)
                             continue
 
+                        '''
                         attr_type = attr_data.get('default').get('type').lower()
                         attr_dict.update(attr_type=attr_type)
 
@@ -357,7 +379,7 @@ class AttributeEditor(QtGui.QWidget):
 
                         if 'desc' in attr_data:
                             attr_dict.update(desc=attr_data.get('desc').get('value'))
-
+                        '''
                         #print attr_data.keys()
                         #attr_dict.update(**attr_data)
                         attributes[attribute] = attr_dict
@@ -528,7 +550,7 @@ class AddAttributeDialog(QtGui.QDialog):
         if attr_name:
             for node in self._nodes:
                 log.info('adding "%s" to node "%s" (%s)' % (attr_name, node.name, attr_type))
-                node.add_attr(attr_name, value=def_value, type=attr_type, connectable=connectable, 
+                node.add_attr(attr_name, value=def_value, attr_type=attr_type, connectable=connectable, 
                                 connection_type=connection_type)
 
         #self.parent().updateChildEditors([attr_name])
@@ -553,6 +575,7 @@ class QFloatEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = 0.0
         self._current_value = None
@@ -645,6 +668,16 @@ class QFloatEditor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+
 
 class QIntEditor(QtGui.QWidget):
     
@@ -657,6 +690,7 @@ class QIntEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = 0
         self._current_value = None
@@ -749,6 +783,16 @@ class QIntEditor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+
 
 class QFloat2Editor(QtGui.QWidget):
 
@@ -761,6 +805,7 @@ class QFloat2Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = (0,0)
         self._current_value = None
@@ -865,6 +910,18 @@ class QFloat2Editor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val2_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+            self.val2_edit.setProperty("class", "Connected")
+
 
 class QFloat3Editor(QtGui.QWidget):
 
@@ -877,6 +934,7 @@ class QFloat3Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = (0.0, 0.0, 0.0)
 
@@ -990,6 +1048,20 @@ class QFloat3Editor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val2_edit.setEnabled(False)
+            self.val3_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+            self.val2_edit.setProperty("class", "Connected")
+            self.val3_edit.setProperty("class", "Connected")
+
 
 class QInt2Editor(QtGui.QWidget):
 
@@ -1002,6 +1074,7 @@ class QInt2Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = (0, 0)
         self._current_value = None
@@ -1106,6 +1179,18 @@ class QInt2Editor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val2_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+            self.val2_edit.setProperty("class", "Connected")
+
 
 class QInt3Editor(QtGui.QWidget):
 
@@ -1118,6 +1203,7 @@ class QInt3Editor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = False
 
         self._default_value = (0, 0, 0)
         self._current_value = None
@@ -1239,6 +1325,20 @@ class QInt3Editor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val2_edit.setEnabled(False)
+            self.val3_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+            self.val2_edit.setProperty("class", "Connected")
+            self.val3_edit.setProperty("class", "Connected")
+
 
 class QBoolEditor(QtGui.QCheckBox):
 
@@ -1251,6 +1351,7 @@ class QBoolEditor(QtGui.QCheckBox):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = False
         self._current_value = None
@@ -1331,6 +1432,15 @@ class QBoolEditor(QtGui.QCheckBox):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.setEnabled(False)
+            self.setProperty("class", "Connected")
+
 
 class StringEditor(QtGui.QWidget):
 
@@ -1343,6 +1453,7 @@ class StringEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._connection    = None
 
         self._default_value = ""
         self._current_value = None
@@ -1450,6 +1561,16 @@ class StringEditor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+
 
 class FileEditor(QtGui.QWidget):
 
@@ -1462,6 +1583,7 @@ class FileEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'file')
+        self._connection    = None
 
         self._default_value = ""
         self._current_value = None
@@ -1577,6 +1699,17 @@ class FileEditor(QtGui.QWidget):
             self._current_value = self.value
             self.valueChanged.emit(self)
 
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.file_edit.setText(conn)
+            self.file_edit.setEnabled(False)
+            self.button_browse.setEnabled(False)
+            self.file_edit.setProperty("class", "Connected")
+
 
 class ColorPicker(QtGui.QWidget):
     """ 
@@ -1589,6 +1722,7 @@ class ColorPicker(QtGui.QWidget):
 
         self._ui            = kwargs.get('ui', None)
         self._attribute     = kwargs.get('name', 'color')
+        self._connection    = None
 
         self._default_value = (125, 125, 125)
         self._current_value = None
@@ -1702,6 +1836,14 @@ class ColorPicker(QtGui.QWidget):
         if self.value != self._current_value:
             self._current_value = self.value
             self.valueChanged.emit(self)
+
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.colorSwatch.setEnabled(False)
 
     def setAttr(self, val):
         # 32 is the first user data role

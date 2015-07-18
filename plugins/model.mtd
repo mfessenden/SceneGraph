@@ -1,8 +1,8 @@
 # model node attributes
 [group Node Attributes]
-    [connection file]
-        default             FILE    ""
-        connection_type     INPUT   FILE
 
-    [connection output]
-        connection_type     OUTPUT    ""
+    [input file]
+        default             FILE    ""
+
+    [output output]
+        default             NODE    ""

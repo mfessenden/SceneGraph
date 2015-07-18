@@ -1,9 +1,13 @@
 # marge node attributes
-[group Inputs]
-    [connection inputA]
-        default            ""        ""
-        connection_type    INPUT     ""
+[group Node Attributes]
+    
+    [output output]        
+        default            MERGE     "" 
 
-    [connection inputB]
-        default            ""        ""
-        connection_type    INPUT     ""
+[group Inputs]
+    
+    [input inputA]
+        default            NODE      ""
+
+    [input inputB]
+        default            NODE      ""

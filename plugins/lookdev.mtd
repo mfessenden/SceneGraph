@@ -1,24 +1,26 @@
 # lookdev node attributes
+[group Node Attributes]
+    [attr docstring]
+        default             STRING    "Look development mapping node. Maps models to shaders."
+        label               STRING    "Doc"
+        desc                STRING    "node docstring."
+
 [group Asset]
 
-    [connection model]
-        default            FILE      ""
-        label              STRING    "Model"
-        connection_type    INPUT     FILE
+    [input model]
+        default            NODE       ""
+        label              STRING     "Model"
 
-    [connection shader_mapping]
-        default            FILE      ""
-        label              STRING    "Mapping"
-        desc               STRING    "shaders mapping file."
-        connection_type    INPUT     FILE
+    [input shader_mapping]
+        default            NODE       ""
+        label              STRING     "Mapping"
+        desc               STRING     "shaders mapping file."
 
-    [connection shader]
-        default            FILE      ""
-        label              STRING    "Shaders"
-        desc               STRING    "shaders file."
-        connection_type    INPUT     FILE
+    [input shader]
+        default            NODE       ""
+        label              STRING     "Shaders"
+        desc               STRING     "shaders file."
 
-    [connection texture]
-        default            FILE      ""
-        label              STRING    "Textures"
-        connection_type    INPUT     DIRECTORY
+    [input texture]
+        default            NODE       ""
+        label              STRING     "Textures"

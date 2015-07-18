@@ -50,6 +50,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         self._render_effects = True                   # enable fx
         self._label_coord    = [0,0]                  # default coordiates of label
 
+        # tags
+        self._evaluate_tag   = False                  # indicates the node is set to "evaluate" (a la Houdini)
+        
         # connections widget
         self.connections     = dict()
 
@@ -510,6 +513,9 @@ class NodeWidget(QtGui.QGraphicsObject):
         # translate the label
         self.label.setPos(self.label_pos)        
         self.drawConnections()
+
+        # set the tooltip to the current node's documentation string.
+        self.setToolTip(self.dagnode.docstring)
 
         # render fx
         if self._render_effects:
@@ -1240,7 +1246,7 @@ class Connection(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_MouseOver:
             self.is_hover = True
 
-        self.setToolTip('%s.%s\n(%.2f, %.2f)' % (self.dagnode.name, self.name, self.pos().x(), self.pos().y()))
+        self.setToolTip('%s.%s' % (self.dagnode.name, self.name))
 
         # background
         gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)
@@ -1265,6 +1271,7 @@ class Connection(QtGui.QGraphicsObject):
         label_color = self.label_color
         if self._debug:
             label_color = QtGui.QColor(*[170, 170, 170])
+        
         self.label.hide()
         if self.is_expanded:
             self.label.setBrush(label_color)
@@ -1278,7 +1285,7 @@ class Connection(QtGui.QGraphicsObject):
             if self.isOutputConnection():
                 self.label.setPos(self.output_label_pos)
 
-            self.label.setToolTip('%d, %d (%.2f)' % (self.label.pos().x(), self.label.pos().y(), self.label.boundingRect().width()))
+            self.label.setToolTip(self.dagconn.desc)
 
         # visualize the bounding rect if _debug attribute is true
         if self._debug:

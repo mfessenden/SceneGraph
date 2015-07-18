@@ -1,37 +1,31 @@
 # texture node attributes
-[group Texture Attributes]
-    [connection diffuse]
+[group Texture Collection]
+    [input diffuse]
         label               STRING  "Diffuse"
-        default             FILE    ""     
+        default             DIR     ""     
         desc                STRING  "Diffuse texture directory."
-        connection_type     INPUT   DIRECTORY
 
-    [connection specular]
+    [input specular]
         label               STRING  "Specular"
-        default             FILE    ""        
+        default             DIR     ""        
         desc                STRING  "Specular texture directory."
-        connection_type     INPUT   DIRECTORY
 
-    [connection gloss]
+    [input gloss]
         label               STRING  "Glossiness"
-        default             FILE    ""        
+        default             DIR     ""        
         desc                STRING  "Glossiness texture directory."
-        connection_type     INPUT   DIRECTORY
 
-    [connection bump]
+    [input bump]
         label               STRING  "Bump"
-        default             FILE    ""        
+        default             DIR     ""        
         desc                STRING  "Bump texture directory."
-        connection_type     INPUT   DIRECTORY
 
-    [connection normal]
+    [input normal]
         label               STRING  "Normal Map"
-        default             FILE    ""
+        default             DIR     ""
         desc                STRING  "Normal texture directory."
-        connection_type     INPUT   DIRECTORY
 
-    [connection disp]
+    [input disp]
         label               STRING  "Displacement"
-        default             FILE    ""
+        default             DIR     ""
         desc                STRING  "Displacement texture directory."
-        connection_type     INPUT   DIRECTORY

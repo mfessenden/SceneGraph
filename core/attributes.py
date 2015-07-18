@@ -17,18 +17,21 @@ class Attribute(object):
         # private attributes
         self._dag              = weakref.ref(dagnode) if dagnode else None
 
+        # stash argument passed to 'type' - overrides 
+        # auto-type mechanism. * this will become data_type
+        self._type             = kwargs.get('attr_type', None)
+        self._edges            = []
+
         self.name              = name
         self.label             = kwargs.get('label', "") 
         self.default_value     = kwargs.get('default_value', "")
         self.value             = value
-        self.user              = user
-
-        # stash argument passed to 'type' - overrides auto-type mechanism.
-        # * this will become data_type
-        self._type             = kwargs.get('type', None)           # 
-        self._edges            = kwargs.get('edges', [])
+        
+        self.doctstring        = kwargs.get('doctstring', '')
+        self.desc              = kwargs.get('desc', '')
 
         # globals
+        self.user              = user
         self.private           = kwargs.get('private', False)  # hidden
         self.hidden            = kwargs.get('hidden', False) 
         self.connectable       = kwargs.get('connectable', False)
@@ -37,6 +40,7 @@ class Attribute(object):
 
         # connection
         self.connection_type   = kwargs.get('connection_type', 'input')
+        self.data_type         = kwargs.get('data_type', None) 
         self.max_connections   = kwargs.get('max_connections', 1)  # 0 = infinite
 
     def __str__(self):
@@ -47,13 +51,17 @@ class Attribute(object):
 
     def update(self, **kwargs):
         """
-        Update the data dictionary.
+        Update attributes.
 
         * todo: can't pass as **kwargs else we lose the order (why is that?)
         """
         for name, value in kwargs.iteritems():
-            #print '# adding attribute: "%s"' % name
-            setattr(self, name, value)
+            # we don't save edge attributes, so don't read them from disk.
+            if name not in ['_edges']:
+                #print '# adding attribute: "%s"' % name
+                if hasattr(self, name) and value != getattr(self, name):
+                    print '# DEBUG: Attribute "%s" updating value: "%s": "%s" - "%s"' % (self.name, name, value, getattr(self, name))
+                setattr(self, name, value)
 
     @property
     def data(self):
@@ -61,7 +69,8 @@ class Attribute(object):
         Output data for writing.
         """
         data = dict()
-        for attr in ['label', 'value', 'attr_type', 'private', 'hidden', 'connectable', 'locked', 'required', 'user']:
+        for attr in ['label', 'value', 'desc', '_edges', 'attr_type', 'private', 
+                     'hidden', 'connectable', 'connection_type', 'locked', 'required', 'user']:
             if hasattr(self, attr):
                 value = getattr(self, attr)
                 #if value or attr in self.REQUIRED:
@@ -100,3 +109,4 @@ class Attribute(object):
         """
         old_name = self.name
         self.name = name
+

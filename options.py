@@ -4,11 +4,11 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 API_MAJOR_VERSION           = 0.64
-API_REVISION                = 4
+API_REVISION                = 5
 API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                    = None
-API_MINIMUM                 = 0.640
+API_MINIMUM                 = 0.645
 
 
 SCENEGRAPH_PATH             = os.path.dirname(__file__)
@@ -77,6 +77,14 @@ LOGGING_LEVELS = {
     }
 
 
+# node connection property types
+PROPERTY_TYPES = dict(
+    simple              = ['FLOAT', 'STRING', 'BOOL', 'INT'],
+    arrays              = ['FLOAT2', 'FLOAT3', 'INT2', 'INT3', 'COLOR'],
+    data_types          = ['FILE', 'MULTI', 'MERGE', 'NODE', 'DIR'],   
+    )
+
+
 # Default preferences
 SCENEGRAPH_PREFERENCES = {
     'use_gl' : {'default':False, 'desc':'Render graph with OpenGL.'},
@@ -112,8 +120,8 @@ def setup_fonts(font='SansSerif', size=8, platform=None):
     """
     from PySide import QtGui
     fonts = dict()
-    mono_family = 'Consolas'
-
+    mono_font = 'Consolas'
+    ui_font = font
     # standard sizes
     size_ui = size
     size_mn = size
@@ -121,32 +129,30 @@ def setup_fonts(font='SansSerif', size=8, platform=None):
 
     if platform == 'MacOSX':
         size_ui = size + 4
-        size_mn = size + 2
+        size_mn = size + 7
         size_sm = size_ui - 1        
-        mono_family = 'Menlo'
+        mono_font = 'Menlo'
 
-    fonts["ui"] = QtGui.QFont(font)
+    fonts["ui"] = QtGui.QFont(ui_font)
     fonts["ui"].setPointSize(size_ui)
 
-    fonts["output"] = QtGui.QFont('Monospace')
+    fonts["output"] = QtGui.QFont(mono_font)
     fonts["output"].setPointSize(size_mn)
-    fonts["output"].setFamily(mono_family)
 
-    fonts["console"] = QtGui.QFont('Monospace')
+    fonts["console"] = QtGui.QFont(mono_font)
     fonts["console"].setPointSize(size_mn)
-    fonts["console"].setFamily(mono_family)
 
-    fonts["attr_editor"] = QtGui.QFont(font)
+    fonts["attr_editor"] = QtGui.QFont(ui_font)
     fonts["attr_editor"].setPointSize(size_ui)
 
-    fonts["attr_editor_group"] = QtGui.QFont(font)
+    fonts["attr_editor_group"] = QtGui.QFont(ui_font)
     fonts["attr_editor_group"].setPointSize(size_ui)
     fonts["attr_editor_group"].setBold(True)
 
-    fonts["attr_editor_label"] = QtGui.QFont(font)
+    fonts["attr_editor_label"] = QtGui.QFont(ui_font)
     fonts["attr_editor_label"].setPointSize(size_sm)
 
-    fonts["disabled"] = QtGui.QFont(font)
+    fonts["disabled"] = QtGui.QFont(ui_font)
     fonts["disabled"].setPointSize(size_ui)
     fonts["disabled"].setItalic(True)
     return fonts

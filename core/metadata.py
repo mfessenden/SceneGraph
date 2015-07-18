@@ -32,6 +32,14 @@ class MetadataParser(object):
         DESCRIPTION:
             read and parse node metadata (.mtd) files to build a 
             template for the AttributeEditor widget.
+
+            Metadata is stored as:
+
+            [section $name]
+
+                [attr $attr_name]
+                    $property_name      $property_type      $property_value
+
     """
     def __init__(self, filename=None, **kwargs):
 
@@ -57,7 +65,7 @@ class MetadataParser(object):
 
     def parse(self, filename):
         """
-        Read a template file. Data is structured into groups
+        Parses a single template file. Data is structured into groups
         of attributes (ie: 'Transform', 'Attributes')
 
         params:
@@ -66,6 +74,7 @@ class MetadataParser(object):
         if self._initialized:
             self.initialize()
 
+        log.info('reading metadata file: "%s"' % filename)
         data = dict()
         if filename is not None:
             if os.path.exists(filename):
@@ -82,6 +91,7 @@ class MetadataParser(object):
                         # remove leading spaces
                         rline = line.lstrip(' ')
 
+                        # section/attribute header match
                         if re.match(regex.get("section"), rline):                            
                               
                             section_obj = re.search(regex.get("section_value"), rline)
@@ -106,8 +116,10 @@ class MetadataParser(object):
                                     attr_name = section_value
                                     #print '   Attribute: ', attr_name
 
-                                if section_type == 'connection':            
+                                if section_type in ['input', 'output']:            
                                     conn_data = dict()
+                                    conn_data.update(connectable=True)
+                                    conn_data.update(connection_type=section_type)
                                     parent[section_value] = conn_data
                                     attr_name = section_value
                                     #print '   Attribute: ', attr_name

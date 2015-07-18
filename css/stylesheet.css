@@ -64,7 +64,7 @@ QTabBar{
     /*font-size: 11;*/
 }
 
-QPushButton.Console{
+QPushButton{
     border-color: #454545;
     border-style: outset;
     border-width: 1px;
@@ -81,6 +81,11 @@ QPushButton:!enabled{
 
 QLineEdit{
     background-color: #3a3a3a;
+}
+
+QLineEdit.Connected{
+    color: #7db4ff;
+    background-color: #3e3e3e;
 }
 
 QMenuBar.AttributeMenu::item{

@@ -448,6 +448,7 @@ class Graph(object):
         edge_id_str = '(%s,%s)' % (src.id, dest.id)
 
         if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:
+            
             # add the nx edge        
             self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)
             log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
@@ -503,6 +504,7 @@ class Graph(object):
             else:
                 if type(args[0]) is str:
                     if ',' in args[0]:
+                        print 'splitting...'
                         src_conn, dest_conn = cs(args[0])
 
         if not src_conn or not dest_conn:
@@ -1077,7 +1079,7 @@ class Graph(object):
                 dest_string = '%s.%s' % (dest_dag_node.name, dest_attr)
 
                 # TODO: need to get connection node here
-                log.debug('connecting nodes: "%s" "%s"' % (src_string, dest_string))            
+                log.info('connecting nodes: "%s" "%s"' % (src_string, dest_string))            
                 dag_edge = self.add_edge(src_dag_node, dest_dag_node, src_attr=src_attr, dest_attr=dest_attr, weight=weight)
 
         #self.handler.scene.clear()

@@ -10,12 +10,22 @@ from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
 
 
+PROPERTY_TYPES = dict(
+    simple              = ['FLOAT', 'STRING', 'BOOL', 'INT'],
+    arrays              = ['FLOAT2', 'FLOAT3', 'INT2', 'INT3', 'COLOR'],
+    data_types          = ['FILE', 'MULTI', 'MERGE', 'NODE', 'DIR'],   
+    )
+
+
 class DagNode(Observable):
 
     default_name  = 'node'
     default_color = [172, 172, 172, 255]
     node_type     = 'dagnode'
     PRIVATE       = ['node_type']
+    required      = ['name', 'color', 'docstring', '_graph', 'width', 
+                     'width', 'base_height', 'pos', 'enabled', 'orientation',
+                     '_metadata', 'data']
 
     def __init__(self, name=None, **kwargs):
         self._attributes        = dict()
@@ -26,6 +36,7 @@ class DagNode(Observable):
         # basic node attributes        
         self.name               = name if name else self.default_name
         self.color              = kwargs.pop('color', self.default_color)
+        self.docstring          = ""
         self._graph             = kwargs.pop('_graph', None)
 
         self.width              = kwargs.pop('width', 100.0)
@@ -39,6 +50,8 @@ class DagNode(Observable):
         metadata                = kwargs.pop('metadata', dict())
         attributes              = kwargs.pop('attributes', dict())
 
+        # if the node metadata isn't passed from another class, 
+        # read it from disk
         if not metadata:
             metadata = self.parse_metadata()
         # ui
@@ -48,8 +61,8 @@ class DagNode(Observable):
         self.id = UUID if UUID else str(uuid.uuid4())
         self._metadata.update(metadata)
 
-        # build connections
-        self.buildConnections()
+        # attributes
+        self.buildAttributes()
 
         # add attributes
         if attributes:
@@ -123,8 +136,8 @@ class DagNode(Observable):
         return self._metadata
 
     @property 
-    def mdata(self):
-        print json.dumps(self._metadata.data, indent=5)
+    def template(self):
+        print json.dumps(self._metadata._template_data, indent=5)
 
     @property
     def graph(self):
@@ -231,22 +244,79 @@ class DagNode(Observable):
         self._attributes.update({attr.name:attr})
 
     #- Connections ----
-    def buildConnections(self, data={}):
+    def buildAttributes(self, verbose=False):
         """
-        Build connections from metadata.
+        Parse and build attributes.
         """
-        if not data:
-            for input_data in self.metadata.input_connections():
-                # input_data = {input:{data_type:FILE}}
-                conn_name = input_data.keys()[0]
-                conn_attrs = input_data.pop(conn_name)
-                self.add_attr(conn_name, connectable=True, connection_type='input', user=False, **conn_attrs)
+        if verbose:
+            print '\n# "%s:%s":' % (self.Class(), self.name)
 
-            for output_data in self.metadata.output_connections():
-                # output_data = {input:{data_type:FILE}}
-                conn_name = output_data.keys()[0]
-                conn_attrs = output_data.pop(conn_name)
-                self.add_attr(conn_name, connectable=True, connection_type='output', user=False, **conn_attrs)
+        for section in self._metadata.data:
+            if verbose:
+                print '   "Section: %s"' % ( section)
+
+            attributes = self._metadata.data.get(section)
+
+            for attr_name in attributes:
+                
+                # parse connections
+                properties = attributes.get(attr_name)
+                attr_label = 'Attribute'
+
+                is_connection = False
+                conn_type = None
+                required  = False
+
+
+                if 'connectable' in properties:
+                    if 'connection_type' in properties:
+                        is_connection = True
+                        conn_type = properties.get('connection_type')
+                        if conn_type == 'input':
+                            attr_label = "Input"
+
+                        if conn_type == 'output':
+                            attr_label = "Output"
+
+                # parse required
+                if 'required' in properties:
+                    required = properties.get('required', False)
+
+                if required:
+                    attr_label = '*%s' % attr_label
+
+                if verbose:
+                    print '      "%s: %s"' % (attr_label, attr_name)
+
+                # build an attribute
+                if is_connection:
+                    attr_node = self.metadata.map(attr_name, properties)
+                    if not attr_node:
+                        continue
+
+                # parse properties of attribute/connection
+                # MAPPING:
+                # name    -> name
+                # type    -> attr_type (lower)
+                # default -> default_value
+                # label   -> label
+                for pname in properties:
+                    if pname not in ['required']:
+                        pvalues = properties.get(pname)
+
+                        # connection data, pass
+                        if not util.is_dict(pvalues):
+                            continue 
+
+                        if verbose:
+                            print '         "%s":' % (pname)
+                        for pattr in pvalues:
+                            pval = pvalues.get(pattr)
+                            if verbose:
+                                print '             "%s":%s' % (pattr, pval)
+            if verbose:
+                print '\n'
+
 
     @property
     def connections(self):
@@ -519,7 +589,42 @@ class DagNode(Observable):
                 raise OSError('plugin description file "%s" does not exist.' % metadata_filename)
 
             parsed = parser.parse(metadata_filename)
-            node_metadata.update(parsed)
+
+            for section in parsed:
+                if section not in node_metadata:
+                    node_metadata[section] = dict()
+
+                attributes = parsed.get(section)
+                    
+                # parse out input/output here?
+                for attr in attributes:
+                    if attr not in node_metadata[section]:
+                        node_metadata.get(section)[attr] = dict()
+                    else:
+                        pass
+                        #log.debug('METADATA: module "%s" updating attribute: "%s:%s"...' % (basename, section, attr))
+
+                    attr_properties = attributes.get(attr)
+                    for pname in attr_properties:
+                        pvalues = attr_properties.get(pname)
+
+                        if pname not in node_metadata.get(section).get(attr):
+                            node_metadata.get(section).get(attr)[pname] = dict()
+                        else:
+                            pass
+                            #log.debug('METADATA: module "%s" updating attribute property: "%s:%s:%s"...' % (basename, section, attr, pname))
+                        
+                        if util.is_dict(pvalues):
+                            for pattr in pvalues:
+                                pval = pvalues.get(pattr)
+                                node_metadata.get(section).get(attr)[pname] = pval
+                        else:
+                            # "output:value:connectable":  True
+                            node_metadata.get(section).get(attr)[pname] = pvalues
+                            #print '# "%s:%s:%s": ' % (attr, pattr, pname), pvalues
+
+
+            node_metadata
         return node_metadata
 
     def Class(self):
@@ -556,8 +661,105 @@ class Metadata(object):
         self._data           = dict()
         self._default_xform  = "Node Transform"
         self._default_attrs  = "Node Attributes" 
+        self._template_data  = dict()               # dictionary to hold parsed data
 
         self._data.update(**kwargs)
+
+    def __str__(self):
+        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
+
+    def __repr__(self):
+        pc = self._parent.ParentClasses()
+        parents = [x.__name__ for x in pc]
+        parents.append(self._parent.Class())
+        return 'Metadata: [%s]' % ','.join(parents)
+        #return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
+
+    def update(self, data):
+        """
+        Update the data dictionary.
+
+        * todo: can't pass as **kwargs else we lose the order (why is that?)
+        """
+        self._template_data = data
+        for k, v in data.iteritems():
+            if k in self._data:
+                self._data.get(k).update(**v)
+            else:
+                self._data.update({k:v})
+
+    def map(self, name, properties):
+        """
+        Maps data dictionary to an Attribute. Example:
+
+            "shader_mapping": {
+                "default": {
+                    "type": "FILE",
+                    "value": ""
+                },
+                "label": {
+                    "type": "STRING",
+                    "value": "Mapping"
+                },
+                "desc": {
+                    "type": "STRING",
+                    "value": "shaders mapping file."
+                },
+                "connection_type": {
+                    "type": "INPUT",
+                    "value": "file"
+                }
+
+        params:
+            name       (str)  - attribute name.
+            properties (dict) - attribute dictionary.
+        """
+        if not 'default' in properties:
+            lof.error('attribute "%s" metadata is missing required "default" property.' % name)
+            return 
+
+
+        default_value = None
+
+        # connection properties
+        connectable = properties.pop('connectable')
+        connection_type = properties.pop('connection_type')        
+        max_connections = properties.pop('max_connections', 1) 
+
+        pdict = dict()
+        # attribute properties (ie 'label', 'desc', 'connection_type')
+        for property_name in properties:
+
+            pattrs = properties.get(property_name)
+            if not util.is_dict(pattrs):
+                continue
+
+            property_value = pattrs.get('value')
+            property_type  = pattrs.get('type')
+
+            attr_type      = None
+
+            if property_value:
+                if property_value.isupper():
+                    pass
+
+                if property_type.isupper():
+                    if property_type not in PROPERTY_TYPES.get('data_types'): 
+                            attr_type = property_type.lower()
+                    else:
+                        # data type (ie 'FILE')
+                        attr_type = property_type.lower()
+
+            # {'label': 'Name'}
+            pdict[property_name] = property_value
+            pdict['attr_type'] = attr_type
+
+        return self._parent.add_attr(name, connectable=True, connection_type=connection_type, 
+                            max_connections=max_connections, default_value=default_value, user=False, **pdict)
+
+    @property
+    def data(self):
+        return self._data
 
     def parentItem(self):
         """
@@ -603,7 +805,7 @@ class Metadata(object):
         """
         if attr in self.attributes(section):
             return self._data.get(section).get(attr)
-        return {}
+        return dict()
 
     def defaults(self):
         """
@@ -613,11 +815,11 @@ class Metadata(object):
             (dict) - attributes dictionary.
         """
         if self._default_attrs is None:
-            return {}
+            return dict()
 
         if self._default_attrs in self._data.keys():
             return self._data.get(self._default_attrs)
-        return {}
+        return dict()
 
     def transformAttrs(self):
         """
@@ -630,10 +832,10 @@ class Metadata(object):
             return {}
         if self._default_xform in self._data.keys():
             return self._data.get(self._default_xform)
-        return {}
+        return dict()
 
     def get_connection(self, name):
-        return {}
+        return dict()
 
     def input_connections(self):
         """
@@ -647,16 +849,15 @@ class Metadata(object):
         for section in self.sections():
             for attribute in self.attributes(section):
                 attr_data = self.getAttr(section, attribute)
-                #print 'attr: ', attr_data.keys()
-                if 'connection_type' in attr_data:
-                    conn_data = attr_data.get('connection_type')
-                    conn_type = conn_data.get('type')
-                    data_type = conn_data.get('value', None)
 
-                    cdata = dict(data_type=data_type)
+                if 'connection_type' in attr_data:
+                    connectable = attr_data.get('connectable')
+                    conn_type = attr_data.get('connection_type')
+
                     if conn_type == 'INPUT':
-                        #connections.append({attribute:{'type':conn_type}})
-                        connections.append({attribute:cdata})
+                        if connectable:
+                            #connections.append({attribute:{'type':conn_type}})
+                            connections.append({attribute:attr_data})
         return connections
 
     def output_connections(self):
@@ -671,39 +872,18 @@ class Metadata(object):
         for section in self.sections():
             for attribute in self.attributes(section):
                 attr_data = self.getAttr(section, attribute)
-                #print 'attr: ', attr_data.keys()
-                if 'connection_type' in attr_data:
-                    conn_data = attr_data.get('connection_type')
-                    conn_type = conn_data.get('type')
-                    data_type = conn_data.get('value', None)
 
-                    cdata = dict(data_type=data_type)
+                if 'connection_type' in attr_data:
+                    connectable = attr_data.get('connectable')
+                    conn_type = attr_data.get('connection_type')
+                    
                     if conn_type == 'OUTPUT':
-                        #connections.append({attribute:{'type':conn_type}})
-                        connections.append({attribute:cdata})
+                        if connectable:
+                            #connections.append({attribute:{'type':conn_type}})
+                            connections.append({attribute:attr_data})
         return connections
 
-    def update(self, data):
-        """
-        Update the data dictionary.
 
-        * todo: can't pass as **kwargs else we lose the order (why is that?)
-        """
-        for k, v in data.iteritems():
-            if k in self._data:
-                self._data.get(k).update(**v)
-            else:
-                self._data.update({k:v})
-
-    @property
-    def data(self):
-        return self._data
-
-    def __str__(self):
-        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
-
-    def __repr__(self):
-        return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
 
 '''

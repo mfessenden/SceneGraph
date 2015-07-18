@@ -1,23 +1,19 @@
 # asset node attributes
 [group Asset]
-    [connection model]
-        default            FILE      ""
+    [input model]
+        default            NODE      [FILE, "model"]
         label              STRING    "Model"
-        connection_type    INPUT     [FILE, "model"]
 
-    [connection lookdev]
-        default            FILE      ""
+    [input lookdev]
+        default            NODE      ["lookdev"]
         label              STRING    "Lookdev"
         desc               STRING    "lookdev node."
-        connection_type    INPUT     "lookdev"
         
-    [connection rig]
-        default            FILE      ""
+    [input rig]
+        default            NODE      [FILE, "rig"]
         label              STRING    "Rig"
         desc               STRING    "rigging file."
-        connection_type    INPUT     FILE
 
-    [connection texture]
-        default            FILE      ""
+    [input texture]
+        default            NODE      ["texture", FILE]
         label              STRING    "Textures"
-        connection_type    INPUT     ["texture", FILE]

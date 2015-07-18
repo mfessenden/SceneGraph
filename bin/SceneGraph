@@ -14,7 +14,6 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
 
     if sys.platform == 'darwin':
-        #app.setStyle('plastique')
         app.setStyle('cleanlooks')
 
     # oxygen looks better in linux overall, but plastique groupBoxes look better
