@@ -64,7 +64,7 @@ class Observable(object):
         if not self._changed:
             return
 
-        log.info('updating observers...')
+        log.debug('updating observers...')
         self.clear_changed()
         for obs in self._observers:
             obs.update(*args, **kwargs)

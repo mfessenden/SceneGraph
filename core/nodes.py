@@ -8,13 +8,8 @@ from collections import MutableMapping
 from SceneGraph.core import log, Attribute, Observable
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
-sys.setrecursionlimit(50)
 
-'''
-from SceneGraph import core
-g=core.Graph()
-m=g.add_node('lookdev')
-'''
+
 class DagNode(Observable):
 
     default_name  = 'node'
@@ -65,29 +60,27 @@ class DagNode(Observable):
     def __getattr__(self, name):
         if name in self._attributes:
             attribute = self._attributes.get(name)
-            print 'querying Attribute: "%s"' % name
+            #print 'querying Attribute: "%s"' % name
             return attribute.value
         elif hasattr(self, name):
             return getattr(self, name)
         raise AttributeError('no attribute exists "%s"' % name)
 
     def __setattr__(self, name, value):
-        if name == '_attributes':
+        if name in ['_attributes', '_changed', '_observers']:
             super(DagNode, self).__setattr__(name, value)
         elif name in self._attributes:
             attribute = self._attributes.get(name)
             if value != attribute.value:
                 attribute.value = value
-
                 # callbacks
-                #Observable.set_changed(self)
-                #Observable.notify(self)
-                print 'setting Attribute value: "%s"' % name
+                Observable.set_changed(self)
+                Observable.notify(self)
         else:
             super(DagNode, self).__setattr__(name, value)
             # callbacks
-            #Observable.set_changed(self)
-            #Observable.notify()        
+            Observable.set_changed(self)
+            Observable.notify(self)        
 
     @property
     def data(self):
