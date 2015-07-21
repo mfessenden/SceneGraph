@@ -23,9 +23,8 @@ class DagNode(Observable):
     default_color = [172, 172, 172, 255]
     node_type     = 'dagnode'
     PRIVATE       = ['node_type']
-    required      = ['name', 'color', 'docstring', '_graph', 'width', 
-                     'width', 'base_height', 'pos', 'enabled', 'orientation',
-                     '_metadata', 'data']
+    REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
+                      'base_height', 'pos', 'enabled', 'orientation']
 
     def __init__(self, name=None, **kwargs):
         self._attributes        = dict()
@@ -109,7 +108,7 @@ class DagNode(Observable):
         Output data for writing.
         """
         data = dict()
-        for attr in ['name', 'node_type', 'id', 'color', 'width', 'base_height', 'pos', 'enabled', 'orientation']:
+        for attr in self.REQUIRED:
             if hasattr(self, attr):
                 data[attr] = getattr(self, attr)
         data.update(**self._attributes)
@@ -244,7 +243,7 @@ class DagNode(Observable):
         self._attributes.update({attr.name:attr})
 
     #- Connections ----
-    def buildAttributes(self, verbose=False):
+    def buildAttributes(self, verbose=True):
         """
         Parse and build attributes from the Metadata object.
         """
@@ -271,11 +270,16 @@ class DagNode(Observable):
                     if 'connection_type' in properties:
                         is_connection = True
                         conn_type = properties.get('connection_type')
+                        print '  -> connection "%s" type: %s' % (attr_name, conn_type)
                         if conn_type == 'input':
                             attr_label = "Input"
 
                         if conn_type == 'output':
                             attr_label = "Output"
+
+                if 'default' in properties:
+                    defaults = properties.get('default')
+                    #print '%s attr_type: ' % attr_name, defaults.get('type')
 
                 # parse required
                 if 'required' in properties:
@@ -352,6 +356,7 @@ class DagNode(Observable):
         #print '%s data type: ' % name, data_type
         default_value = defaults.get('value')
 
+
         # connection properties
         connectable = properties.pop('connectable')
         connection_type = properties.pop('connection_type')        
@@ -383,10 +388,10 @@ class DagNode(Observable):
 
             # {'label': 'Name'}
             pdict[property_name] = property_value
-            pdict['attr_type'] = attr_type
+            pdict['data_type'] = attr_type
 
         #print '%s attrs: ' % name, pdict
-        return self.add_attr(name, connectable=True, connection_type=connection_type, data_type=data_type,
+        return self.add_attr(name, connectable=True, connection_type=connection_type, attr_type=data_type.lower(),
                             max_connections=max_connections, default_value=default_value, user=False, **pdict)
 
     @property

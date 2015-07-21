@@ -10,7 +10,7 @@ class Attribute(object):
     Generic Attribute class.
     """
     attribute_type = 'generic'
-    REQUIRED       = ['name', 'attr_type', 'value', '_edges'] 
+    REQUIRED       = ['name', 'attr_type', 'value', '_edges']
 
     def __init__(self, name, value, dagnode=None, user=True, **kwargs):
 
@@ -73,12 +73,13 @@ class Attribute(object):
         Output data for writing.
         """
         data = dict()
+        #for attr in self.REQUIRED:
         for attr in ['label', 'value', 'desc', '_edges', 'attr_type', 'private', 
                      'hidden', 'connectable', 'connection_type', 'locked', 'required', 'user']:
-            if hasattr(self, attr):
-                value = getattr(self, attr)
-                #if value or attr in self.REQUIRED:
-                data[attr] = value
+                if hasattr(self, attr):
+                    value = getattr(self, attr)
+                    #if value or attr in self.REQUIRED:
+                    data[attr] = value
         return data
 
     @property

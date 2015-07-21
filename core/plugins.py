@@ -312,9 +312,9 @@ class PluginManager(object):
                 for cname, obj in inspect.getmembers(module, inspect.isclass):
                     if not plugins or cname in plugins:
                         if hasattr(obj, 'ParentClasses'):
-                            if 'NodeWidget' in obj.ParentClasses(obj):
-                                globals()[cname] = obj
-                                imported.update({node_type:{'widget':globals()[cname]}})              
+                            #if 'NodeWidget' in obj.ParentClasses(obj):
+                            globals()[cname] = obj
+                            imported.update({node_type:{'widget':globals()[cname]}})              
         return imported
 
     def _get_external_plugin_paths(self, path='scenegraph_plugins'):

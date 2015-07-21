@@ -65,6 +65,7 @@ class SceneGraphUI(form_class, base_class):
         # preferences
         self.debug            = kwargs.get('debug', bool(SCENEGRAPH_DEBUG))
         self.use_gl           = kwargs.get('opengl', False)
+        self._show_private    = False
 
         self.edge_type        = 'bezier'
         self.viewport_mode    = 'smart'
@@ -243,6 +244,7 @@ class SceneGraphUI(form_class, base_class):
         self.action_revert.triggered.connect(self.revertGraph)
         self.action_clear_graph.triggered.connect(self.resetGraph)
         self.action_draw_graph.triggered.connect(self.refreshGraph)
+        self.action_show_all.triggered.connect(self.togglePrivate)
 
         
         self.action_reset_scale.triggered.connect(self.resetScale)
@@ -310,7 +312,12 @@ class SceneGraphUI(form_class, base_class):
         if SCENEGRAPH_DEBUG == '1':
             db_label = 'Debug off'
 
+        show_msg = 'Show all attrbutes'
+        if self._show_private:
+            show_msg = 'Hide private attrbutes'
+
         self.action_debug_mode.setText(db_label)
+        self.action_show_all.setText(show_msg)
 
     def initializeWindowMenu(self):
         """
@@ -756,6 +763,17 @@ class SceneGraphUI(form_class, base_class):
         for edge in self.view.scene().get_edges():
             edge.edge_type = self.edge_type
         self.view.scene().update()
+
+    def togglePrivate(self):
+        """
+        **Debug
+        """
+        self._show_private = not self._show_private
+
+        ae = self.getAttributeEditorWidget()
+        if ae:
+            print 'refreshing...'
+            ae.setNodes(self.view.scene().selectedDagNodes(), clear=True)
 
     def setAutosaveDelay(self):
         """

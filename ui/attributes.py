@@ -16,13 +16,15 @@ class AttributeEditor(QtGui.QWidget):
 
         self._nodes         = []
         self._sections      = []        # node metadata sections
-        self._show_private  = False
+        
+        self._ui            = kwargs.get('ui')
         self._handler       = kwargs.get('handler', None)
+        self._show_private  = self._ui._show_private
         self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
 
-        self._ui            = kwargs.get('ui')
+        
         self.fonts          = self._ui.fonts
 
         self.setObjectName("AttributeEditor")
@@ -116,19 +118,15 @@ class AttributeEditor(QtGui.QWidget):
                         continue
 
                     attr_type = attr_attrs.get('attr_type')
-                    if verbose:
-                        print '# building %s attribute: "%s"' % (attr_type, attr_name)
+                    log.info('building %s attribute: "%s"' % (attr_type, attr_name))
 
                     default_value = attr_attrs.get('default_value', None)
 
                     # map the correct editor widget
-                    if attr_type:
+                    if attr_type is not None:
                         editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
                         if editor:
-                            if verbose:
-                                print '\n# attribute:      ', attr_name
-                                print '# getting editor: ', attr_type
                             editor.setFont(self.fonts.get("attr_editor"))
                             if editor:
                                 editor.initializeEditor()
@@ -159,7 +157,11 @@ class AttributeEditor(QtGui.QWidget):
                                             print 'connection: ', conn_str
                                             editor.setConnected(conn_str)
 
-                                row += 1 
+                                row += 1
+                        else:
+                            print 'No editor for type: "%s"' % attr_type
+                    else:
+                        print 'Attribute: "%s" has a type of: ' % attr_name, attr_type
 
             if row:
                 self.mainGroupLayout.addWidget(group)
@@ -198,13 +200,7 @@ class AttributeEditor(QtGui.QWidget):
             for e in editors:
                 e.initializeEditor()
 
-    def togglePrivate(self):
-        """
-        **Debug
-        """
-        self._show_private = not self._show_private
-        self.clearLayout(self.mainGroupLayout)
-        self.buildLayout()
+
 
     def sizeHint(self):
         return QtCore.QSize(270, 550)
@@ -286,7 +282,7 @@ class AttributeEditor(QtGui.QWidget):
     def handler(self):
         return self._handler
         
-    def setNodes(self, dagnodes):
+    def setNodes(self, dagnodes, clear=False):
         """
         Add nodes to the current editor.
 
@@ -294,6 +290,9 @@ class AttributeEditor(QtGui.QWidget):
             dagnodes (list) - list of dag node objects.
         """
         self._sections=[]
+        if clear:
+            self._nodes = []
+
         for d in dagnodes:
             for section in d.metadata.sections():
                 if section not in self._sections:
@@ -349,7 +348,7 @@ class AttributeEditor(QtGui.QWidget):
                     if attribute not in result:
                         properties = attributes.get(attribute)
                         attr_dict = dict()
-
+                        print '%s properties: ' % attribute, properties.keys()
                         # TODO: need to figure this out
                         attr_dict['attr_type'] = properties.get('type', None)
                         attr_dict['default_value'] = properties.get('value', None)

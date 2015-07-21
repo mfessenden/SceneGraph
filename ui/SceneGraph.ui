@@ -113,7 +113,7 @@
      <x>0</x>
      <y>0</y>
      <width>984</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -144,6 +144,8 @@
     <addaction name="separator"/>
     <addaction name="action_evaluate"/>
     <addaction name="action_debug_mode"/>
+    <addaction name="separator"/>
+    <addaction name="action_show_all"/>
    </widget>
    <widget class="QMenu" name="menu_window">
     <property name="title">
@@ -224,8 +226,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>377</width>
-          <height>142</height>
+          <width>376</width>
+          <height>154</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -273,8 +275,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>377</width>
-          <height>141</height>
+          <width>376</width>
+          <height>153</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -378,8 +380,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>361</width>
-                  <height>274</height>
+                  <width>356</width>
+                  <height>280</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -615,8 +617,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>315</height>
+              <width>368</width>
+              <height>312</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -707,8 +709,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>315</height>
+              <width>368</width>
+              <height>312</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -804,7 +806,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../icn/scenegraph.qrc">
+    <iconset>
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">
@@ -944,6 +946,11 @@
   <action name="action_plugins">
    <property name="text">
     <string>Plugins...</string>
+   </property>
+  </action>
+  <action name="action_show_all">
+   <property name="text">
+    <string>Show all attributes</string>
    </property>
   </action>
  </widget>
