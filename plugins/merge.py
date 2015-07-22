@@ -9,7 +9,7 @@ SCENEGRAPH_NODE_TYPE = 'merge'
 class MergeNode(DagNode):
 
     default_name  = 'merge'
-    default_color = [178, 27, 32, 255]
+    default_color = [255, 85, 0, 255]
     node_type     = 'merge'
     
     def __init__(self, name=None, **kwargs):

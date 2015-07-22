@@ -26,8 +26,7 @@ class PluginManager(object):
     run with PluginManager.load_plugins()
     """
     def __init__(self, paths=[], **kwargs):
-
-        self._node_data = dict()
+        self._node_data = dict()    
 
         # plugin paths & module data
         self._default_plugin_path    = SCENEGRAPH_PLUGIN_PATH

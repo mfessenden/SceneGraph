@@ -64,6 +64,7 @@ class SceneGraphUI(form_class, base_class):
         self.debug            = kwargs.get('debug', False)
         self.use_gl           = kwargs.get('opengl', False)
         self._show_private    = False
+        self._valid_plugins   = []  
 
         self.edge_type        = 'bezier'
         self.viewport_mode    = 'smart'
@@ -111,8 +112,8 @@ class SceneGraphUI(form_class, base_class):
         # setup
         self.initializeWorkPath(self._work_path)
         self.readSettings()
+        self.initializeUI()           
 
-        self.initializeUI()              
         self.connectSignals()
         self.initializeStylesheet()
 
@@ -215,6 +216,13 @@ class SceneGraphUI(form_class, base_class):
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
         self.view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.network.graph['environment'] = self.environment
+
+        # disable plugins
+        if self._valid_plugins:
+            for plugin in self.graph.plug_mgr.node_types():
+                if plugin not in self._valid_plugins:
+                    log.info('disabling plugin "%s"' % plugin)
+                    self.graph.plug_mgr.node_types().get(plugin).update(enabled=False)
         
     def connectSignals(self):
         """
@@ -368,10 +376,14 @@ class SceneGraphUI(form_class, base_class):
         parent.addMenu(menu_add_node)
         if color:
             parent.addMenu(menu_node_color)
-        
+
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         parent.setStyleSheet(str(ssf.readAll()))
+
+        parent.setFont(self.fonts.get("ui"))
+        menu_add_node.setFont(self.fonts.get("ui"))
+        menu_node_color.setFont(self.fonts.get("ui"))
         #parent.exec_(qcurs.pos())
 
     def initializeRecentFilesMenu(self):
@@ -981,6 +993,17 @@ class SceneGraphUI(form_class, base_class):
         tab_menu.clear()
         add_menu = QtGui.QMenu('Add node:')
 
+        # haxx: stylesheet should work here
+        ssf = QtCore.QFile(self.stylesheet)
+        ssf.open(QtCore.QFile.ReadOnly)
+        add_menu.setStyleSheet(str(ssf.readAll()))
+        tab_menu.setStyleSheet(str(ssf.readAll()))
+
+        tab_menu.addMenu(add_menu)
+        
+        tab_menu.setFont(self.fonts.get("ui"))
+        add_menu.setFont(self.fonts.get("ui"))
+
         qcurs = QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
         scene_pos = self.view.mapToScene(view_pos)
@@ -990,14 +1013,8 @@ class SceneGraphUI(form_class, base_class):
             add_menu.addAction(node_action)
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
+            node_action.setFont(self.fonts.get("ui"))
 
-        # haxx: stylesheet should work here
-        ssf = QtCore.QFile(self.stylesheet)
-        ssf.open(QtCore.QFile.ReadOnly)
-        add_menu.setStyleSheet(str(ssf.readAll()))
-        tab_menu.setStyleSheet(str(ssf.readAll()))
-
-        tab_menu.addMenu(add_menu)
         tab_menu.exec_(qcurs.pos())
 
     def spinAction(self):
@@ -1054,10 +1071,22 @@ class SceneGraphUI(form_class, base_class):
         autosave_inc = self.qtsettings.value("autosave_inc")
         if autosave_inc is None:
             autosave_inc = 30000
-            
+
+        # update valid plugin types
+        #self._invalid_plugins = []
+        plugins = self.qtsettings.value("plugins")
+        if plugins:
+            if type(plugins) in [str, unicode]:
+                plugins = [plugins,]
+            for plugin in plugins:
+                if plugin not in self._valid_plugins:
+                    self._valid_plugins.append(plugin)
+                    #self.graph.plug_mgr.node_types().get(plugin).update(enabled=False)
+
         self.autosave_inc = int(autosave_inc)
         log.setLevel(int(logging_level))
         self.qtsettings.endGroup()
+
 
         # read the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
@@ -1086,6 +1115,7 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.setValue("use_gl", self.use_gl)
         self.qtsettings.setValue("logging_level", log.level)
         self.qtsettings.setValue("autosave_inc", self.autosave_inc)
+        self.qtsettings.setValue('plugins', self.graph.plug_mgr.node_types().keys())
         self.qtsettings.endGroup()
 
         # write the dock settings

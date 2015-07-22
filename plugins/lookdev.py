@@ -9,7 +9,7 @@ SCENEGRAPH_NODE_TYPE = 'lookdev'
 class LookdevNode(DagNode):
 
     default_name  = 'lookdev'
-    default_color = [124, 124, 185, 255]
+    default_color = [170, 170, 255, 255]
     node_type     = 'lookdev'
     
     def __init__(self, name=None, **kwargs):

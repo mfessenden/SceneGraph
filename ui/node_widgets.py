@@ -1271,10 +1271,16 @@ class Connection(QtGui.QGraphicsObject):
         if self._debug:
             label_color = QtGui.QColor(*[170, 170, 170])
         
+        # user attributes display in italics
+        italic = False
+        if self.dagnode.get_attr(self.name).user:
+            italic = True
+
+        label_font = QtGui.QFont(self.node._cfont, self.node._cfont_size, italic=italic)
         self.label.hide()
         if self.is_expanded:
             self.label.setBrush(label_color)
-            self.label.setFont(QtGui.QFont(self.node._cfont, self.node._cfont_size))
+            self.label.setFont(label_font)
             self.label.show()
             self.label.setText(self.name)
             # set the positions

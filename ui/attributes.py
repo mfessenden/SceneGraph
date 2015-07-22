@@ -316,15 +316,13 @@ class AttributeEditor(QtGui.QWidget):
                 attribute = node._attributes.get(name)
 
                 if attribute.user:
-                    print '# user attribute: "%s"' % name
                     if name not in attributes:
                         attributes[name] = dict()
 
                     for pname, pval in attribute.data.iteritems():
                         if pname not in attributes.get(name):
-                            print '# adding user property: "%s": %s' % (pname, pval)
+                            log.debug('adding user property: "%s": %s' % (pname, pval))
                             attributes.get(name)[pname]=pval
-
         return attributes
 
     def getNodeSectionAttrs(self, section):

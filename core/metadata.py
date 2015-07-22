@@ -74,7 +74,7 @@ class MetadataParser(object):
         if self._initialized:
             self.initialize()
 
-        log.info('reading metadata file: "%s"' % filename)
+        log.debug('reading metadata file: "%s"' % filename)
         data = dict()
         if filename is not None:
             if os.path.exists(filename):

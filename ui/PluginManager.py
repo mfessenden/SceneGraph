@@ -109,39 +109,44 @@ class PluginManager(QtGui.QDialog):
         plugins = self.plugin_manager._node_data
         self.tableModel.clear()
         for plug_name in plugins:
-            pattrs = plugins.get(plug_name)
-            dagnode = pattrs.get('dagnode', None)
-            src = pattrs.get('source')
-            enabled =pattrs.get('enabled')
-            if dagnode is not None:
-                dagnode=dagnode.__name__
-            
-            widget = pattrs.get('widget', None)
-            if widget is not None:
-                widget=widget.__name__
+            if plug_name not in 'default':
+                pattrs = plugins.get(plug_name)
+                dagnode = pattrs.get('dagnode', None)
+                src = pattrs.get('source')
+                enabled =pattrs.get('enabled')
+                if dagnode is not None:
+                    dagnode=dagnode.__name__
+                
+                widget = pattrs.get('widget', None)
+                if widget is not None:
+                    widget=widget.__name__
 
-            metadata = pattrs.get('metadata', None)
+                metadata = pattrs.get('metadata', None)
 
-            data.append([plug_name, dagnode, src, enabled])
+                data.append([plug_name, dagnode, src, enabled])
         self.tableModel.addPlugins(data)
 
-    def selectedPlugin(self):
+    def selectedPlugins(self):
         """
         returns:
             (list) - list of plugin attributes.
         """
         if not self.tableSelectionModel.selectedRows():
             return []
-        selected = self.tableSelectionModel.selectedRows()[0]
-        return self.tableModel.plugins[selected.row()]
+        plugins = []
+        for i in self.tableSelectionModel.selectedRows():
+            plugins.append(self.tableModel.plugins[i.row()])
+        return plugins
 
     def tableSelectionChanged(self):
-        plugin = self.selectedPlugin()
+        plugins = self.selectedPlugins()
 
         enabled = True
-        if plugin:
-            plugin_name = [self.tableModel.PLUGIN_NAME_ROW]
-            enabled = plugin[self.tableModel.PLUGIN_ENABLED_ROW]
+        if plugins:
+            for plugin in plugins:
+                plugin_name = [self.tableModel.PLUGIN_NAME_ROW]
+                if not plugin[self.tableModel.PLUGIN_ENABLED_ROW]:
+                    enabled = False
 
         button_text = 'Disable'
         if not enabled:
@@ -150,13 +155,14 @@ class PluginManager(QtGui.QDialog):
         self.button_disable.setText(button_text)
 
     def disabledAction(self):
-        plugin = self.selectedPlugin()
-        if plugin:
-            plugin_name = plugin[self.tableModel.PLUGIN_NAME_ROW]
-            enabled = bool(plugin[self.tableModel.PLUGIN_ENABLED_ROW])
+        plugins = self.selectedPlugins()
+        if plugins:
+            for plugin in plugins:
+                plugin_name = plugin[self.tableModel.PLUGIN_NAME_ROW]
+                enabled = bool(plugin[self.tableModel.PLUGIN_ENABLED_ROW])
 
-            self.plugin_manager.enable(plugin_name, not enabled)
-            self.checkPlugins()
+                self.plugin_manager.enable(plugin_name, not enabled)
+                self.checkPlugins()
 
     def acceptedAction(self):
         self.close()
@@ -189,12 +195,12 @@ class TableView(QtGui.QTableView):
 
         #self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         self.setIconSize(QtCore.QSize(16, 16))
         self.setShowGrid(False)
         self.setGridStyle(QtCore.Qt.NoPen)
-        self.setSortingEnabled(True)
+        self.setSortingEnabled(False)
         self.verticalHeader().setDefaultSectionSize(18)  # 24
         self.verticalHeader().setMinimumSectionSize(18)  # 24
 

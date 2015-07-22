@@ -79,8 +79,9 @@ class Attribute(object):
                      'hidden', 'connectable', 'connection_type', 'locked', 'required', 'user']:
                 if hasattr(self, attr):
                     value = getattr(self, attr)
-                    #if value or attr in self.REQUIRED:
-                    data[attr] = value
+                    if value or attr in self.REQUIRED:
+                        #if value or attr in self.REQUIRED:
+                        data[attr] = value
         return data
 
     @property
