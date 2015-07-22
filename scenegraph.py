@@ -13,9 +13,7 @@ from SceneGraph import util
 
 
 log = core.log
-global SCENEGRAPH_DEBUG
 SCENEGRAPH_UI = options.SCENEGRAPH_UI
-SCENEGRAPH_DEBUG = os.getenv('SCENEGRAPH_DEBUG', 0) # default value was '0'
 
 
 def loadUiType(uiFile):
@@ -63,7 +61,7 @@ class SceneGraphUI(form_class, base_class):
         self.pmanager         = None
 
         # preferences
-        self.debug            = kwargs.get('debug', bool(SCENEGRAPH_DEBUG))
+        self.debug            = kwargs.get('debug', False)
         self.use_gl           = kwargs.get('opengl', False)
         self._show_private    = False
 
@@ -167,7 +165,7 @@ class SceneGraphUI(form_class, base_class):
         self.resetStatus()
 
         # remove the Draw tab
-        self.tabWidget.removeTab(2)
+        self.tabWidget.removeTab(3)
 
         # setup undo/redo
         undo_action = self.view.scene().undo_stack.createUndoAction(self, "&Undo")
@@ -271,6 +269,7 @@ class SceneGraphUI(form_class, base_class):
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
+        self.tabWidget.currentChanged.connect(self.updateMetadata)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputTextBrowser.clear)
         self.button_update_draw.clicked.connect(self.updateDrawTab)
@@ -307,9 +306,17 @@ class SceneGraphUI(form_class, base_class):
             edge_type = 'polygon'
         self.action_edge_type.setText('%s lines' % edge_type.title())
 
-        global SCENEGRAPH_DEBUG
         db_label = 'Debug on'
-        if SCENEGRAPH_DEBUG == '1':
+        debug = os.getenv('SCENEGRAPH_DEBUG', False)
+
+        if debug in ['true', '1']:
+            debug = True
+
+        if debug in ['false', '0']:
+            debug = False
+
+        if debug:
+            print 'label is off'
             db_label = 'Debug off'
 
         show_msg = 'Show all attrbutes'
@@ -731,26 +738,29 @@ class SceneGraphUI(form_class, base_class):
         Set the debug environment variable and set widget
         debug values to match.
         """
-        global SCENEGRAPH_DEBUG
-        val = '0'
-        if SCENEGRAPH_DEBUG == '0':
-            val = '1'
-        os.environ["SCENEGRAPH_DEBUG"] = val
-        SCENEGRAPH_DEBUG = val
+        debug = os.getenv('SCENEGRAPH_DEBUG', False)
+
+        if debug in ['true', '1']:
+            debug = False
+
+        if debug in ['false', '0']:
+            debug = True
 
         node_widgets = self.view.scene().get_nodes()
         edge_widgets = self.view.scene().get_edges()
 
         if node_widgets:
             for widget in node_widgets:
-                widget.setDebug(eval(SCENEGRAPH_DEBUG))
+                widget.setDebug(debug)
 
         if edge_widgets:
             for ewidget in edge_widgets:
-                ewidget._debug = SCENEGRAPH_DEBUG
+                ewidget._debug = debug
 
-        self.debug = eval(SCENEGRAPH_DEBUG)
-        self.view.scene().update()      
+        self.debug = debug
+        self.view.scene().update()
+        self.view.scene().update()
+        os.environ['SCENEGRAPH_DEBUG'] = '1' if debug else '0' 
 
     def toggleEdgeTypes(self):
         """
@@ -832,6 +842,8 @@ class SceneGraphUI(form_class, base_class):
                     self.tableView.setHidden(False)
                     self.tableView.resizeRowToContents(0)
                     self.tableView.resizeRowToContents(1)
+
+                self.updateMetadata()
 
         else:
             self._selected_nodes = []
@@ -1157,6 +1169,29 @@ class SceneGraphUI(form_class, base_class):
         self.outputTextBrowser.setFont(self.fonts.get('output'))
 
         self.outputTextBrowser.scrollContentsBy(0, posy)
+        #self.outputTextBrowser.setReadOnly(True)
+
+    def updateMetadata(self):
+        """
+        Update the metadata text edit.
+        """        
+        bar = self.metdataBrowser.verticalScrollBar()
+        posy = bar.value()
+
+        self.metdataBrowser.clear()        
+
+        # update graph attributes
+        nodes = self.view.scene().selectedNodes()
+        if not nodes:
+            return
+
+        node = nodes[0]
+        metadata = node.dagnode.metadata._template_data   # was node.dagnode.metadata.data
+        html_data = self.formatOutputHtml(metadata)
+        self.metdataBrowser.setHtml(html_data)
+        self.metdataBrowser.setFont(self.fonts.get('output'))
+
+        self.metdataBrowser.scrollContentsBy(0, posy)
         #self.outputTextBrowser.setReadOnly(True)
 
     def updateDrawTab(self, filename=None):

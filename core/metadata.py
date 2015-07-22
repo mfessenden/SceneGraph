@@ -112,6 +112,9 @@ class MetadataParser(object):
 
                                 if section_type == 'attr':            
                                     attr_data = dict()
+                                    # connection attributes
+                                    #attr_data.update(connectable=False)
+                                    #attr_data.update(connection_type=None)
                                     parent[section_value] = attr_data
                                     attr_name = section_value
                                     #print '   Attribute: ', attr_name

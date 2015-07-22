@@ -348,7 +348,7 @@ class AttributeEditor(QtGui.QWidget):
                     if attribute not in result:
                         properties = attributes.get(attribute)
                         attr_dict = dict()
-                        print '%s properties: ' % attribute, properties.keys()
+                        print '"%s" properties: ' % attribute, properties.keys()
                         # TODO: need to figure this out
                         attr_dict['attr_type'] = properties.get('type', None)
                         attr_dict['default_value'] = properties.get('value', None)
@@ -357,8 +357,10 @@ class AttributeEditor(QtGui.QWidget):
 
                         if 'default' in properties:
                             defaults = properties.get('default')
+                            print '    - defaults: %s' % ', '.join(defaults.keys())
                             attr_dict['attr_type'] = defaults.get('type')
                             attr_dict['default_value'] = defaults.get('value')
+                            print 'attr type: ', defaults.get('type')
 
 
                         attr_dict['private'] = properties.get('private', False)

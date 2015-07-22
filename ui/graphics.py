@@ -245,6 +245,7 @@ class GraphicsView(QtGui.QGraphicsView):
         else:
             self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
 
+        # right mouse click
         if event.button() == QtCore.Qt.RightButton:
             item = self.itemAt(event.pos())
             color = False
@@ -314,7 +315,7 @@ class GraphicsView(QtGui.QGraphicsView):
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        self._parent.initializeNodesMenu(menu, pos, color=color)
+        self._parent.initializeNodesMenu(menu, self.mapToGlobal(pos), color=color)
         menu.exec_(self.mapToGlobal(pos))
     
     #- Actions -----
@@ -349,7 +350,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         QtGui.QGraphicsScene.__init__(self, parent)
 
         self.ui          = ui
-        self.debug       = ui.debug
         self.edge_type   = ui.edge_type
 
         # graph
@@ -370,6 +370,14 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         self.scenenodes=dict()
         self.clear()
+
+    @property
+    def debug(self):
+        return self.ui.debug
+
+    @debug.setter
+    def debug(self, value):
+        self.ui.debug = value
 
     @property 
     def undo_stack(self):
@@ -548,7 +556,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         widgets = []
         for item in self.items():
-            if isinstance(item, node_widgets.NodeWidget):
+            #if isinstance(item, node_widgets.NodeWidget):
+            if hasattr(item, 'node_class'):            
                 widgets.append(item)
         return widgets
 
@@ -658,6 +667,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         Draw a line if a connection widget is selected and dragged.
         """
         item = self.itemAt(event.scenePos())
+
+        # left mouse
         if event.button() == QtCore.Qt.LeftButton:
             if isinstance(item, node_widgets.Connection):
                 if item.isOutputConnection():
@@ -723,8 +734,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 dest_items.pop(0)
 
             self.removeItem(self.line)
-            print 'source: ', source_items
-            print 'dest:   ', dest_items
+            #print 'source: ', source_items
+            #print 'dest:   ', dest_items
             if len(source_items) and len(dest_items):
                 # these are connection widgets
                 source_conn = source_items[0]

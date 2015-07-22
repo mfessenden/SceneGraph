@@ -13,8 +13,9 @@ class NodeWidget(QtGui.QGraphicsObject):
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
     nodeChanged    = QtCore.Signal(object) 
-    nodeDeleted    = QtCore.Signal(object)  
-
+    nodeDeleted    = QtCore.Signal(object) 
+    node_class     = 'dagnode'
+      
     def __init__(self, dagnode, parent=None):
         super(NodeWidget, self).__init__(parent)
 
@@ -554,19 +555,16 @@ class NodeWidget(QtGui.QGraphicsObject):
             painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
             painter.drawEllipse(self.input_pos, 4, 4)
 
-    def setDebug(self, val):
+    def setDebug(self, value):
         """
         Set the debug value of all child nodes.
         """
-        vs = 'true'
-        if not val:
-            vs = 'false'
-        if val != self._debug:
-            log.info('setting "%s" debug: %s' % (self.dagnode.name, vs))
-            self._debug = val
+        if value != self._debug:
+            log.info('setting "%s" debug: %s' % (self.dagnode.name, value))
+            self._debug = value
             for item in self.childItems():
                 if hasattr(item, '_debug'):
-                    item._debug = val
+                    item._debug = value
 
     @classmethod
     def ParentClasses(cls, p=None):
@@ -739,12 +737,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
     def callback_dest_deleted(self):
         print 'Edge destination deleted.'
 
-    def setDebug(self, val):
+    def setDebug(self, value):
         """
-        Set the widget debug modeself.
+        Set the widget debug mode.
         """
-        if val != self._debug:
-            self._debug = val
+        if value != self._debug:
+            self._debug = value
 
     def listConnections(self):
         """
@@ -1300,12 +1298,13 @@ class Connection(QtGui.QGraphicsObject):
                 rect.moveTo(self.label.pos().x(), self.label.pos().y())
                 painter.drawRect(rect)
 
-    def setDebug(self, val):
+    def setDebug(self, value):
         """
-        Set the widget debug modeself.
+        Set the widget debug mode.
         """
-        if val != self._debug:
-            self._debug = val
+        if value != self._debug:
+            self._debug = value
+
 
 #- Sub-Widgets ----
 

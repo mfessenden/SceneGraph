@@ -3,15 +3,21 @@ import re
 
 
 #- Naming ----
-def clean_name(name):
+def clean_name(s):
     """
     Return a cleaned version of a string - removes everything 
     but alphanumeric characters and dots.
+
+    params:
+        s (str) - string to clean up.
+
+    returns:
+        (str) - cleaned string.
     """
-    return re.sub(r'[^a-zA-Z0-9\n\.]', '_', name) 
+    return re.sub(r'[^a-zA-Z0-9\n\.]', '_', s) 
 
 
-def camel_case_to_lower_case_underscore(string):
+def camel_case_to_lower_case_underscore(s):
     """
     Split string by upper case letters.
     F.e. useful to convert camel case strings to underscore separated ones.
@@ -20,35 +26,35 @@ def camel_case_to_lower_case_underscore(string):
     words = []
     from_char_position = 0
     for current_char_position, char in enumerate(string):
-        if char.isupper() and from_char_position < current_char_position:
-            words.append(string[from_char_position:current_char_position].lower())
+        if char.isupper() and from_char_position < s:
+            words.append(s[from_char_position:current_char_position].lower())
             from_char_position = current_char_position
-    words.append(string[from_char_position:].lower())
+    words.append(s[from_char_position:].lower())
     return '_'.join(words)
 
 
-def camel_case_to_title(string):
+def camel_case_to_title(s):
     """
     Split string by upper case letters and return a nice name.
     @return words (list)
     """
     words = []
     from_char_position = 0
-    for current_char_position, char in enumerate(string):
+    for current_char_position, char in enumerate(s):
         if char.isupper() and from_char_position < current_char_position:
-            words.append(string[from_char_position:current_char_position].title())
+            words.append(s[from_char_position:current_char_position].title())
             from_char_position = current_char_position
-    words.append(string[from_char_position:].title())
+    words.append(s[from_char_position:].title())
     return ' '.join(words)
 
 
-def lower_case_underscore_to_camel_case(string):
+def lower_case_underscore_to_camel_case(s):
     """
     Convert string or unicode from lower-case underscore to camel-case
     """
-    splitted_string = string.split('_')
+    splitted_string = s.split('_')
     # use string's class to work on the string to keep its type
-    class_ = string.__class__
+    class_ = s.__class__
     return splitted_string[0] + class_.join('', map(class_.capitalize, splitted_string[1:]))
 
 
@@ -97,7 +103,6 @@ def list_attr_types(s):
 
     if False not in list(set([is_number(x) for x in s])):
         return 'float%d' % len(s)
-
     return 'unknown'
 
 
@@ -169,6 +174,5 @@ def nodeParse(node):
         left = parse(node[u"left"])
         right = parse(node[u"right"])
         return BinaryExpression(operator, left, right)
-
     else:
         raise ValueError("Invalid data structure.")
