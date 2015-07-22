@@ -315,7 +315,8 @@ class GraphicsView(QtGui.QGraphicsView):
         Pop up a node creation context menu at a given location.
         """
         menu = QtGui.QMenu()
-        self._parent.initializeNodesMenu(menu, self.mapToGlobal(pos), color=color)
+
+        self._parent.initializeNodesMenu(menu, self.mapToScene(pos), color=color)
         menu.exec_(self.mapToGlobal(pos))
     
     #- Actions -----

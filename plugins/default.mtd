@@ -2,7 +2,7 @@
 # todo: these should MERGE with DagNode Node Attributes
 [group Default Attributes]
 
-    [attr doctstring]
+    [attr docstring]
         default             STRING    "default node"
 
     [input input]

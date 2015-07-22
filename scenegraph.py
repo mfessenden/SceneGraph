@@ -316,7 +316,6 @@ class SceneGraphUI(form_class, base_class):
             debug = False
 
         if debug:
-            print 'label is off'
             db_label = 'Debug off'
 
         show_msg = 'Show all attrbutes'
@@ -351,7 +350,7 @@ class SceneGraphUI(form_class, base_class):
         for node in self.graph.node_types():
             node_action = menu_add_node.addAction(node)
             # add the node at the scene pos
-            node_action.triggered.connect(partial(self.graph.add_node, node_type=node))
+            node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=[pos.x(), pos.y()]))
 
         # build the color menu
         if color:
@@ -1185,8 +1184,13 @@ class SceneGraphUI(form_class, base_class):
         if not nodes:
             return
 
+        if len(nodes) > 1:
+            return
+
         node = nodes[0]
-        metadata = node.dagnode.metadata._template_data   # was node.dagnode.metadata.data
+        if not hasattr(node, 'dagnode'):
+            return
+        metadata = node.dagnode.metadata.data   # was node.dagnode.metadata.data
         html_data = self.formatOutputHtml(metadata)
         self.metdataBrowser.setHtml(html_data)
         self.metdataBrowser.setFont(self.fonts.get('output'))

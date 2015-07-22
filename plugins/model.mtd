@@ -4,5 +4,10 @@
     [input file]
         default             FILE    ""
 
-    [output output]
+[group Outputs]
+    [output outMesh]
         default             NODE    ""
+
+    [output Alembic]
+        default             FILE    ""
+        visibility          BOOL    true

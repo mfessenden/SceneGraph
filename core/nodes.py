@@ -356,8 +356,6 @@ class DagNode(Observable):
             name       (str)  - attribute name.
             properties (dict) - attribute dictionary.
         """
-
-
         # connection properties
         max_connections = properties.pop('max_connections', 1) 
 
@@ -385,8 +383,6 @@ class DagNode(Observable):
 
             # {'label': 'Name'}
             pdict[property_name] = property_value
-            if verbose:
-                print '  -> "%s" attribute type: %s' % (property_name, attr_type)
             pdict['attr_type'] = attr_type
 
         #print '%s attrs: ' % name, pdict
@@ -662,12 +658,10 @@ class DagNode(Observable):
             if not os.path.exists(metadata_filename):
                 raise OSError('plugin description file "%s" does not exist.' % metadata_filename)
 
-            print '\n# parsing filename: %s' % metadata_filename
             # parse the metadata 
             parsed = parser.parse(metadata_filename)
 
             for section in parsed:
-                print '\n   "%s":' % section
                 if section not in node_metadata:
                     node_metadata[section] = dict()
 
@@ -676,52 +670,11 @@ class DagNode(Observable):
 
                 # parse out input/output here?
                 for attr in attributes:
-                    print '      Attribute: "%s"' % attr
-
                     if attr not in node_metadata[section]:
                         node_metadata.get(section)[attr] = dict()
 
                     attr_properties = attributes.get(attr)
                     node_metadata.get(section).get(attr).update(attr_properties)
-                    '''
-                    # attribute properties...
-                    attr_type = None
-                    default_value = None
-                    
-                    connectable = attr_properties.get('connectable', False)
-                    connection_type = attr_properties.get('connection_type', 'input')
-
-                    # get default values
-                    if 'default' in attr_properties:
-                        defaults = attr_properties.get('default')
-
-                        attr_type = defaults.get('type')
-                        if 'value' in defaults:
-                            default_value = defaults.get('value')
-
-                    
-                    if connectable:
-                        node_metadata.get(section).get(attr).update(connectable=True, connection_type=connection_type)
-                    
-                    for pname in attr_properties:
-                        if pname not in ['default']:                        
-                            pvalue = attr_properties.get(pname)
-
-                            if util.is_dict(pvalue):
-
-                                print '        Property: "%s": "%s"' % (pname, pvalue)
-
-                            if pname not in node_metadata.get(section).get(attr):
-                                node_metadata.get(section).get(attr)[pname] = dict()
-
-                            if util.is_dict(pvalue):
-                                if 'value' in pvalue:
-                                    pval = pvalue.get('value')
-                                    node_metadata.get(section).get(attr)[pname]['value'] = pval
-
-                            else:
-                                node_metadata.get(section).get(attr)[pname] = pvalue
-                    '''
 
         return node_metadata
 

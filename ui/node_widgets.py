@@ -647,6 +647,13 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.setAcceptsHoverEvents(True)
         self.setZValue(-1.0)
 
+
+    def __str__(self):
+        return 'Edge("%s")' % self.name
+
+    def __repr__(self):
+        return 'Edge("%s")' % self.name
+
     def __del__(self):
         self.breakConnections()
 
@@ -725,12 +732,6 @@ class EdgeWidget(QtGui.QGraphicsObject):
             result = False
         return result
 
-    def __str__(self):
-        return 'Edge("%s")' % self.name
-
-    def __repr__(self):
-        return 'Edge("%s")' % self.name
-
     def callback_source_deleted(self):
         print 'Edge source deleted.'
 
@@ -779,9 +780,9 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (str) - source connection name (ie: "node1.output").
         """
-        if not self.source_item():            
-            if hasattr(self.source_item(), 'node'):
-                return '%s.%s' % (self.source_item().node.dagnode.name, self.source_item().name)
+        if self.source_item():            
+            if hasattr(self.source_item(),'dagnode'):
+                return '%s.%s' % (self.source_item().dagnode.name, self.source_item().name)
         return '(source broken)'
 
     @property
@@ -790,9 +791,9 @@ class EdgeWidget(QtGui.QGraphicsObject):
         returns:
             (str) - destination connection name (ie: "node2.input").
         """
-        if not self.dest_item():            
-            if hasattr(self.dest_item(), 'node'):
-                return '%s.%s' % (self.dest_item().node.dagnode.name, self.dest_item().name)
+        if self.dest_item():            
+            if hasattr(self.dest_item(), 'dagnode'):
+                return '%s.%s' % (self.dest_item().dagnode.name, self.dest_item().name)
         return '(dest broken)'
 
     @property
@@ -1244,7 +1245,7 @@ class Connection(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_MouseOver:
             self.is_hover = True
 
-        self.setToolTip('%s.%s' % (self.dagnode.name, self.name))
+        self.setToolTip('%s.%s (%s)' % (self.dagnode.name, self.name, self.dagnode.get_attr(self.name).data_type))
 
         # background
         gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)

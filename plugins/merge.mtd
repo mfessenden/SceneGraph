@@ -1,7 +1,7 @@
-# marge node attributes
+# merge node attributes
 [group Node Attributes]
     
-    [output output]        
+    [output output]
         default            MERGE     "" 
 
 [group Inputs]

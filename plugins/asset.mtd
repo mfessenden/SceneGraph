@@ -3,11 +3,12 @@
     [input model]
         default            NODE      [FILE, "model"]
         label              STRING    "Model"
+        desc               STRING    "model node input."
 
     [input lookdev]
         default            NODE      ["lookdev"]
         label              STRING    "Lookdev"
-        desc               STRING    "lookdev node."
+        desc               STRING    "lookdev node input."
         
     [input rig]
         default            NODE      [FILE, "rig"]

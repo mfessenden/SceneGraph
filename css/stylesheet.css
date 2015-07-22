@@ -84,8 +84,9 @@ QLineEdit{
 }
 
 QLineEdit.Connected{
-    color: #7db4ff;
-    background-color: #3e3e3e;
+    color: #93aebd;
+    background-color: #323232;
+    font-style: italic;
 }
 
 QMenuBar.AttributeMenu::item{

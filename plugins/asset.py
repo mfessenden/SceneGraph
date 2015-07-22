@@ -9,7 +9,7 @@ SCENEGRAPH_NODE_TYPE = 'asset'
 class AssetNode(DagNode):
 
     default_name  = 'asset'
-    default_color = [246, 235, 158, 255]
+    default_color = [174, 188, 43, 255]
     node_type     = 'asset'
 
     def __init__(self, name=None, **kwargs):

@@ -101,7 +101,6 @@ class AttributeEditor(QtGui.QWidget):
                 attrs = user_attributes
 
             for attr_name, attr_attrs in attrs.iteritems():
-
                 private = attr_attrs.get('private', False)
                 attr_label = attr_attrs.get('label', None)
                 desc = attr_attrs.get('desc', None)
@@ -154,12 +153,13 @@ class AttributeEditor(QtGui.QWidget):
                                             src_id, dest_id, edge_attrs = self._graph.get_edge(src_id, dest_id)[0]
                                             dagnode = self._graph.get_node(src_id)[0]
                                             conn_str = '%s.%s' % (dagnode.name, edge_attrs.get('src_attr'))
-                                            print 'connection: ', conn_str
+                                            #print 'connection: ', conn_str
                                             editor.setConnected(conn_str)
 
                                 row += 1
                         else:
-                            print 'No editor for type: "%s"' % attr_type
+                            pass
+                            #print 'No editor for type: "%s"' % attr_type
                     else:
                         print 'Attribute: "%s" has a type of: ' % attr_name, attr_type
 
@@ -339,35 +339,45 @@ class AttributeEditor(QtGui.QWidget):
         """
         result = dict()
         for node in self._nodes:
-            if section in node.metadata.data:
 
+            if section in node.metadata.data:
                 attributes = node.metadata.data.get(section)
 
-                for attribute in attributes:
-
+                for attribute in attributes:                    
                     if attribute not in result:
                         properties = attributes.get(attribute)
+
+                        # filter out output connections
+                        if 'connection_type' in properties:
+                            visibility = properties.get('visibility', False)
+                            if properties.get('connection_type') == 'output':
+                                if not visibility:
+                                    continue
+
                         attr_dict = dict()
-                        print '"%s" properties: ' % attribute, properties.keys()
+
                         # TODO: need to figure this out
                         attr_dict['attr_type'] = properties.get('type', None)
                         attr_dict['default_value'] = properties.get('value', None)
 
-                        #print
-
                         if 'default' in properties:
                             defaults = properties.get('default')
-                            print '    - defaults: %s' % ', '.join(defaults.keys())
+                            #print '    - defaults: %s' % ', '.join(defaults.keys())
                             attr_dict['attr_type'] = defaults.get('type')
                             attr_dict['default_value'] = defaults.get('value')
-                            print 'attr type: ', defaults.get('type')
+                            #print 'attr type: ', defaults.get('type')
 
+                        # query attached edges
+                        edges = []
+                        if attribute in node._attributes.keys():
+                            # get the attribute object
+                            attr_node = node.get_attr(attribute)
+                            edges = attr_node._edges
 
                         attr_dict['private'] = properties.get('private', False)
                         attr_dict['label'] = properties.get('label', {}).get('value', None)
                         attr_dict['desc'] = properties.get('desc', {}).get('value', None)
-                        attr_dict['_edges'] = properties.get('_edges', [])
-                        
+                        attr_dict['_edges'] = edges
                         
                         # need: private, label, desc, _edges
                         result[attribute] = attr_dict
@@ -1469,6 +1479,8 @@ class StringEditor(QtGui.QWidget):
     def validate_text(self, text):
         validator = self.val1_edit.validator()
         state, txt, pos = validator.validate(self.val1_edit.text(), 0)
+        if not txt:
+            print 'no text'
         if state == QtGui.QValidator.State.Acceptable:
             pass
         if state == QtGui.QValidator.State.Invalid:
@@ -1545,6 +1557,8 @@ class StringEditor(QtGui.QWidget):
         """
         Update the current nodes with the revised value.
         """
+        print 'updating value...'
+        print 'value: ', self.value
         if self.value != self._current_value:
             self._current_value = self.value
             self.valueChanged.emit(self)
@@ -2088,6 +2102,9 @@ WIDGET_MAPPER = dict(
     int8        = QIntEditor,
     color       = ColorPicker,
     short2      = QFloat2Editor,
+    # TESTING
+    node        = StringEditor,
+    multi       = StringEditor,
     )
 
 

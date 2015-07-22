@@ -10,6 +10,7 @@
     [input model]
         default            FILE       ""
         label              STRING     "Model"
+        desc               STRING     "model file."
 
     [input shader_mapping]
         default            FILE       ""
@@ -21,6 +22,3 @@
         label              STRING     "Shaders"
         desc               STRING     "shaders file."
 
-    [input texture]
-        default            FILE       ""
-        label              STRING     "Textures"

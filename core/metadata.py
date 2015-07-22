@@ -90,6 +90,7 @@ class MetadataParser(object):
                         # parse sections
                         # remove leading spaces
                         rline = line.lstrip(' ')
+                        rline = rline.rstrip()
 
                         # section/attribute header match
                         if re.match(regex.get("section"), rline):                            
@@ -108,7 +109,7 @@ class MetadataParser(object):
                                         # set the current parent
                                         parent[section_value] = group_data
                                         parent = parent[section_value]
-                                        #print '\nGroup: ', section_value
+                                        #print '\nGroup: "%s"' % section_value
 
                                 if section_type == 'attr':            
                                     attr_data = dict()
@@ -117,7 +118,7 @@ class MetadataParser(object):
                                     #attr_data.update(connection_type=None)
                                     parent[section_value] = attr_data
                                     attr_name = section_value
-                                    #print '   Attribute: ', attr_name
+                                    #print '   Attribute: "%s"' % attr_name
 
                                 if section_type in ['input', 'output']:            
                                     conn_data = dict()
@@ -125,16 +126,18 @@ class MetadataParser(object):
                                     conn_data.update(connection_type=section_type)
                                     parent[section_value] = conn_data
                                     attr_name = section_value
-                                    #print '   Attribute: ', attr_name
+                                    #print '   Connection: "%s"' % attr_name
 
                         else:
                             prop_obj = re.search(regex.get("properties"), rline)
 
                             if prop_obj:
+
                                 pname = prop_obj.group('name')
                                 ptype = prop_obj.group('type')
                                 pvalu = prop_obj.group('value')
 
+                                #print 'property: "%s" (%s)' % (pname, rline)
                                 value = pvalu
                                 if ptype in ['BOOL', 'INPUT', 'OUTPUT']:
                                     if ptype == 'BOOL':
