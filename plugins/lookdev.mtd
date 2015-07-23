@@ -5,6 +5,11 @@
         label               STRING    "Doc"
         desc                STRING    "node docstring."
 
+    [attr force_expand]
+        default             BOOL      false
+        label               STRING    "Expand Node"
+        private             BOOL      true
+
 [group Asset]
 
     [input model]

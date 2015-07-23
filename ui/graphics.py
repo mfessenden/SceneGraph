@@ -228,6 +228,30 @@ class GraphicsView(QtGui.QGraphicsView):
         self._scale = factor
 
     def mouseMoveEvent(self, event):
+        """
+        Move connected nodes if the Alt key is pressed.
+        """     
+        selected_nodes = self.scene().selectedNodes()
+        event_item = self.itemAt(event.pos())
+        nodes_to_move = []
+        if event.buttons() & QtCore.Qt.LeftButton:            
+            if event.modifiers() & QtCore.Qt.AltModifier:
+                if selected_nodes:                    
+                    for sel_node in selected_nodes:
+                        if hasattr(sel_node, 'dagnode'):
+                            UUID = sel_node.dagnode.id
+                            if UUID:
+                                # get downstream nodes 
+                                ds_ids = self.scene().graph.downstream(UUID)
+                                for nid in ds_ids:
+                                    node_widget = self.scene().get_node(nid)
+                                    if node_widget and node_widget not in nodes_to_move:
+                                        nodes_to_move.append(node_widget)
+
+        if nodes_to_move:
+            for node_widget in nodes_to_move:
+                node_widget.setSelected(True)
+
         self.updateStatus(event)
         QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
@@ -237,8 +261,7 @@ class GraphicsView(QtGui.QGraphicsView):
     def mousePressEvent(self, event):
         """
         Pan the viewport if the control key is pressed
-        """
-        
+        """        
         self.current_cursor_pos = event.pos()
         if event.modifiers() & QtCore.Qt.ControlModifier:
             self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
@@ -483,6 +506,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         old_snapshot = self.graph.snapshot()
 
         for edge in edges:
+
             src_id = edge.get('src_id')
             dest_id = edge.get('dest_id')
 
@@ -508,6 +532,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             dest_conn_widget = dest_node.getInputConnection(dest_attr)
 
             if not src_conn_widget or not dest_conn_widget:
+                print 'cannot find a connection widget'
                 continue
 
             edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget, weight=weight)
@@ -539,14 +564,56 @@ class GraphicsScene(QtGui.QGraphicsScene):
             nodes = [nodes,]
             
         for node in nodes:
-            print '# Scene.removeNodes: ', node
-            if isinstance(node, node_widgets.NodeWidget):
-                print '# signalling graph...'
+            if self.is_node(node):
                 self.graph.remove_node(node.dagnode.id)
 
-            if isinstance(node, node_widgets.EdgeWidget):
-                print 'edge!'
+            if self.is_edge(node):
                 self.graph.remove_edge(*node.ids)
+
+    def is_node(self, widget):
+        """
+        Returns true if the given widget is a dag node type.
+
+        params:
+            widget (obj) - QGraphicsObject widget.
+
+        returns:
+            (bool) - widget is a Dag node type. 
+        """
+        if hasattr(widget, 'node_class'):
+            if widget.node_class in ['dagnode', 'dot']:
+                return True
+        return False
+
+    def is_connection(self, widget):
+        """
+        Returns true if the given widget is a dag node connection type.
+
+        params:
+            widget (obj) - QGraphicsObject widget.
+
+        returns:
+            (bool) - widget is a connection type. 
+        """
+        if hasattr(widget, 'node_class'):
+            if widget.node_class in ['connection']:
+                return True
+        return False
+
+    def is_edge(self, widget):
+        """
+        Returns true if the given widget is a edge type.
+
+        params:
+            widget (obj) - QGraphicsObject widget.
+
+        returns:
+            (bool) - widget is an edge type. 
+        """
+        if hasattr(widget, 'node_class'):
+            if widget.node_class in ['edge']:
+                return True
+        return False
 
     def get_nodes(self):
         """
@@ -557,8 +624,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         widgets = []
         for item in self.items():
-            #if isinstance(item, node_widgets.NodeWidget):
-            if hasattr(item, 'node_class'):            
+            if self.is_node(item):            
                 widgets.append(item)
         return widgets
 
@@ -590,10 +656,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         widgets = []
         selected = self.selectedItems()
         for item in selected:
-            if isinstance(item, node_widgets.NodeWidget):
+            if self.is_node(item):
                 widgets.append(item)
 
-            if isinstance(item, node_widgets.EdgeWidget):
+            if self.is_edge(item):
                 if not nodes_only:
                     widgets.append(item)
         return widgets
@@ -606,7 +672,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             (list) - list of selected dag nodes.
         """
         if self.selectedNodes():
-            return [n.dagnode for n in self.selectedNodes()]
+            return [n.dagnode for n in self.selectedNodes() if self.is_node(n)]
         return []
 
     def get_edges(self):
@@ -618,7 +684,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         edges = []
         for item in self.items():
-            if isinstance(item, node_widgets.EdgeWidget):
+            if self.is_edge(item):
                 edges.append(item)
         return edges
 
@@ -671,33 +737,36 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         # left mouse
         if event.button() == QtCore.Qt.LeftButton:
-            if isinstance(item, node_widgets.Connection):
-                if item.isOutputConnection():
-                    crect = item.boundingRect()
-                    self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
-                    self.addItem(self.line)
-                    self.update(self.itemsBoundingRect())
+            if item:
+                if self.is_connection(item):
+                    if item.isOutputConnection():
+                        crect = item.boundingRect()
+                        lpen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(*[251, 251, 251])), 1, QtCore.Qt.SolidLine)
+                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
+                        self.line.setPen(lpen)
+                        self.addItem(self.line)
+                        self.update(self.itemsBoundingRect())
 
-                # disconnect the edge if this is an input
-                if item.isInputConnection():
-                    # query the edge(s) attached.
-                    edges = item.connections.values()                    
-                    if edges:
-                        if len(edges) == 1:
-                            conn_edge = edges[0]
+                        # disconnect the edge if this is an input
+                        if item.isInputConnection():
+                            # query the edge(s) attached.
+                            edges = item.connections.values()                    
+                            if edges:
+                                if len(edges) == 1:
+                                    conn_edge = edges[0]
 
-                            # remove the edge from the connections
-                            if conn_edge.disconnect_terminal(item):
-                                log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
-                                # todo: call manage?
-                                self.graph.remove_edge(*conn_edge.ids)
+                                    # remove the edge from the connections
+                                    if conn_edge.disconnect_terminal(item):
+                                        log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
+                                        # todo: call manage?
+                                        self.graph.remove_edge(*conn_edge.ids)
 
-                                edge_line = conn_edge.getLine()
-                                p1 = edge_line.p1()
+                                        edge_line = conn_edge.getLine()
+                                        p1 = edge_line.p1()
 
-                                self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
-                                self.addItem(self.line)
-                                self.update(self.itemsBoundingRect())
+                                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
+                                        self.addItem(self.line)
+                                        self.update(self.itemsBoundingRect())
 
         if event.button() == QtCore.Qt.RightButton:
             pass
@@ -734,17 +803,16 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if len(dest_items) and dest_items[0] == self.line:
                 dest_items.pop(0)
 
-            self.removeItem(self.line)
-            #print 'source: ', source_items
-            #print 'dest:   ', dest_items
+            self.line.scene().removeItem(self.line)
+            self.line = None
+
             if len(source_items) and len(dest_items):
                 # these are connection widgets
                 source_conn = source_items[0]
                 dest_conn = dest_items[0]
 
                 # if we're not dealing with two connections, return 
-                if not isinstance(source_conn, node_widgets.Connection) or not isinstance(dest_conn, node_widgets.Connection):
-                    print 'wrong type'
+                if not self.is_connection(source_conn) or not self.is_connection(dest_conn):
                     return
 
                 if source_conn == dest_conn:
@@ -752,14 +820,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                 if self.validateConnection(source_conn, dest_conn):
                     src_dag = source_conn.dagnode
-                    dest_dag = dest_conn.dagnode                 
+                    dest_dag = dest_conn.dagnode
                     edge = self.graph.add_edge(src_dag, dest_dag, src_attr=source_conn.name, dest_attr=dest_conn.name)
-                else:
-                    print 'oops'
-            else:
-                print 'double oops'
 
-        self.line = None
         QtGui.QGraphicsScene.mouseReleaseEvent(self, event)
         self.update()
 
@@ -787,14 +850,11 @@ class GraphicsScene(QtGui.QGraphicsScene):
         params:
             node (QGraphicsObject) - node (or edge) widget.
         """
-        print 'GraphicsScene.nodeDeletedEvent'
-        if isinstance(node, node_widgets.NodeWidget):
-            print 'removing node: ', node.name
-            self.removeItem(node)
+        if self.is_node(node):
+            node.close()
 
-        if isinstance(node, node_widgets.EdgeWidget):
-            print 'removing edge: ', node.name
-            self.removeItem(node)
+        if self.is_edge(node):
+            node.close()
 
     def colorChangedAction(self, color):
         """
@@ -805,7 +865,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         nodes = self.selectedNodes()
         for node in nodes:
-            if isinstance(node, node_widgets.NodeWidget):
+            if self.is_node(node):
                 node.dagnode.color = color
                 node.update()
 
@@ -825,9 +885,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
             (bool) - connection is valid.
         """
         if self.line:
-
-            if not isinstance(src, node_widgets.Connection) or not isinstance(dest, node_widgets.Connection):
-                print 'Error: wrong type.'
+            if not self.is_connection(src) or not self.is_connection(dest):
+                print 'Error: source or destination objects are not Connection widgets.'
                 return False
 
             if src.isInputConnection() or dest.isOutputConnection():

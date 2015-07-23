@@ -1,5 +1,4 @@
 # default node attributes
-# todo: these should MERGE with DagNode Node Attributes
 [group Default Attributes]
 
     [attr docstring]

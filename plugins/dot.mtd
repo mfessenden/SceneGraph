@@ -1,0 +1,24 @@
+# dot node attributes
+[group Node Transform]
+
+    [attr width]
+        default             FLOAT     10.0
+        required            BOOL      true
+        private             BOOL      true   
+
+    [attr radius]
+        default             FLOAT    10.0
+        label               STRING   "dot radius."
+        required            BOOL     true
+        private             BOOL     true
+
+[group Node Attributes]
+
+    [attr base_height]
+        default             FLOAT     10.0
+        private             BOOL      true
+
+    [attr force_expand]
+        default             BOOL      false
+        label               STRING    "Expand Node"
+        private             BOOL      true  

@@ -24,7 +24,7 @@ class DagNode(Observable):
     node_type     = 'dagnode'
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
-                      'base_height', 'pos', 'enabled', 'orientation']
+                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
 
     def __init__(self, name=None, **kwargs):
         self._attributes        = dict()
@@ -40,6 +40,7 @@ class DagNode(Observable):
 
         self.width              = kwargs.pop('width', 100.0)
         self.base_height        = kwargs.pop('base_height', 15.0)
+        self.force_expand       = kwargs.pop('force_expand', False)
 
         self.pos                = kwargs.pop('pos', (0.0, 0.0))
         self.enabled            = kwargs.pop('enabled', True)
@@ -157,6 +158,8 @@ class DagNode(Observable):
     #- Transform ----
     @property
     def expanded(self):
+        if self.force_expand:
+            return True
         height = max(len(self.inputs), len(self.outputs))
         return height > 1
 
@@ -172,7 +175,7 @@ class DagNode(Observable):
         btm_buffer = 0
         max_conn = max(len(self.inputs), len(self.outputs))
         height = max_conn if max_conn else 1
-        if height > 1:
+        if height > 1 or self.force_expand:
             height+=1
             btm_buffer = self.base_height/2
         return (height * self.base_height) + btm_buffer

@@ -109,7 +109,7 @@ class PluginManager(QtGui.QDialog):
         plugins = self.plugin_manager._node_data
         self.tableModel.clear()
         for plug_name in plugins:
-            if plug_name not in 'default':
+            if plug_name not in ['default', 'dot']:
                 pattrs = plugins.get(plug_name)
                 dagnode = pattrs.get('dagnode', None)
                 src = pattrs.get('source')

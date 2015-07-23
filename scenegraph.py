@@ -793,7 +793,6 @@ class SceneGraphUI(form_class, base_class):
 
         ae = self.getAttributeEditorWidget()
         if ae:
-            print 'refreshing...'
             ae.setNodes(self.view.scene().selectedDagNodes(), clear=True)
 
     def setAutosaveDelay(self):
@@ -1073,7 +1072,6 @@ class SceneGraphUI(form_class, base_class):
             autosave_inc = 30000
 
         # update valid plugin types
-        #self._invalid_plugins = []
         plugins = self.qtsettings.value("plugins")
         if plugins:
             if type(plugins) in [str, unicode]:
@@ -1081,7 +1079,6 @@ class SceneGraphUI(form_class, base_class):
             for plugin in plugins:
                 if plugin not in self._valid_plugins:
                     self._valid_plugins.append(plugin)
-                    #self.graph.plug_mgr.node_types().get(plugin).update(enabled=False)
 
         self.autosave_inc = int(autosave_inc)
         log.setLevel(int(logging_level))

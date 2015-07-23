@@ -1449,6 +1449,8 @@ class StringEditor(QtGui.QWidget):
         self._ui            = kwargs.get('ui', None)
         self.icons          = kwargs.get('icons')
         self._attribute     = kwargs.get('name', 'array')
+        self._required      = kwargs.get('required', True)
+        self._clean_value   = kwargs.get('clean', True)
         self._connection    = None
 
         self._default_value = ""
@@ -1462,8 +1464,7 @@ class StringEditor(QtGui.QWidget):
         # value 1 editor
         self.val1_edit = QtGui.QLineEdit(self)
         regexp = QtCore.QRegExp('^([a-zA-Z0-9_]+)')
-        validator = QtGui.QRegExpValidator(regexp)
-        self.val1_edit.setValidator(validator)
+
 
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
@@ -1471,18 +1472,19 @@ class StringEditor(QtGui.QWidget):
         self.val1_edit.textEdited.connect(self.validate_text)
         self.val1_edit.editingFinished.connect(self.valueUpdatedAction)
         self.val1_edit.returnPressed.connect(self.valueUpdatedAction)
-
         self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     def validate_text(self, text):
-        validator = self.val1_edit.validator()
-        state, txt, pos = validator.validate(self.val1_edit.text(), 0)
-        if not txt:
-            print 'no text'
-        if state == QtGui.QValidator.State.Acceptable:
-            pass
-        if state == QtGui.QValidator.State.Invalid:
-            print 'invalid: ', txt
+        current_text = self.value
+        if self._clean_value:
+            cpos = self.val1_edit.cursorPosition()
+            cleaned = util.clean_name(current_text)
+            self.val1_edit.blockSignals(True)
+            self.val1_edit.setText(cleaned)
+            self.val1_edit.blockSignals(False)
+            self.val1_edit.setCursorPosition(cpos)
+            
+        self._current_value = self.value
 
     @property
     def attribute(self):

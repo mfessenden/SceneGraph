@@ -53,6 +53,10 @@
         required            BOOL      true
         label               STRING    "Enabled"
 
+    [attr force_expand]
+        default             BOOL      false
+        label               STRING    "Expand Node"
+
     [output output]
         default             MULTI     ""
         

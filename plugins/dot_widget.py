@@ -65,6 +65,7 @@ class DotWidget(QtGui.QGraphicsObject):
 
         # set node position
         self.setPos(QtCore.QPointF(self.dagnode.pos[0], self.dagnode.pos[1]))
+        self.drawConnections()
 
     def close(self):
         """
@@ -74,6 +75,30 @@ class DotWidget(QtGui.QGraphicsObject):
             if self.scene() is not None:
                 self.scene().removeItem(self)
 
+    def drawConnections(self, remove=False):
+        """
+        Update all of the connection widgets.
+
+        params:
+            remove (bool) - force connection removal & rebuild.
+        """
+        for conn_name in self.dagnode.connections:
+            conn_dag = self.dagnode.get_connection(conn_name)
+            conn_widget = Connection(self, conn_dag, conn_name)
+
+            yoffset = self.dagnode.height/2
+            yoffset+=3
+
+            if conn_widget.is_input:
+                conn_widget.setY(-yoffset)
+
+
+            if conn_widget.is_output:
+                conn_widget.setY(yoffset)
+
+            self.connections[conn_name] = conn_widget
+            conn_widget.setZValue(-1)
+        
     #- Attributes ----
     @property
     def id(self):
@@ -403,23 +428,6 @@ class DotWidget(QtGui.QGraphicsObject):
                 if hasattr(item, '_debug'):
                     item._debug = val
 
-    def buildConnections(self):
-        """
-        Build the nodes' connection widgets.
-        """
-
-        for input_name in self.dagnode.inputs:            
-            # connection dag node
-            input_dag = self.dagnode._inputs.get(input_name)
-            input_widget = Connection(self, input_dag, input_name, **input_dag)
-            self.connections['input'][input_name] = input_widget
-
-        for output_name in self.dagnode.outputs:
-            # connection dag node
-            output_dag = self.dagnode._outputs.get(output_name)
-            output_widget = Connection(self, output_dag, output_name, **output_dag)
-            self.connections['output'][output_name] = output_widget
-
     @classmethod
     def ParentClasses(cls, p=None):
         """
@@ -441,6 +449,7 @@ class Connection(QtGui.QGraphicsObject):
     clickedSignal       = QtCore.Signal(QtCore.QObject)
     nodeChanged         = QtCore.Signal(object)
     PRIVATE             = []
+    node_class          = 'connection'
 
     def __init__(self, parent, conn_node, name, **kwargs):
         QtGui.QGraphicsObject.__init__(self, parent)
@@ -479,7 +488,7 @@ class Connection(QtGui.QGraphicsObject):
         self.connections    = dict()
 
         self.setAcceptHoverEvents(True)
-        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable)
+        self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemStacksBehindParent)
 
     def __repr__(self):
         return 'Connection("%s")' % self.connection_name

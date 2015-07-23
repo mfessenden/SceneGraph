@@ -15,7 +15,50 @@ class DotNode(DagNode):
     def __init__(self, name=None, **kwargs):
         DagNode.__init__(self, name, **kwargs)
 
-        self.width              = 10.0
-        self.base_height        = 10.0        
+        self.radius             = 10.0
         self.orientation        = 'dot'
+        self.force_expand       = False
 
+        self.add_attr('input', connectable=True, connection_type='input')
+
+    @property
+    def base_height(self):
+        return self.radius
+    
+    @base_height.setter
+    def base_height(self, value):
+        """
+        Set the base width value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value
+
+    @property
+    def width(self):
+        return self.radius
+    
+    @width.setter
+    def width(self, value):
+        """
+        Set the base width value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value
+
+    @property
+    def height(self):
+        return self.radius
+    
+    @height.setter
+    def height(self, value):
+        """
+        Set the radius value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value

@@ -1,13 +1,18 @@
 # merge node attributes
 [group Node Attributes]
+
+    [attr force_expand]
+        default             BOOL      false
+        label               STRING    "Expand Node"
+        private             BOOL      true
     
     [output output]
-        default            MERGE     "" 
+        default            MERGE      "" 
 
 [group Inputs]
     
     [input inputA]
-        default            NODE      ""
+        default            NODE       ""
 
     [input inputB]
-        default            NODE      ""
+        default            NODE       ""

@@ -1,4 +1,10 @@
 # texture node attributes
+[group Node Attributes]
+    [attr force_expand]
+        default             BOOL      false
+        label               STRING    "Expand Node"
+        private             BOOL      true
+
 [group Texture Collection]
     [input diffuse]
         label               STRING  "Diffuse"
