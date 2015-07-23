@@ -263,10 +263,11 @@ class GraphicsView(QtGui.QGraphicsView):
         Pan the viewport if the control key is pressed
         """        
         self.current_cursor_pos = event.pos()
-        if event.modifiers() & QtCore.Qt.ControlModifier:
-            self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
-        else:
-            self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
+        if event.button() == QtCore.Qt.LeftButton:
+            if event.modifiers() & QtCore.Qt.ControlModifier:
+                self.setDragMode(QtGui.QGraphicsView.ScrollHandDrag)
+            else:
+                self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
 
         # right mouse click
         if event.button() == QtCore.Qt.RightButton:
@@ -729,6 +730,33 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         return True
 
+    def splitEdge(self, edge, pos):
+        """
+        Insert a dot into the selected edge chain.
+
+        params:
+            edge (Edge) - edge widget instance.
+
+        returns:
+            (bool) - node was properly inserted into the current chain.
+        """
+        src_attr = edge.source_item().name
+        dest_attr = edge.dest_item().name
+
+        src = edge.source_node.dagnode
+        dest = edge.dest_node.dagnode
+
+        # remove the old edge
+        if self.graph.remove_edge(*edge.ids):
+            dot = self.graph.add_node('dot', pos=[pos.x(), pos.y()])
+
+            # add the two new edges
+            edge1 = self.graph.add_edge(src, dot, src_attr=src_attr, dest_attr='input')
+            edge2 = self.graph.add_edge(dot, dest, src_attr='output', dest_attr=dest_attr)
+            if edge1 and edge2:
+                return True
+        return False
+
     def mousePressEvent(self, event):
         """
         Draw a line if a connection widget is selected and dragged.
@@ -737,36 +765,44 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         # left mouse
         if event.button() == QtCore.Qt.LeftButton:
-            if item:
-                if self.is_connection(item):
-                    if item.isOutputConnection():
-                        crect = item.boundingRect()
-                        lpen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(*[251, 251, 251])), 1, QtCore.Qt.SolidLine)
-                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
-                        self.line.setPen(lpen)
-                        self.addItem(self.line)
-                        self.update(self.itemsBoundingRect())
+            if event.modifiers() & QtCore.Qt.AltModifier:
+                if item:
+                    if self.is_edge(item):
+                        if self.splitEdge(item, event.scenePos()):
+                            log.info('splitting edge...')
+                        else:
+                            log.warning('cannot split edge.')
+            else:
+                if item:
+                    if self.is_connection(item):
+                        if item.isOutputConnection():
+                            crect = item.boundingRect()
+                            lpen = QtGui.QPen(QtGui.QBrush(QtGui.QColor(*[251, 251, 251])), 1, QtCore.Qt.SolidLine)
+                            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(event.scenePos(), event.scenePos()))
+                            self.line.setPen(lpen)
+                            self.addItem(self.line)
+                            self.update(self.itemsBoundingRect())
 
-                        # disconnect the edge if this is an input
-                        if item.isInputConnection():
-                            # query the edge(s) attached.
-                            edges = item.connections.values()                    
-                            if edges:
-                                if len(edges) == 1:
-                                    conn_edge = edges[0]
+                            # disconnect the edge if this is an input
+                            if item.isInputConnection():
+                                # query the edge(s) attached.
+                                edges = item.connections.values()                    
+                                if edges:
+                                    if len(edges) == 1:
+                                        conn_edge = edges[0]
 
-                                    # remove the edge from the connections
-                                    if conn_edge.disconnect_terminal(item):
-                                        log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
-                                        # todo: call manage?
-                                        self.graph.remove_edge(*conn_edge.ids)
+                                        # remove the edge from the connections
+                                        if conn_edge.disconnect_terminal(item):
+                                            log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
+                                            # todo: call manage?
+                                            self.graph.remove_edge(*conn_edge.ids)
 
-                                        edge_line = conn_edge.getLine()
-                                        p1 = edge_line.p1()
+                                            edge_line = conn_edge.getLine()
+                                            p1 = edge_line.p1()
 
-                                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
-                                        self.addItem(self.line)
-                                        self.update(self.itemsBoundingRect())
+                                            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
+                                            self.addItem(self.line)
+                                            self.update(self.itemsBoundingRect())
 
         if event.button() == QtCore.Qt.RightButton:
             pass

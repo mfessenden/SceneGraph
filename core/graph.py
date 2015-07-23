@@ -446,9 +446,13 @@ class Graph(object):
         src_conn = src.get_connection(src_attr)
         dest_conn = dest.get_connection(dest_attr)
         edge_id_str = '(%s,%s)' % (src.id, dest.id)
-
-        if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:
-            
+        '''
+        print '# source dag:  ', src.name
+        print '# dest dag:    ', dest.name
+        print '# source conn: ', src_conn, src_attr
+        print '# dest conn:   ', dest_conn, dest_attr
+        '''
+        if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:            
             # add the nx edge        
             self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)
             log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
