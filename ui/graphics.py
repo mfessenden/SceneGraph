@@ -600,7 +600,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             (bool) - widget is a Dag node type. 
         """
         if hasattr(widget, 'node_class'):
-            if widget.node_class in ['dagnode', 'dot']:
+            if widget.node_class in ['dagnode', 'dot', 'note']:
                 return True
         return False
 

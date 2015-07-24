@@ -17,6 +17,51 @@ PROPERTY_TYPES = dict(
     )
 
 
+class SimpleNode(Observable):
+
+    default_name  = 'node'
+    default_color = [172, 172, 172, 255]
+    node_type     = 'dagnode'
+    PRIVATE       = ['node_type']
+    REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
+                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
+
+    def __init__(self, name=None, **kwargs):
+        self._attributes        = dict()
+
+        Observable.__init__(self)
+        self._metadata          = Metadata(self)
+
+        # basic node attributes        
+        self.name               = name if name else self.default_name
+        self.color              = kwargs.pop('color', self.default_color)
+        self.docstring          = ""
+        self._graph             = kwargs.pop('_graph', None)
+
+        self.width              = kwargs.pop('width', 100.0)
+        self.base_height        = kwargs.pop('base_height', 15.0)
+        self.force_expand       = kwargs.pop('force_expand', False)
+
+        self.pos                = kwargs.pop('pos', (0.0, 0.0))
+        self.enabled            = kwargs.pop('enabled', True)
+        self.orientation        = kwargs.pop('orientation', 'horizontal')
+
+        # metadata
+        metadata                = kwargs.pop('metadata', dict())
+        attributes              = kwargs.pop('attributes', dict())
+
+        # if the node metadata isn't passed from another class, 
+        # read it from disk
+        if not metadata:
+            metadata = self.read_metadata()
+        # ui
+        self._widget            = None  
+
+        UUID = kwargs.pop('id', None)
+        self.id = UUID if UUID else str(uuid.uuid4())
+        self._metadata.update(metadata)
+
+
 class DagNode(Observable):
 
     default_name  = 'node'
@@ -659,8 +704,10 @@ class DagNode(Observable):
                 metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
             
             if not os.path.exists(metadata_filename):
-                raise OSError('plugin description file "%s" does not exist.' % metadata_filename)
+                log.warning('plugin description file "%s" does not exist.' % metadata_filename)
+                continue
 
+            log.debug('reading plugin metadata file: "%s".' % metadata_filename)
             # parse the metadata 
             parsed = parser.parse(metadata_filename)
 
@@ -734,12 +781,13 @@ class Metadata(object):
 
         * todo: can't pass as **kwargs else we lose the order (why is that?)
         """
-        self._template_data = data
-        for k, v in data.iteritems():
-            if k in self._data:
-                self._data.get(k).update(**v)
-            else:
-                self._data.update({k:v})
+        if data:
+            self._template_data = data
+            for k, v in data.iteritems():
+                if k in self._data:
+                    self._data.get(k).update(**v)
+                else:
+                    self._data.update({k:v})
 
     @property
     def data(self):

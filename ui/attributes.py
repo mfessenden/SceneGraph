@@ -2104,6 +2104,7 @@ WIDGET_MAPPER = dict(
     # TESTING
     node        = StringEditor,
     multi       = StringEditor,
+    doc         = StringEditor,
     )
 
 
