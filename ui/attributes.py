@@ -1482,9 +1482,8 @@ class StringEditor(QtGui.QWidget):
             self.val1_edit.blockSignals(True)
             self.val1_edit.setText(cleaned)
             self.val1_edit.blockSignals(False)
-            self.val1_edit.setCursorPosition(cpos)
-            
-        self._current_value = self.value
+            self.val1_edit.setCursorPosition(cpos)            
+        #self._current_value = self.value
 
     @property
     def attribute(self):
@@ -1557,9 +1556,9 @@ class StringEditor(QtGui.QWidget):
         """
         Update the current nodes with the revised value.
         """
-        print 'updating value...'
-        print 'value: ', self.value
+        
         if self.value != self._current_value:
+            #print '# DEBUG: updating "%s" value: "%s"' % (self._attribute, self.value)
             self._current_value = self.value
             self.valueChanged.emit(self)
 

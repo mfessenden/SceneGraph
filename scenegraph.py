@@ -189,7 +189,10 @@ class SceneGraphUI(form_class, base_class):
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
 
+        # apply fonts
         self.setFont(self.fonts.get("ui"))
+        for menu in self.menubar.findChildren(QtGui.QMenu):
+            menu.setFont(self.fonts.get("ui"))
 
     def initializeStylesheet(self):
         """
@@ -261,7 +264,7 @@ class SceneGraphUI(form_class, base_class):
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
-        self.edge_type_menu.currentIndexChanged.connect(self.toggleEdgeTypes)
+        self.edge_type_menu.currentIndexChanged.connect(self.edgeTypeChangedAction)
         self.viewport_mode_menu.currentIndexChanged.connect(self.toggleViewMode)
         self.check_use_gl.toggled.connect(self.toggleOpenGLMode)
         self.logging_level_menu.currentIndexChanged.connect(self.toggleLoggingLevel)
@@ -474,8 +477,10 @@ class SceneGraphUI(form_class, base_class):
         Build the window title
         """
         title_str = 'Scene Graph'
+        if self.environment not in ['standalone']:
+            title_str = 'Scene Graph - %s' % self.environment.title()
         if self.graph.getScene():
-            title_str = '%s - %s' % (title_str, self.graph.getScene())
+            title_str = '%s: %s' % (title_str, self.graph.getScene())
 
         # add an asterisk if the current stack is dirty (scene is changed)
         if not self.undo_stack.isClean():
@@ -773,17 +778,25 @@ class SceneGraphUI(form_class, base_class):
         self.view.scene().update()
         os.environ['SCENEGRAPH_DEBUG'] = '1' if debug else '0' 
 
-    def toggleEdgeTypes(self):
+    def toggleEdgeTypes(self, edge_type):
         """
         Toggle the edge types.
-        """
-        edge_type = self.edge_type_menu.currentText()
-        if edge_type:
+
+        params:
+            edge_type (str) - edge type (bezier or polygon)
+        """           
+        if edge_type != self.edge_type:
             self.edge_type = edge_type
 
-        for edge in self.view.scene().get_edges():
-            edge.edge_type = self.edge_type
-        self.view.scene().update()
+            for edge in self.view.scene().get_edges():
+                edge.edge_type = self.edge_type
+            self.view.scene().update()
+
+            menu_text = self.edge_type_menu.currentText()
+            if menu_text != edge_type:
+                self.edge_type_menu.blockSignals(True)
+                self.edge_type_menu.setCurrentIndex(self.edge_type_menu.findText(edge_type))
+                self.edge_type_menu.blockSignals(False)
 
     def togglePrivate(self):
         """
@@ -808,6 +821,13 @@ class SceneGraphUI(form_class, base_class):
         self.autosave_timer.start(self.autosave_inc)
 
     #- ACTIONS ----
+    def edgeTypeChangedAction(self):
+        """
+        Runs when the current edge type menu is changed.
+        """
+        edge_type = self.edge_type_menu.currentText()
+        self.toggleEdgeTypes(edge_type)
+
     def nodesSelectedAction(self):
         """
         Action that runs whenever a node is selected in the UI

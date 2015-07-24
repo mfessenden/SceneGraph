@@ -89,16 +89,69 @@ class DotWidget(QtGui.QGraphicsObject):
             yoffset = self.dagnode.height/2
             yoffset+=3
 
+            #conn_center = conn_widget.mapToParent(self.center)
+            
             if conn_widget.is_input:
+                #conn_widget.transform().translate(0, -yoffset)
                 conn_widget.setY(-yoffset)
 
-
             if conn_widget.is_output:
+                #conn_widget.transform().translate(0, yoffset)
                 conn_widget.setY(yoffset)
+
+            # set the transformation origin to the Dot's center.
+            conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(self.center))
 
             self.connections[conn_name] = conn_widget
             conn_widget.setZValue(-1)
-        
+    
+    def updateConnections(self):
+        for conn_name in self.connections:
+            conn_dag = self.dagnode.get_connection(conn_name)
+            conn_widget = self.connections.get(conn_name)
+
+            # point the connection at the connected edge
+            if conn_widget.connected_edges():
+                edge = conn_widget.connected_edges()[0]
+                line = edge.getLine()
+
+                if conn_widget.isInputConnection():
+                    p1 = conn_widget.mapFromScene(line.p1())
+                    p2 = conn_widget.transformOriginPoint()
+
+                if conn_widget.isOutputConnection():
+                    p1 = conn_widget.transformOriginPoint()
+                    p2 = conn_widget.mapFromScene(line.p2())              
+
+                line = QtCore.QLineF(p1, p2)
+                x1 = p1.x()
+                x2 = p2.x()
+                y1 = p1.y()
+                y2 = p2.y()
+
+                #angle=math.atan2(-(pos1[1]-pos2[1]), pos1[0]-pos2[0])
+                t = math.atan2(-(y1-y2), x1-x2)
+                x = math.degrees(t)
+                angle = '%.2f' % x
+
+                if conn_widget._debug:
+                    painter.drawLine(line)
+                    qfont = QtGui.QFont("Monospace")
+                    qfont.setPointSize(5)
+                    conn_widget.debug_label = QtGui.QGraphicsTextItem(conn_widget)
+                    conn_widget.debug_label.setFont(qfont)
+                    conn_widget.debug_label.setDefaultTextColor(QtGui.QColor(conn_widget.bg_color))                
+                    #conn_widget.debug_label.setPlainText('%.4f, %.4f' % (angle[0], angle[1]))
+                    conn_widget.debug_label.setPlainText(angle)
+                    conn_widget.debug_label.setX(15)
+                    conn_widget.debug_label.setRotation(0)
+
+                if angle != conn_widget._angle:
+                    if not conn_widget._rotated:
+                        conn_widget._angle = angle
+                        conn_widget.setRotation(90+(float(angle)*-1) )
+                        conn_widget._rotated=True
+
     #- Attributes ----
     @property
     def id(self):
@@ -169,6 +222,7 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         if change == self.ItemPositionHasChanged:
             self.nodeChanged.emit(self)
+            self.updateConnections()
         return super(DotWidget, self).itemChange(change, value)
 
     def mouseDoubleClickEvent(self, event):
@@ -230,6 +284,10 @@ class DotWidget(QtGui.QGraphicsObject):
 
     #- SUBCLASS -----
     #- Global Properties ----
+    @property
+    def center(self):
+        return self.boundingRect().center()
+
     @property
     def bg_color(self):
         """
@@ -414,6 +472,8 @@ class DotWidget(QtGui.QGraphicsObject):
         painter.setBrush(qbrush)
         painter.drawEllipse(self.boundingRect())
 
+        self.updateConnections()
+
     def setDebug(self, val):
         """
         Set the debug value of all child nodes.
@@ -461,18 +521,16 @@ class Connection(QtGui.QGraphicsObject):
         self.dagconn        = conn_node
 
         # globals
-        self.draw_radius    = 4.0
+        self.draw_radius    = self.dagnode.radius * 0.3
         self.pen_width      = 1.5
         self.radius         = self.draw_radius*4
         self.buffer         = 2.0
         self.node_shape     = 'circle'        
-        self.draw_label     = False                  # draw a connection name label
         self.is_proxy       = False                  # connection is a proxy for several connections
 
         # widget colors
         self._i_color       = [255, 255, 41, 255]    # input color
         self._o_color       = [0, 204, 0, 255]       # output color   
-        self._l_color       = [5, 5, 5, 200]         # label color
         self._s_color       = [0, 0, 0, 60]          # shadow color
         self._p_color       = [178, 187, 28, 255]    # proxy node color
 
@@ -480,15 +538,17 @@ class Connection(QtGui.QGraphicsObject):
         self._debug         = False
         self.is_selected    = False
         self.is_hover       = False
-
-        # label
-        self.label          = QtGui.QGraphicsSimpleTextItem(self)
+        self.debug_label    = QtGui.QGraphicsTextItem(self)
+        self._angle         = '0'
+        self._rotated       = False
 
         # dict: {(id, id) : edge widget} 
         self.connections    = dict()
 
         self.setAcceptHoverEvents(True)
         self.setFlags(QtGui.QGraphicsObject.ItemIsSelectable | QtGui.QGraphicsItem.ItemIsFocusable | QtGui.QGraphicsItem.ItemStacksBehindParent)
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
 
     def __repr__(self):
         return 'Connection("%s")' % self.connection_name
@@ -535,6 +595,15 @@ class Connection(QtGui.QGraphicsObject):
     @property
     def max_connections(self):
         return self.dagconn.max_connections
+
+    def connected_edges(self):
+        """
+        Returns a list of connected edges.
+
+        returns:
+            (list) - list of connected edge widgets.
+        """
+        return self.connections.values()
 
     @property
     def is_connectable(self):
@@ -583,43 +652,6 @@ class Connection(QtGui.QGraphicsObject):
         """
         return self.bg_color.darker(250)
 
-    @property
-    def label_color(self):
-        """
-        Returns the widget label color.
-
-        returns:
-            (QColor) - widget label color.
-        """
-        if not self.is_enabled:
-            return QtGui.QColor(*[50, 50, 50, 128])
-        if self.is_selected:
-            return QtGui.QColor(*[88, 0, 0])
-        return QtGui.QColor(*self._l_color)
-
-    @property 
-    def input_label_pos(self):
-        """
-        Returns a point for the label to lock to.
-        """
-        cw = self.draw_radius + (self.pen_width*2)
-        x = cw
-        h = float(self.label.boundingRect().height())
-        y = -h/2
-        return QtCore.QPointF(x, y)
-
-    @property 
-    def output_label_pos(self):
-        """
-        Returns a point for the label to lock to.
-        """
-        cw = self.draw_radius + (self.pen_width*2)
-        lw = self.label.boundingRect().width()
-        x = -(cw + lw)
-        h = float(self.label.boundingRect().height())
-        y = -h/2
-        return QtCore.QPointF(x , y)
-
     def isInputConnection(self):
         """
         Returns true if the node is an input
@@ -650,13 +682,25 @@ class Connection(QtGui.QGraphicsObject):
             pass
         QtGui.QGraphicsObject.hoverLeaveEvent(self, event)
 
-    def mouseClickEvent(self, event):
+    def mousePressEvent(self, event):
         """
          * debug
         """
-        if event.button() == QtCore.Qt.RightButton:
-            print '# connected edges: ', self.connections.values()
-        event.accept()
+        self._rotated = False
+        super(Connection, self).mousePressEvent(event)
+
+    def itemChange(self, change, value):
+        """
+        Default node 'changed' signal.
+
+        ItemMatrixChange
+
+        change == "GraphicsItemChange"
+        """
+        #print 'change: ', change
+        if change == QtGui.QGraphicsItem.ItemPositionHasChanged or change == QtGui.QGraphicsItem.ItemTransformChange or change == QtGui.QGraphicsItem.ItemTransformChange:
+            self._rotated = False
+        return super(Connection, self).itemChange(change, value)
 
     def boundingRect(self):
         """
@@ -719,26 +763,12 @@ class Connection(QtGui.QGraphicsObject):
             if self.isOutputConnection():
                 start_angle = start_angle * -1
             painter.drawPie(self.drawRect(), start_angle, 16*180)
-        
-        # label
-        label_color = self.label_color
-        if self._debug:
-            label_color = QtGui.QColor(*[170, 170, 170])
-        
-        self.label.hide()
-        if self.is_expanded:
-            self.label.setBrush(label_color)
-            self.label.setFont(QtGui.QFont(self.node._cfont, self.node._cfont_size))
-            self.label.show()
-            self.label.setText(self.name)
-            # set the positions
-            if self.isInputConnection():
-                self.label.setPos(self.input_label_pos)
 
-            if self.isOutputConnection():
-                self.label.setPos(self.output_label_pos)
 
-            self.label.setToolTip(self.dagconn.desc)
+        # if the connection has an attached edge, rotate the connector to face it
+        if self.debug_label:
+            if self.debug_label.scene():
+                self.debug_label.scene().removeItem(self.debug_label)
 
         # visualize the bounding rect if _debug attribute is true
         if self._debug:
@@ -746,12 +776,17 @@ class Connection(QtGui.QGraphicsObject):
             painter.setPen(QtGui.QPen(self.bg_color, 0.5, QtCore.Qt.DashLine))
             painter.drawRect(self.boundingRect())
 
-            if self.is_expanded:
-                painter.setPen(QtGui.QPen(QtGui.QColor(*[140, 140, 140]), 0.5, QtCore.Qt.DashLine))
-                self.label.setToolTip("(%.2f, %.2f)" % (self.label.pos().x(), self.label.pos().y()))
-                rect = self.label.sceneBoundingRect()
-                rect.moveTo(self.label.pos().x(), self.label.pos().y())
-                painter.drawRect(rect)
+            # center/transformation origin 
+            painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            painter.setBrush(QtGui.QBrush(QtGui.QColor(*[0, 0, 255, 150])))
+
+            # connection center point (blue)
+            painter.drawEllipse(self.transformOriginPoint(), 1, 1)
+            #painter.drawEllipse(self.boundingRect().center(), 1, 1)
+            
+            # dot node center (red)
+            painter.setBrush(QtGui.QBrush(QtGui.QColor(*[255, 0, 0, 150])))
+            #painter.drawEllipse(self.mapFromParent(self.node.center), 1, 1)
 
     def setDebug(self, value):
         """
@@ -759,3 +794,5 @@ class Connection(QtGui.QGraphicsObject):
         """
         if value != self._debug:
             self._debug = value
+
+

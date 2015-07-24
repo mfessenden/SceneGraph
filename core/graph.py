@@ -809,19 +809,31 @@ class Graph(object):
             return True
         return False
 
-    def copyNodes(self, nodes):
-        """
-        Copy nodes to the copy buffer
-        """
-        return False
-
-    def pasteNodes(self):
+    def copyNodes(self):
         """
         Paste saved nodes
         """
         offset = 25
         pasted_nodes = []
         return pasted_nodes
+
+    def pasteNodes(self, nodes, offset=[200, 200]):
+        """
+        Copy nodes to the copy buffer
+        """
+        import copy
+        result = []
+        for node in nodes:
+            new_name = self.get_valid_name(node.name)
+            data = copy.deepcopy(node.data)
+            data.update(pos=[node.pos[0]+offset[0], node.pos[1]+offset[1]])
+            data.update(name=new_name)
+            data.pop('node_type')
+            data.pop('id')
+            new_node = self.add_node(node.node_type, **data)
+            print '# adding node: "%s"' % new_node.name
+            result.append(new_node)
+        return result
 
     def connect(self, source, dest):
         """

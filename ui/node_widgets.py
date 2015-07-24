@@ -1083,6 +1083,15 @@ class Connection(QtGui.QGraphicsObject):
     def max_connections(self):
         return self.dagconn.max_connections
 
+    def connected_edges(self):
+        """
+        Returns a list of connected edges.
+
+        returns:
+            (list) - list of connected edge widgets.
+        """
+        return self.connections.values()
+
     @property
     def is_connectable(self):
         """
@@ -1324,15 +1333,23 @@ class NodeLabel(QtGui.QGraphicsObject):
 
     def __init__(self, parent):
         QtGui.QGraphicsObject.__init__(self, parent)
-        
+
         self.dagnode        = parent.dagnode
         self._debug         = False
 
         self.label = QtGui.QGraphicsTextItem(self.dagnode.name, self)
+        self.label.node = parent
         self._document = self.label.document()
 
         self._document.setMaximumBlockCount(1)
         self._document.contentsChanged.connect(self.nodeNameChanged)
+
+        # set flags
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, False)
+
+        self.label.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, False)
+        self.label.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, False)
 
         # bounding shape
         self.rect_item = QtGui.QGraphicsRectItem(self.boundingRect(), self)
@@ -1429,6 +1446,9 @@ class NodeLabel(QtGui.QGraphicsObject):
 class NodeBackground(QtGui.QGraphicsItem):
     def __init__(self, parent=None, scene=None):
         super(NodeBackground, self).__init__(parent, scene)
+
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, False)
 
         self.dagnode = parent.dagnode
         self._debug  = False

@@ -34,6 +34,7 @@ class GraphicsView(QtGui.QGraphicsView):
         
         self._scale              = 1
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
+        self._nodes_to_copy      = []   
 
         self.initializeSceneGraph(ui.graph, ui, opengl=opengl, debug=debug)
         self.viewport_mode       = self._parent.viewport_mode
@@ -300,7 +301,13 @@ class GraphicsView(QtGui.QGraphicsView):
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
             #self.setSceneRect(boundsRect) # this resizes the scene rect to the bounds rect, not desirable
 
-        if event.key() == QtCore.Qt.Key_F:
+        # disable selected nodes
+        elif event.key() == QtCore.Qt.Key_D:
+            if selected_nodes:
+                for node in selected_nodes:
+                    node.is_enabled = not node.is_enabled
+
+        elif event.key() == QtCore.Qt.Key_F:
             boundsRect = self.scene().selectionArea().boundingRect()
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
 
@@ -308,12 +315,23 @@ class GraphicsView(QtGui.QGraphicsView):
         elif event.key() == QtCore.Qt.Key_Delete or event.key() == QtCore.Qt.Key_Backspace:
             self.scene().handler.removeSceneNodes(selected_nodes)
 
-        # disable selected nodes
-        elif event.key() == QtCore.Qt.Key_D:
-            if selected_nodes:
-                for node in selected_nodes:
-                    node.is_enabled = not node.is_enabled
+        elif event.key() == QtCore.Qt.Key_C and event.modifiers() == QtCore.Qt.ControlModifier:
+            self._nodes_to_copy = self.scene().selectedDagNodes()            
+            log.warning('copying nodes: "%s"' % '", "'.join([x.name for x in self._nodes_to_copy]))
 
+        elif event.key() == QtCore.Qt.Key_V and event.modifiers() == QtCore.Qt.ControlModifier:
+            if self._nodes_to_copy:
+                new_nodes = self.scene().graph.pasteNodes(self._nodes_to_copy)
+                log.warning('pasting %d nodes' % len(new_nodes))
+                self._nodes_to_copy = []
+
+        # toggle edge types
+        elif event.key() == QtCore.Qt.Key_E:
+            edge_type = self._parent.edge_type
+            toggled = 'polygon'
+            if edge_type == 'polygon':
+                toggled = 'bezier'
+            self._parent.toggleEdgeTypes(edge_type=toggled)
 
         self.scene().update()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
@@ -710,11 +728,53 @@ class GraphicsScene(QtGui.QGraphicsScene):
         'Pop' a node from its current chain.
 
         params:
-            node (DagNode) - node widget instance.
+            node (NodeWidget) - node widget instance.
 
         returns:
             (bool) - node was properly removed from its chain.
         """
+
+        if not self.is_node(node):
+            log.warning('popNode: invalid widget type')
+            return
+
+        dagnode = node.dagnode
+        predecessors = self.graph.network.predecessors(dagnode.id)
+        successors = self.graph.network.successors(dagnode.id)
+        reconnect = len(predecessors) == 1 and len(successors) == 1
+
+        print '# reconnect: ', reconnect
+
+        # get the connected edges
+        connected_edges = []
+        for conn_name in node.connections:
+            conn_widget = node.connections.get(conn_name)
+            if conn_widget.is_connected:
+                for edge in conn_widget.connected_edges():
+                    if edge not in connected_edges:
+                        connected_edges.append(edge)
+
+
+        if connected_edges:
+            for cedge in connected_edges:
+                if reconnect:
+                    #print 'edge to reconnect: ', cedge.name
+                    src_conn_widget = edge.source_item()
+                    dst_conn_widget = edge.dest_item()
+
+                    src_dag = src_conn_widget.dagnode
+                    dst_dag = dst_conn_widget.dagnode
+
+                    if src_dag is not dagnode:
+                        #print '# source connection: ', src_dag.name
+                        reconnections.append(src_conn_widget.connection_name)
+
+                    if dst_dag is not dagnode:
+                        #print '# dest connection: ', dst_dag.name
+                        reconnections.append(dst_conn_widget.connection_name)
+
+                if cedge.breakConnections():
+                    cedge.close()
         return True
 
     def insertNode(self, node, edge):
@@ -740,6 +800,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         returns:
             (bool) - node was properly inserted into the current chain.
         """
+        if not self.is_edge(edge):
+            log.warning('splitEdge: invalid widget type')
+            return
+
         src_attr = edge.source_item().name
         dest_attr = edge.dest_item().name
 
@@ -757,21 +821,42 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 return True
         return False
 
+    def nodeAt(self, *args):
+        """
+        Similar to 'itemAt', return a node if available. 
+        """
+        item = QtGui.QGraphicsScene.itemAt(self, *args)
+        if hasattr(item, 'node'):
+            if hasattr(item.node, 'node_class'):
+                item = item.node
+        return item
+
     def mousePressEvent(self, event):
         """
         Draw a line if a connection widget is selected and dragged.
         """
         item = self.itemAt(event.scenePos())
+        node = self.nodeAt(event.scenePos())
+
+        modifiers = QtGui.QApplication.keyboardModifiers()
 
         # left mouse
         if event.button() == QtCore.Qt.LeftButton:
-            if event.modifiers() & QtCore.Qt.AltModifier:
+            if modifiers == QtCore.Qt.AltModifier:
                 if item:
                     if self.is_edge(item):
                         if self.splitEdge(item, event.scenePos()):
                             log.info('splitting edge...')
                         else:
                             log.warning('cannot split edge.')
+
+            elif modifiers == QtCore.Qt.ShiftModifier:
+                if node:
+                    if self.is_node(node):
+                        if self.popNode(node):
+                            log.info('popping node "%s"' % node.dagnode.name)
+                        else:
+                            log.warning('cannot pop node "%s"' % node.dagnode.name)
             else:
                 if item:
                     if self.is_connection(item):

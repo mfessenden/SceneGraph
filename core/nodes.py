@@ -680,7 +680,7 @@ class DagNode(Observable):
                     node_metadata.get(section).get(attr).update(attr_properties)
 
         return node_metadata
-
+    
     def Class(self):
         return self.__class__.__name__
 
