@@ -301,6 +301,7 @@ class NoteWidget(QtGui.QGraphicsObject):
             self.is_hover = True
 
         self.label.setPos(self.label_pos)
+        self.label.label.setTextWidth(self.width * 0.8)
 
         # setup colors
         bg_color1 = self.bg_color
@@ -337,7 +338,7 @@ class NoteWidget(QtGui.QGraphicsObject):
         # shapes
         note_shape = self.getNoteShape()
         corner_shape = self.getCornerShape()
-
+        corner_shape.translate(-0.5, 0.5)
         painter.setPen(qpen)
         painter.setBrush(qbrush)
 
@@ -346,8 +347,7 @@ class NoteWidget(QtGui.QGraphicsObject):
         painter.setBrush(cbrush)
         painter.setPen(cpen)
         # draw corner
-        painter.drawPolygon(corner_shape)
-            
+        painter.drawPolygon(corner_shape)            
 
     def setDebug(self, val):
         """
@@ -396,8 +396,8 @@ class NodeText(QtGui.QGraphicsObject):
         self.label.node = parent
         self._document = self.label.document()
 
-        self._document.setMaximumBlockCount(1)
-        self._document.contentsChanged.connect(self.nodeNameChanged)
+        #self._document.setMaximumBlockCount(1)
+        self._document.contentsChanged.connect(self.nodeTextChanged)
 
         # set flags
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, False)
@@ -415,7 +415,7 @@ class NodeText(QtGui.QGraphicsObject):
         self.setHandlesChildEvents(False)
 
     @QtCore.Slot()
-    def nodeNameChanged(self):
+    def nodeTextChanged(self):
         """
         Runs when the node name is changed.
         """      
@@ -433,7 +433,7 @@ class NodeText(QtGui.QGraphicsObject):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Enter or event.key() == QtCore.Qt.Key_Return:
-            self.nodeNameChanged()
+            self.nodeTextChanged()
         else:
             QtGui.QGraphicsObject.keyPressEvent(self, event)
 

@@ -17,5 +17,16 @@ class NoteNode(DagNode):
 
         self.corner_loc     = 'top'   
         self.base_height    = 75
-        self.corner_size    = 15
         self.doc_text       = kwargs.get('doc_text', "Sample note text.")
+
+    @property
+    def data(self):
+        """
+        Output data for writing.
+        """
+        data = dict()
+        for attr in self.REQUIRED:
+            if hasattr(self, attr):
+                data[attr] = getattr(self, attr)
+        data.update(doc_text=self.doc_text, corner_loc=self.corner_loc)
+        return data
