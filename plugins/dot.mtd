@@ -10,7 +10,7 @@
         default             FLOAT    10.0
         label               STRING   "dot radius."
         required            BOOL     true
-        private             BOOL     true
+        #private            BOOL     true
 
 [group Node Attributes]
 

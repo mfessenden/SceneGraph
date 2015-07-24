@@ -809,6 +809,9 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Returns the current line color.
         """
+        if self._debug:
+            return QtGui.QColor(*[200, 200, 200, 125])
+
         if self.is_selected:
             return QtGui.QColor(*self._h_color)
 
@@ -958,7 +961,6 @@ class EdgeWidget(QtGui.QGraphicsObject):
                 angle = (math.pi * 2.0) - angle
 
             revArrow = -1
-
             center_point = self.getCenterPoint()
             end_point = self.getEndPoint()
 

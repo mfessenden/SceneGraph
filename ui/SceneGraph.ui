@@ -198,12 +198,19 @@
      <string>Nodes</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menu_debug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="action_reset_dots"/>
+   </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_edit"/>
    <addaction name="menu_graph"/>
    <addaction name="menu_nodes"/>
    <addaction name="menu_window"/>
    <addaction name="menu_help"/>
+   <addaction name="menu_debug"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="attrEditorWidget">
@@ -965,6 +972,14 @@
   <action name="action_show_all">
    <property name="text">
     <string>Show all attributes</string>
+   </property>
+  </action>
+  <action name="action_reset_dots">
+   <property name="text">
+    <string>Reset dot nodes</string>
+   </property>
+   <property name="toolTip">
+    <string>Re-center dot nodes</string>
    </property>
   </action>
  </widget>

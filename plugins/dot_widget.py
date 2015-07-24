@@ -5,8 +5,7 @@ import weakref
 from PySide import QtCore, QtGui
 from SceneGraph.core import log
 from SceneGraph import options
-from SceneGraph.ui import Connection, SceneNodesCommand
-
+from SceneGraph.ui import SceneNodesCommand
 
 
 SCENEGRAPH_WIDGET_TYPE = 'dot'
@@ -71,6 +70,12 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         Cleanup and delete the node and children.
         """
+        for conn_name in self.connections:
+            conn_widget = self.connections.get(conn_name)
+            if conn_widget:
+                if conn_widget.scene():
+                    conn_widget.scene().removeItem(conn_widget)
+
         if self is not None:
             if self.scene() is not None:
                 self.scene().removeItem(self)
@@ -86,8 +91,9 @@ class DotWidget(QtGui.QGraphicsObject):
             conn_dag = self.dagnode.get_connection(conn_name)
             conn_widget = Connection(self, conn_dag, conn_name)
 
-            yoffset = self.dagnode.height/2
-            yoffset+=3
+            radius = float(conn_widget.radius/2)
+            yoffset = radius
+            yoffset += radius*0.5
 
             #conn_center = conn_widget.mapToParent(self.center)
             
@@ -100,28 +106,54 @@ class DotWidget(QtGui.QGraphicsObject):
                 conn_widget.setY(yoffset)
 
             # set the transformation origin to the Dot's center.
-            conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(self.center))
-
+            conn_widget.setRotation(0)
+            conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(QtCore.QPointF(0,0)))
             self.connections[conn_name] = conn_widget
             conn_widget.setZValue(-1)
     
-    def updateConnections(self):
+    def updateConnections(self, painter):
+        """
+        Update the connection widget's rotation values
+        if they're connected to existing edges.
+        """
         for conn_name in self.connections:
             conn_dag = self.dagnode.get_connection(conn_name)
             conn_widget = self.connections.get(conn_name)
 
+            
+            ### RECENTER AND TRANSLATE BASED ON RADIUS ###
+            conn_widget.setRotation(0)
+            conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(QtCore.QPointF(0,0)))
+
+            # update radius
+            radius = float(self.dagnode.radius/2)
+            yoffset = radius
+            yoffset += radius*0.5
+
+            #conn_center = conn_widget.mapToParent(self.center)            
+            if conn_widget.is_input:
+                conn_widget.setY(-yoffset)
+
+            if conn_widget.is_output:
+                conn_widget.setY(yoffset)
+
+           
             # point the connection at the connected edge
+            angle = '0.0'
             if conn_widget.connected_edges():
                 edge = conn_widget.connected_edges()[0]
-                line = edge.getLine()
+                eline = edge.getLine()
 
+                label_xoffset = 20
                 if conn_widget.isInputConnection():
-                    p1 = conn_widget.mapFromScene(line.p1())
-                    p2 = conn_widget.transformOriginPoint()
+                    p1 = self.mapFromScene(eline.p1())
+                    p2 = conn_widget.boundingRect().center()
+                    label_xoffset = -label_xoffset
 
                 if conn_widget.isOutputConnection():
-                    p1 = conn_widget.transformOriginPoint()
-                    p2 = conn_widget.mapFromScene(line.p2())              
+                    #p1 = self.center
+                    p1 = conn_widget.boundingRect().center()
+                    p2 = self.mapFromScene(eline.p2())              
 
                 line = QtCore.QLineF(p1, p2)
                 x1 = p1.x()
@@ -134,23 +166,28 @@ class DotWidget(QtGui.QGraphicsObject):
                 x = math.degrees(t)
                 angle = '%.2f' % x
 
+                # remove the current label
+                if conn_widget.debug_label:
+                    if conn_widget.debug_label.scene():
+                        conn_widget.debug_label.scene().removeItem(conn_widget.debug_label)
+
+                # draw a label to show the angle
                 if conn_widget._debug:
+                    painter.setBrush(QtCore.Qt.NoBrush)
+                    painter.setPen(QtGui.QPen(conn_widget.bg_color, 0.5, QtCore.Qt.DashLine))
                     painter.drawLine(line)
                     qfont = QtGui.QFont("Monospace")
-                    qfont.setPointSize(5)
+                    qfont.setPointSize(10)
                     conn_widget.debug_label = QtGui.QGraphicsTextItem(conn_widget)
+                    conn_widget.debug_label.setFlag(QtGui.QGraphicsItem.ItemIgnoresTransformations)
                     conn_widget.debug_label.setFont(qfont)
                     conn_widget.debug_label.setDefaultTextColor(QtGui.QColor(conn_widget.bg_color))                
                     #conn_widget.debug_label.setPlainText('%.4f, %.4f' % (angle[0], angle[1]))
                     conn_widget.debug_label.setPlainText(angle)
-                    conn_widget.debug_label.setX(15)
-                    conn_widget.debug_label.setRotation(0)
+                    conn_widget.debug_label.setX(label_xoffset)
 
-                if angle != conn_widget._angle:
-                    if not conn_widget._rotated:
-                        conn_widget._angle = angle
-                        conn_widget.setRotation(90+(float(angle)*-1) )
-                        conn_widget._rotated=True
+                # rotate the connector
+                conn_widget.setRotation(90+(float(angle)*-1) )
 
     #- Attributes ----
     @property
@@ -222,7 +259,7 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         if change == self.ItemPositionHasChanged:
             self.nodeChanged.emit(self)
-            self.updateConnections()
+            #self.updateConnections()
         return super(DotWidget, self).itemChange(change, value)
 
     def mouseDoubleClickEvent(self, event):
@@ -472,7 +509,7 @@ class DotWidget(QtGui.QGraphicsObject):
         painter.setBrush(qbrush)
         painter.drawEllipse(self.boundingRect())
 
-        self.updateConnections()
+        self.updateConnections(painter)
 
     def setDebug(self, val):
         """
@@ -632,6 +669,7 @@ class Connection(QtGui.QGraphicsObject):
         color = self._i_color
         if self.is_output:
             color = self._o_color
+
         if not self.is_enabled:
             return QtGui.QColor(*[125, 125, 125])
 
@@ -686,7 +724,6 @@ class Connection(QtGui.QGraphicsObject):
         """
          * debug
         """
-        self._rotated = False
         super(Connection, self).mousePressEvent(event)
 
     def itemChange(self, change, value):
@@ -702,6 +739,10 @@ class Connection(QtGui.QGraphicsObject):
             self._rotated = False
         return super(Connection, self).itemChange(change, value)
 
+    @property
+    def parent_center(self):
+        return self.mapFromParent(self.node.center)
+    
     def boundingRect(self):
         """
         Return the bounding rect for the connection (plus selection buffer).
@@ -731,6 +772,9 @@ class Connection(QtGui.QGraphicsObject):
         """
         Draw the connection widget.
         """
+        self.draw_radius  = self.dagnode.radius * 0.3
+        self.radius       = self.draw_radius*4
+
         self.is_selected = False
         self.is_hover = False
 
@@ -754,9 +798,10 @@ class Connection(QtGui.QGraphicsObject):
         painter.setPen(QtGui.QPen(QtGui.QBrush(self.pen_color), self.pen_width, QtCore.Qt.SolidLine))
         painter.setBrush(QtGui.QBrush(gradient))
 
-        # draw a circle
+        # draw the connector shape
         if self.node_shape == 'circle':
             painter.drawEllipse(QtCore.QPointF(0,0), self.draw_radius, self.draw_radius)
+        
         elif self.node_shape == 'pie':
             # pie drawing
             start_angle = 16*90
@@ -764,11 +809,6 @@ class Connection(QtGui.QGraphicsObject):
                 start_angle = start_angle * -1
             painter.drawPie(self.drawRect(), start_angle, 16*180)
 
-
-        # if the connection has an attached edge, rotate the connector to face it
-        if self.debug_label:
-            if self.debug_label.scene():
-                self.debug_label.scene().removeItem(self.debug_label)
 
         # visualize the bounding rect if _debug attribute is true
         if self._debug:
@@ -778,15 +818,19 @@ class Connection(QtGui.QGraphicsObject):
 
             # center/transformation origin 
             painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
-            painter.setBrush(QtGui.QBrush(QtGui.QColor(*[0, 0, 255, 150])))
+            bg_color = self.bg_color
+            bg_color.setAlpha(125)
+            
+            painter.setBrush(QtGui.QBrush(bg_color))
 
             # connection center point (blue)
-            painter.drawEllipse(self.transformOriginPoint(), 1, 1)
-            #painter.drawEllipse(self.boundingRect().center(), 1, 1)
-            
+            painter.drawEllipse(self.transformOriginPoint(), 2, 2)
+           
             # dot node center (red)
             painter.setBrush(QtGui.QBrush(QtGui.QColor(*[255, 0, 0, 150])))
-            #painter.drawEllipse(self.mapFromParent(self.node.center), 1, 1)
+            painter.drawEllipse(self.parent_center, 2, 2)
+
+            self.setToolTip('rotation: %.2f' % self.rotation())
 
     def setDebug(self, value):
         """

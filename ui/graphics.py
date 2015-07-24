@@ -302,6 +302,10 @@ class GraphicsView(QtGui.QGraphicsView):
             #self.setSceneRect(boundsRect) # this resizes the scene rect to the bounds rect, not desirable
 
         # disable selected nodes
+        elif event.key() == QtCore.Qt.Key_X:
+            self._parent.toggleDebug()
+
+        # disable selected nodes
         elif event.key() == QtCore.Qt.Key_D:
             if selected_nodes:
                 for node in selected_nodes:
@@ -461,9 +465,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         self.initialize()
         self.blockSignals(True)
-        self.undo_stack.blockSignals(True)
+        #self.undo_stack.setActive(False)
         self.graph.restore(data, graph=False)
-        self.undo_stack.blockSignals(False)
+        #self.undo_stack.setActive(True)
         self.blockSignals(False)
         self.update()
 
@@ -477,7 +481,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
         if type(dagids) not in [list, tuple]:
             dagids = [dagids,]
 
-        old_snapshot = self.graph.snapshot() 
         log.debug('GraphicsScene: adding %d nodes.' % len(dagids))
         widgets = []
         for dag_id in dagids:
@@ -504,9 +507,6 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         widget.nodeChanged.connect(self.nodeChangedEvent)
                         widget.nodeDeleted.connect(self.nodeDeletedEvent)
                
-                        new_snapshot = self.graph.snapshot()
-                        self.undo_stack.push(commands.SceneNodesCommand(old_snapshot, new_snapshot, self, msg='node added'))
-
             else:
                 raise GraphException('invalid graph id: "%s"' % dag_id )
         return widgets
@@ -754,7 +754,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                     if edge not in connected_edges:
                         connected_edges.append(edge)
 
-
+        reconnections = []
         if connected_edges:
             for cedge in connected_edges:
                 if reconnect:

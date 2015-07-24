@@ -246,6 +246,7 @@ class SceneGraphUI(form_class, base_class):
         self.menu_file.aboutToShow.connect(self.initializeFileMenu)
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
         self.menu_window.aboutToShow.connect(self.initializeWindowMenu)
+        self.menu_debug.aboutToShow.connect(self.initializeDebugMenu) 
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -261,6 +262,9 @@ class SceneGraphUI(form_class, base_class):
         self.action_exit.triggered.connect(self.close)
         self.action_save_layout.triggered.connect(self.saveLayoutAction)
         self.action_plugins.triggered.connect(self.pluginManagerAction)
+
+        # debug menu
+        self.action_reset_dots.triggered.connect(self.resetDotsAction)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -347,6 +351,17 @@ class SceneGraphUI(form_class, base_class):
         for layout in layout_names:
             restore_action = menu.addAction(layout)
             restore_action.triggered.connect(partial(self.qtsettings.restoreLayout, layout))
+
+    def initializeDebugMenu(self):
+        """
+        Set up the debug menu.
+        """
+        has_dots = False
+        for node in self.view.scene().get_nodes():
+            if node.node_class == 'dot':
+                has_dots = True
+
+        self.action_reset_dots.setEnabled(has_dots)
 
     def initializeNodesMenu(self, parent, pos, color=True):
         """
@@ -646,6 +661,7 @@ class SceneGraphUI(form_class, base_class):
         self.view.scene().clearSelection()
         self.undo_stack.setClean()
         self.autosave_timer.start(self.autosave_inc)
+        self.clearUndoStack()
 
     def autoSaveCheck(self, filename):
         """
@@ -681,6 +697,7 @@ class SceneGraphUI(form_class, base_class):
             self.resetGraph()
             self.readGraph(filename)
             log.info('reverting graph: %s' % filename)
+            self.clearUndoStack()
 
     def resetGraph(self):
         """
@@ -691,6 +708,7 @@ class SceneGraphUI(form_class, base_class):
         #self.action_save_graph.setEnabled(False)
         self.buildWindowTitle()
         self.updateOutput()
+        self.clearUndoStack()
 
     def resetScale(self):
         self.view.resetMatrix()      
@@ -827,6 +845,21 @@ class SceneGraphUI(form_class, base_class):
         """
         edge_type = self.edge_type_menu.currentText()
         self.toggleEdgeTypes(edge_type)
+
+    def resetDotsAction(self):
+        """
+        * Debug
+        """
+        dot_nodes = []
+        for node in self.view.scene().get_nodes():
+            if node.node_class == 'dot':
+                dot_nodes.append(node)
+
+                for conn_name in node.connections:
+                    conn_widget = node.connections.get(conn_name)
+                    conn_widget.setRotation(0)
+                    conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(QtCore.QPointF(0,0)))
+
 
     def nodesSelectedAction(self):
         """

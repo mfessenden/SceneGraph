@@ -52,6 +52,10 @@ class SceneHandler(QtCore.QObject):
     def scene(self):
         return self.parent()
 
+    @property 
+    def undo_stack(self):
+        return self.ui.undo_stack
+
     def connectGraph(self, scene):
         """
         Connect the parent scenes' Graph object.
@@ -152,8 +156,11 @@ class SceneHandler(QtCore.QObject):
         params:
             dagnodes (list) - list of dagnode objects.
         """
+        old_snapshot = self.graph.snapshot()
         self.updateConsole('adding %d nodes' % len(dagids))
         self.nodesAdded.emit(dagids)
+        new_snapshot = self.graph.snapshot()
+        self.undo_stack.push(commands.SceneNodesCommand(old_snapshot, new_snapshot, self.scene, msg='nodes added'))
 
     def dagEdgesAdded(self, edges):
         """
@@ -183,21 +190,21 @@ class SceneHandler(QtCore.QObject):
         widgets_to_remove = []
         for id in scene.scenenodes:
             widget = scene.scenenodes.get(id)
-            if issubclass(type(widget), node_widgets.NodeWidget):
+            if self.scene.is_node(widget):
                 if widget.id not in self.graph.network.nodes():
                     widgets_to_remove.append(widget)
 
-            if issubclass(type(widget), node_widgets.EdgeWidget): 
+            if self.scene.is_edge(widget):
                 if widget.ids not in self.graph.network.edges():
                     widgets_to_remove.append(widget)
 
         for node in widgets_to_remove:
-            if issubclass(type(node), node_widgets.EdgeWidget):
+            if self.scene.is_edge(node):
                 src_conn = node.source_item
                 dest_conn = node.dest_item
                 node.close()
 
-            if issubclass(type(node), node_widgets.NodeWidget):
+            if self.scene.is_node(node):
                 node.close()
 
     def updateNodes(self, dagnodes):
@@ -223,24 +230,28 @@ class SceneHandler(QtCore.QObject):
         params:
             nodes (list) - list of node/edge widgets.
         """
-        # connect to Graph        
+        # connect to Graph
+        old_snapshot = self.graph.snapshot()      
         if not nodes:
             log.error('no nodes specified.')
             return False
 
         for node in nodes:
-            if issubclass(type(node), node_widgets.NodeWidget):
-                dag = node.dagnode
-                nid = dag.id
-                if self.graph.remove_node(nid):
-                    log.debug('removing dag node: %s' % nid)
-                node.close()
+            if self.scene:
+                if self.scene.is_node(node):
+                    dag = node.dagnode
+                    nid = dag.id
+                    if self.graph.remove_node(nid):
+                        log.debug('removing dag node: %s' % nid)
+                    node.close()
 
-            if issubclass(type(node), node_widgets.EdgeWidget):
+            if self.scene.is_edge(node):
                 if node.ids in self.graph.network.edges():
                     log.debug('removing edge: %s' % str(node.ids))
                     self.graph.remove_edge(*node.ids)
                 node.close()
+        new_snapshot = self.graph.snapshot()
+        self.undo_stack.push(commands.SceneNodesCommand(old_snapshot, new_snapshot, self.scene, msg='nodes deleted'))
 
     def sceneNodesUpdatedAction(self, nodes):
         """
@@ -280,7 +291,7 @@ def dagNodesRemoved(self, dagids):
     elif ntype == 'edge':
         for id in self.scene.scenenodes:
             widget = self.scene.scenenodes.get(id)
-            if issubclass(type(widget), node_widgets.EdgeWidget):
+            if self.scene.is_edge(widget):
                 if widget.ids == dagids:
                     self.updateConsole('removing %s: "%s"' % (ntype, widget.name))
                     if widget and widget not in nodes_to_remove:

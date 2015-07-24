@@ -19,7 +19,7 @@ class DotNode(DagNode):
         self.orientation        = 'dot'
         self.force_expand       = False
 
-        self.add_attr('input', connectable=True, connection_type='input')
+        self.add_attr('input', connectable=True, connection_type='input', attr_type='node')
 
     @property
     def base_height(self):

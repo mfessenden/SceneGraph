@@ -86,11 +86,13 @@ class MetadataParser(object):
                     
                     #remove newlines
                     line = line.rstrip('\n')
-                    if not line.startswith("#") and not line.startswith(';') and line.strip() != "":
+                    rline = line.lstrip(' ')
+                    rline = rline.rstrip()
+
+                    if not rline.startswith("#") and not rline.startswith(';') and rline.strip() != "":
                         # parse sections
                         # remove leading spaces
-                        rline = line.lstrip(' ')
-                        rline = rline.rstrip()
+
 
                         # section/attribute header match
                         if re.match(regex.get("section"), rline):                            
@@ -158,7 +160,9 @@ class MetadataParser(object):
                                 #print '     property: %s (%s)' % (prop_obj.group('name'), attr_name)
                                 properties = {pname: {'type':ptype, 'value':value}}
                                 parent[attr_name].update(properties)
-
+                    else:
+                        if rline:
+                            log.debug('skipping: "%s"' % rline)
         return data
 
 
