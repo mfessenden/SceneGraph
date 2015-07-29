@@ -555,27 +555,31 @@ class SceneGraphUI(form_class, base_class):
         """
         import os
         if not filename:
-            filename, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", 
-                                                                os.path.join(os.getenv('HOME'), 'my_graph.json'), 
+            filename = os.path.join(os.getenv('HOME'), 'my_graph.json')
+            if self.graph.getScene():
+                filename = self.graph.getScene()
+
+            scenefile, filters = QtGui.QFileDialog.getSaveFileName(self, "Save graph file", 
+                                                                filename, 
                                                                 "JSON files (*.json)")
-            basename, fext = os.path.splitext(filename)
+            basename, fext = os.path.splitext(scenefile)
             if not fext:
-                filename = '%s.json' % basename
+                scenefile = '%s.json' % basename
 
         self.undo_stack.setClean()
-        filename = str(os.path.normpath(filename))
-        self.updateStatus('saving current graph "%s"' % filename)
+        filename = str(os.path.normpath(scenefile))
+        self.updateStatus('saving current graph "%s"' % scenefile)
 
-        self.graph.write(filename)
+        self.graph.write(scenefile)
         #self.action_save_graph.setEnabled(True)
         self.action_revert.setEnabled(True)
 
         # remove autosave files
-        autosave_file = '%s~' % filename
+        autosave_file = '%s~' % scenefile
         if os.path.exists(autosave_file):
             os.remove(autosave_file)
 
-        self.qtsettings.addRecentFile(filename)
+        self.qtsettings.addRecentFile(scenefile)
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
 

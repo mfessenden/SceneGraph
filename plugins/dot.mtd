@@ -2,12 +2,12 @@
 [group Node Transform]
 
     [attr width]
-        default             FLOAT     10.0
+        default             FLOAT     8.0
         required            BOOL      true
         private             BOOL      true   
 
     [attr radius]
-        default             FLOAT    10.0
+        default             FLOAT    8.0
         label               STRING   "dot radius."
         required            BOOL     true
         #private            BOOL     true
@@ -15,7 +15,7 @@
 [group Node Attributes]
 
     [attr base_height]
-        default             FLOAT     10.0
+        default             FLOAT     8.0
         private             BOOL      true
 
     [attr force_expand]

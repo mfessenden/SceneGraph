@@ -89,11 +89,14 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         for conn_name in self.dagnode.connections:
             conn_dag = self.dagnode.get_connection(conn_name)
-            conn_widget = Connection(self, conn_dag, conn_name)
+            conn_widget = DotConnection(self, conn_dag, conn_name)
 
             radius = float(conn_widget.radius/2)
             yoffset = radius
-            yoffset += radius*0.5
+            yoffset += radius*0.75
+
+            #print 'radius:  ', radius
+            #print 'yoffset: ', yoffset
 
             #conn_center = conn_widget.mapToParent(self.center)
             
@@ -431,7 +434,7 @@ class DotWidget(QtGui.QGraphicsObject):
         Returns a named connection.
 
         returns:
-            (Connection) - connection widget.
+            (DotConnection) - connection widget.
         """
         if name not in self.inputs:
             return 
@@ -442,7 +445,7 @@ class DotWidget(QtGui.QGraphicsObject):
         Returns a named connection.
 
         returns:
-            (Connection) - connection widget.
+            (DotConnection) - connection widget.
         """
         if name not in self.outputs:
             return 
@@ -453,7 +456,7 @@ class DotWidget(QtGui.QGraphicsObject):
         Returns a named connection.
 
         returns:
-            (Connection) - connection widget.
+            (DotConnection) - connection widget.
         """
         if name not in self.inputs and name not in self.outputs:
             return 
@@ -540,7 +543,7 @@ class DotWidget(QtGui.QGraphicsObject):
 
 
 
-class Connection(QtGui.QGraphicsObject):
+class DotConnection(QtGui.QGraphicsObject):
     
     Type                = QtGui.QGraphicsObject.UserType + 4
     clickedSignal       = QtCore.Signal(QtCore.QObject)
@@ -558,8 +561,8 @@ class Connection(QtGui.QGraphicsObject):
         self.dagconn        = conn_node
 
         # globals
-        self.draw_radius    = self.dagnode.radius * 0.3
-        self.pen_width      = 1.5
+        self.draw_radius    = self.dagnode.radius * 0.4
+        self.pen_width      = self.draw_radius * 0.25
         self.radius         = self.draw_radius*4
         self.buffer         = 2.0
         self.node_shape     = 'circle'        
@@ -588,10 +591,10 @@ class Connection(QtGui.QGraphicsObject):
         self.setFlag(QtGui.QGraphicsObject.ItemSendsScenePositionChanges, True)
 
     def __repr__(self):
-        return 'Connection("%s")' % self.connection_name
+        return 'DotConnection("%s")' % self.connection_name
 
     def __del__(self):
-        print '# Connection "%s" deleted.' % self.name
+        print '# DotConnection "%s" deleted.' % self.name
 
     @property 
     def connection_name(self):
@@ -656,7 +659,7 @@ class Connection(QtGui.QGraphicsObject):
         """
         Assistance for the QT windowing toolkit.
         """
-        return Connection.Type
+        return DotConnection.Type
 
     @property
     def bg_color(self):
@@ -724,7 +727,7 @@ class Connection(QtGui.QGraphicsObject):
         """
          * debug
         """
-        super(Connection, self).mousePressEvent(event)
+        super(DotConnection, self).mousePressEvent(event)
 
     def itemChange(self, change, value):
         """
@@ -737,7 +740,7 @@ class Connection(QtGui.QGraphicsObject):
         #print 'change: ', change
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged or change == QtGui.QGraphicsItem.ItemTransformChange or change == QtGui.QGraphicsItem.ItemTransformChange:
             self._rotated = False
-        return super(Connection, self).itemChange(change, value)
+        return super(DotConnection, self).itemChange(change, value)
 
     @property
     def parent_center(self):

@@ -15,7 +15,7 @@ class DotNode(DagNode):
     def __init__(self, name=None, **kwargs):
         DagNode.__init__(self, name, **kwargs)
 
-        self.radius             = 10.0
+        self.radius             = 8.0
         self.orientation        = 'dot'
         self.force_expand       = False
 

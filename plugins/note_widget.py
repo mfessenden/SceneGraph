@@ -26,14 +26,15 @@ class NoteWidget(QtGui.QGraphicsObject):
         self.dagnode         = dagnode
         self.dagnode.connect_widget(self)
         
-        # attributes
+        # attributes        
+        self.corner_size     = 20
         self.bufferX         = 3
         self.bufferY         = 3
         self.pen_width       = 1.5                    # pen width for NoteBackground  
 
         # fonts
         self._font           = 'SansSerif'
-        self._font_size      = 6
+        self._font_size      = self.dagnode.font_size
         self._font_bold      = False
         self._font_italic    = False
 
@@ -46,20 +47,24 @@ class NoteWidget(QtGui.QGraphicsObject):
         self._debug          = False
         self.is_selected     = False                  # indicates that the node is selected
         self.is_hover        = False                  # indicates that the node is under the cursor
+        self.handle_selected = False                  # indicates that the node handle is selected
         self._render_effects = True                   # enable fx
+
+        # resizing
+        self.top_left        = ()
+        self.btm_right       = ()
 
         # label
         self._evaluate_tag   = False                  # indicates the node is set to "evaluate" (a la Houdini)
-        
-        #self.background      = NoteBackground(self)
-        self.label           = NodeText(self)  
+        self.label           = NodeText(self)
+        self.resize_handle   = QtGui.QGraphicsRectItem(self)
 
         # undo/redo snapshots
         self._current_pos    = QtCore.QPointF(0,0)
         self._data_snapshot  = None
         self._pos_snapshot   = None
 
-        self.setHandlesChildEvents(False)
+        self.setHandlesChildEvents(True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, True)
@@ -133,6 +138,59 @@ class NoteWidget(QtGui.QGraphicsObject):
         return False
 
     #- Events ----
+    def hoverMoveEvent(self,event):
+        QtGui.QGraphicsItem.hoverMoveEvent(self, event)
+        scene_pos = event.scenePos()
+        if self.handle_selected:
+            if not self.handleRect().contains(self.mapFromScene(scene_pos)):
+                self.handle_selected = False
+
+    def hoverLeaveEvent(self,event):
+        self.handle_selected = False
+        QtGui.QGraphicsItem.hoverLeaveEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+        """
+        Scale the node as the resize handle is dragged.
+        """
+        if self.handle_selected:
+            scene_pos = event.scenePos()
+
+            # if there's no stashed value, set it
+            if not self.top_left:
+                top_left = self.mapToScene(self.boundingRect().topLeft())
+                self.top_left = (top_left.x(), top_left.y())
+
+            self.btm_right = (scene_pos.x(), scene_pos.y())
+
+            # create a temporary rectangle with the current selection
+            rect = QtCore.QRectF(QtCore.QPointF(*self.top_left), QtCore.QPointF(*self.btm_right))            
+            self.dagnode.width = rect.width()
+            self.dagnode.height = rect.height()
+            #dag_pos = self.mapFromScene(QtCore.QPointF(*self.top_left))
+            dag_pos = self.mapFromScene(rect.center())
+
+            #posx = dag_pos.x() + self.dagnode.width/2
+            #posx = dag_pos.x() + self.dagnode.width/2
+            self.dagnode.pos = [dag_pos.x(), dag_pos.y()]            
+        QtGui.QGraphicsItem.mouseMoveEvent(self, event)
+
+    def mousePressEvent(self, event):
+        """
+        Help manage mouse movement undo/redos.
+        """
+        self.handle_selected = False
+        QtGui.QGraphicsItem.mousePressEvent(self, event)
+        scene_pos = event.scenePos()
+        #print 'scene pos: ', scene_pos
+        if self.handleRect().contains(self.mapFromScene(scene_pos)):
+            self.handle_selected = True
+
+    def mouseReleaseEvent(self, event):
+        self.top_left = []
+        self.handle_selected = False
+        QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
+
     def dagnodeUpdated(self, *args, **kwargs):
         """
         Callback from the dag node.
@@ -152,6 +210,9 @@ class NoteWidget(QtGui.QGraphicsObject):
             #self.updateConnections()
         return super(NoteWidget, self).itemChange(change, value)
 
+    def handleClickedAction(self):
+        print 'handle clicked'
+
     def boundingRect(self):
         """
         Returns a bounding rectangle for the node.
@@ -159,6 +220,11 @@ class NoteWidget(QtGui.QGraphicsObject):
         returns:
             (QRectF) - node bounding rect.
         """
+        if self.top_left and self.btm_right:
+            top_left = self.mapFromScene(*self.top_left)
+            btm_right = self.mapFromScene(*self.btm_right)
+            return QtCore.QRectF(top_left, btm_right)
+
         w = self.width
         h = self.height
         bx = self.bufferX
@@ -256,7 +322,6 @@ class NoteWidget(QtGui.QGraphicsObject):
             (QPolygonF) - note-shaped polygon
         """
         rect = self.boundingRect()
-        corner_w = rect.width() - (rect.width() * 0.8)
 
         p1 = rect.topLeft()
         p2 = rect.topRight()
@@ -264,8 +329,8 @@ class NoteWidget(QtGui.QGraphicsObject):
         p4 = rect.bottomRight()
         p5 = rect.bottomLeft()
 
-        p2.setX(p2.x() - corner_w)
-        p3.setY(p2.y() + corner_w)
+        p2.setX(p2.x() - self.corner_size)
+        p3.setY(p2.y() + self.corner_size)
         return QtGui.QPolygonF([p1, p2, p3, p4, p5, p1])
 
     def getCornerShape(self):
@@ -276,16 +341,27 @@ class NoteWidget(QtGui.QGraphicsObject):
             (QPolygonF) - corner polygon
         """
         rect = self.boundingRect()
-        corner_w = rect.width() - (rect.width() * 0.8)
 
         p1 = rect.topRight() # need as p1
         p2 = rect.topRight() # need as p2
 
-        p1.setX(p1.x() - corner_w)
-        p2.setY(p1.y() + corner_w)
+        p1.setX(p1.x() - self.corner_size)
+        p2.setY(p1.y() + self.corner_size)
 
         p3 = QtCore.QPointF(p1.x(), p2.y())
         return QtGui.QPolygonF([p1, p2, p3, p1])
+
+    def handleRect(self):
+        """
+        * testing
+        """
+        rect = self.boundingRect()
+        size = 8
+        buffer = 3
+        p1 = rect.bottomRight() # need as p1
+        p2 = QtCore.QPointF(p1.x() - (size+buffer), p1.y())
+        topLeft = QtCore.QPointF(p2.x(), p2.y() - (size+buffer))
+        return QtCore.QRectF(topLeft, QtCore.QSize(size, size))
 
     def paint(self, painter, option, widget):
         """
@@ -300,12 +376,22 @@ class NoteWidget(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_MouseOver:
             self.is_hover = True
 
+        # draw resize handle
+        handle_color = QtGui.QColor(*[250, 250, 250, 25])
+        if self.handle_selected:
+            handle_color = QtGui.QColor(*[250, 250, 250, 125])
+        self.resize_handle.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+        self.resize_handle.setBrush(QtGui.QBrush(handle_color))
+
+        self.resize_handle.setRect(self.handleRect())
         self.label.setPos(self.label_pos)
         self.label.label.setTextWidth(self.width * 0.8)
 
         # setup colors
         bg_color1 = self.bg_color
         bg_color2 = bg_color1.darker(150)
+        bg_color3 = self.bg_color.lighter(50)
+        bg_color3.setAlpha(125)
 
         # background gradient
         gradient = QtGui.QLinearGradient(0, -self.height/2, 0, self.height/2)
@@ -319,8 +405,12 @@ class NoteWidget(QtGui.QGraphicsObject):
 
         cpen = QtGui.QPen(QtCore.Qt.NoPen)
 
+        # background brush
         qbrush = QtGui.QBrush(gradient)
+        # corner brush
         cbrush = QtGui.QBrush(bg_color2.darker(80))
+        # handle brush
+        hbrush = QtGui.QBrush(bg_color3)
 
         if self._debug:
             qpen = QtGui.QPen(QtGui.QColor(*[220, 220, 220]))
@@ -335,6 +425,22 @@ class NoteWidget(QtGui.QGraphicsObject):
             cbrush = QtGui.QBrush(QtCore.Qt.NoBrush)
             painter.drawRect(self.boundingRect())
 
+            center_color = QtGui.QColor(*[164, 224, 255, 75])
+            painter.setPen(QtGui.QPen(center_color, 0.5, QtCore.Qt.DashLine))
+
+            # center point 
+            h1 = QtCore.QPoint(-self.width/2, 0)
+            h2 = QtCore.QPoint(self.width/2, 0)
+
+            v1 = QtCore.QPoint(0, -self.height/2)
+            v2 = QtCore.QPoint(0, self.height/2)
+
+            hline = QtCore.QLine(h1, h2)
+            vline = QtCore.QLine(v1, v2)
+
+            painter.drawLine(hline)
+            painter.drawLine(vline)
+
         # shapes
         note_shape = self.getNoteShape()
         corner_shape = self.getCornerShape()
@@ -347,8 +453,11 @@ class NoteWidget(QtGui.QGraphicsObject):
         painter.setBrush(cbrush)
         painter.setPen(cpen)
         # draw corner
-        painter.drawPolygon(corner_shape)            
+        painter.drawPolygon(corner_shape)
 
+        # draw handle
+        painter.setBrush(hbrush)
+        
     def setDebug(self, val):
         """
         Set the debug value of all child nodes.
@@ -478,7 +587,7 @@ class NodeText(QtGui.QGraphicsObject):
 
         #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         qfont = QtGui.QFont(self.node._font)
-        qfont.setPointSize(self.node._font_size)
+        qfont.setPointSize(self.dagnode.font_size)
         qfont.setBold(self.node._font_bold)
         qfont.setItalic(label_italic)
         self.label.setFont(qfont)
@@ -626,3 +735,127 @@ class NoteBackground(QtGui.QGraphicsObject):
         """
         if val != self._debug:
             self._debug = val
+
+
+class ResizeHandle(QtGui.QGraphicsObject): 
+
+    clicked  = QtCore.Signal()
+
+    def __init__(self, parent=None):
+        super(ResizeHandle, self).__init__(parent)
+
+        self.dagnode         = parent.dagnode
+        self.width           = 5.0
+
+        self._debug          = False
+        self.is_selected     = False                  # indicates that the node is selected
+        self.is_hover        = False                  # indicates that the node is under the cursor
+        self._render_effects = True                   # enable fx
+        
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsFocusable, True)
+        self.setFlag(QtGui.QGraphicsObject.ItemSendsGeometryChanges, True)
+        
+        self.setAcceptedMouseButtons(True)
+        self.setAcceptsHoverEvents(True)
+
+    @property
+    def node(self):
+        return self.parentItem()
+
+    @property
+    def color(self):
+        """
+        Return the 'node color' (background color)
+        """
+        return self.dagnode.color
+
+    @color.setter
+    def color(self, val):
+        """
+        Return the 'node color' (background color)
+        """
+        self.dagnode.color = val
+
+    @property
+    def is_enabled(self):
+        return self.dagnode.enabled
+
+    @property
+    def bg_color(self):
+        """
+        Returns the widget background color.
+
+        returns:
+            (QColor) - widget background color.
+        """
+        if not self.is_enabled:
+            return QtGui.QColor(*[125, 125, 125])
+
+        if self.is_selected:
+            return QtGui.QColor(*[255, 183, 44, 125])
+
+        if self.is_hover:
+            base_color = QtGui.QColor(*self.color)
+            return base_color.lighter(125)
+        return QtGui.QColor(*self.color)
+
+    def boundingRect(self):
+        try:
+            return self.node.boundingRect()
+        except:
+            return QtCore.QRectF(0, 0, 0, 0) 
+
+    def mousePressEvent(self, event):
+        """
+        Help manage mouse movement undo/redos.
+        """
+        self.clicked.emit()
+        QtGui.QGraphicsItem.mousePressEvent(self, event)
+
+    def mouseReleaseEvent(self, event):
+        """
+        Help manage mouse movement undo/redos.
+        """
+        QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
+
+    def getShape(self):
+        """
+        Returns a shape based on the parent's boundingRect
+
+        returns:
+            (QPolygonF) - qquare polygon
+        """
+        rect = self.boundingRect()
+
+        p1 = rect.bottomRight()
+        p2 = QtCore.QPointF(p1.x() - self.width, p1.y())
+        p3 = QtCore.QPointF(p2.x(), p2.y() - self.width)
+        p4 = QtCore.QPointF(p3.x() + self.width, p3.y())
+        return QtGui.QPolygonF([p1, p2, p3, p4, p1])
+
+    def paint(self, painter, option, widget):
+        """
+        Paint the node background.
+        """
+        self.is_selected = False
+        self.is_hover = False
+
+        if option.state & QtGui.QStyle.State_Selected:
+            self.is_selected = True
+
+        if option.state & QtGui.QStyle.State_MouseOver:
+            self.is_hover = True
+
+        # setup colors
+        bg_color = self.bg_color.darker(100)
+        qpen = QtGui.QPen(QtCore.Qt.NoPen)
+        qbrush = QtGui.QBrush(bg_color)
+
+        painter.setPen(qpen)
+        painter.setBrush(qbrush)
+
+        shape = self.getShape()
+        shape.translate(-2, -2)
+        painter.drawPolygon(shape)

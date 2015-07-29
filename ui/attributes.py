@@ -743,7 +743,7 @@ class QIntEditor(QtGui.QWidget):
         """
         Get the current editor value.
         """
-        return self.val1_edit.value
+        return int(self.val1_edit.value)
 
     def initializeEditor(self):
         """
@@ -766,6 +766,7 @@ class QIntEditor(QtGui.QWidget):
                 # set the editor value
                 self.val1_edit.blockSignals(True)
 
+                editor_value = int(editor_value)
                 # set the current node values.
                 self.val1_edit.setText(str(editor_value))
                 self.val1_edit.blockSignals(False)
@@ -1573,6 +1574,126 @@ class StringEditor(QtGui.QWidget):
             self.val1_edit.setProperty("class", "Connected")
 
 
+class DocumentEditor(QtGui.QWidget):
+
+    attr_type       = 'doc'
+    valueChanged    = QtCore.Signal(object)
+
+    def __init__(self, parent=None, **kwargs):
+        super(DocumentEditor, self).__init__(parent)
+
+        self._ui            = kwargs.get('ui', None)
+        self.icons          = kwargs.get('icons')
+        self._attribute     = kwargs.get('name', 'array')
+        self._required      = kwargs.get('required', True)
+        self._clean_value   = kwargs.get('clean', True)
+        self._connection    = None
+
+        self._default_value = ""
+        self._current_value = None
+
+        self.mainLayout = QtGui.QHBoxLayout(self)
+        self.mainLayout.setSpacing(3)
+        self.mainLayout.setContentsMargins(1, 1, 1, 1)
+        self.mainLayout.setObjectName("mainLayout")
+
+        # value 1 editor
+        self.val1_edit = QtGui.QPlainTextEdit(self)
+
+        self.val1_edit.setObjectName("val1_edit")        
+        self.mainLayout.addWidget(self.val1_edit)
+
+        self.val1_edit.document().contentsChanged.connect(self.valueUpdatedAction)
+        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+
+    @property
+    def attribute(self):
+        return self._attribute
+    
+    @property
+    def nodes(self):
+        if self._ui is not None:
+            if hasattr(self._ui, '_nodes'):
+                return self._ui._nodes
+        return []
+    
+    @property
+    def values(self):
+        """
+        Returns a list of the current node values.
+
+        returns:
+            (list) - list of node values for the editor's attribute.
+        """
+        if self._ui is not None:
+            if hasattr(self._ui, 'nodeValues'):
+                return self._ui.nodeValues(self.attribute)
+        return []
+    
+    @property
+    def default_value(self):
+        return self._default_value
+
+    @default_value.setter
+    def default_value(self, val):
+        if val != self._default_value:
+            self._default_value = val
+            return True
+        return False
+
+    @property
+    def value(self):
+        """
+        Get the current editor value.
+        """
+        return str(self.val1_edit.toPlainText())
+
+    def initializeEditor(self):
+        """
+        Set the widgets nodes values.
+        """
+        if not self.nodes or not self.attribute:
+            return
+
+        editor_value = self.default_value
+
+        node_values = self.values
+        if node_values:
+            if len(node_values) > 1:
+                pass
+
+            elif len(node_values) == 1:
+                if node_values[0]:
+                    editor_value = node_values[0]
+
+                # set the editor value
+                self.val1_edit.blockSignals(True)
+
+                # set the current node values.
+                self.val1_edit.setPlainText(str(editor_value))
+                self.val1_edit.blockSignals(False)                
+
+    def valueUpdatedAction(self):
+        """
+        Update the current nodes with the revised value.
+        """
+        
+        if self.value != self._current_value:
+            #print '# DEBUG: updating "%s" value: "%s"' % (self._attribute, self.value)
+            self._current_value = self.value
+            self.valueChanged.emit(self)
+
+    def setConnected(self, conn):
+        """
+        Indicates the input is connected.
+        """
+        if conn != self._connection:
+            self._connection = conn
+            self.val1_edit.setPlainText(conn)
+            self.val1_edit.setEnabled(False)
+            self.val1_edit.setProperty("class", "Connected")
+
+
 class FileEditor(QtGui.QWidget):
 
     attr_type       = 'file'
@@ -2104,7 +2225,7 @@ WIDGET_MAPPER = dict(
     # TESTING
     node        = StringEditor,
     multi       = StringEditor,
-    doc         = StringEditor,
+    doc         = DocumentEditor,
     )
 
 
@@ -2123,6 +2244,7 @@ ATTRIBUTE_DEFAULTS = dict(
     int8        = 0,
     color       = [172, 172, 172, 255],
     short2      = [0.0, 0.0],
+    doc         = "",
     )
 
 

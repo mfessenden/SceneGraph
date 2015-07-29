@@ -293,6 +293,8 @@ class GraphicsView(QtGui.QGraphicsView):
         Fit the viewport if the 'A' key is pressed
         """
         selected_nodes = self.scene().selectedNodes()
+        hover_nodes = self.scene()._hover_nodes
+
         if event.key() == QtCore.Qt.Key_A:
             # get the bounding rect of the graphics scene
             boundsRect = self.scene().itemsBoundingRect()            
@@ -337,8 +339,25 @@ class GraphicsView(QtGui.QGraphicsView):
                 toggled = 'bezier'
             self._parent.toggleEdgeTypes(edge_type=toggled)
 
+        elif event.key() == QtCore.Qt.Key_Alt:
+            if hover_nodes:
+                for node in hover_nodes:
+                    if hasattr(node, 'alt_modifier'):
+                        node.alt_modifier = True
+
         self.scene().update()
         return QtGui.QGraphicsView.keyPressEvent(self, event)
+
+    def keyReleaseEvent(self, event):
+        """
+        Fit the viewport if the 'A' key is pressed
+        """
+        hover_nodes = self.scene()._hover_nodes
+        if hover_nodes:
+            for node in hover_nodes:
+                if hasattr(node, 'alt_modifier'):
+                    node.alt_modifier = False
+        return QtGui.QGraphicsView.keyReleaseEvent(self, event)
 
     def get_scroll_state(self):
         """
@@ -396,19 +415,22 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def __init__(self, parent=None, graph=None, ui=None, **kwargs):
         QtGui.QGraphicsScene.__init__(self, parent)
 
-        self.ui          = ui
-        self.edge_type   = ui.edge_type
+        self.ui             = ui
+        self.edge_type      = ui.edge_type
 
         # graph
-        self.graph       = graph
-        self.network     = graph.network
-        self.plug_mgr    = graph.plug_mgr
+        self.graph          = graph
+        self.network        = graph.network
+        self.plug_mgr       = graph.plug_mgr
 
         # temp line for drawing edges
-        self.line        = None        
+        self.line           = None        
 
-        self.handler     = handlers.SceneHandler(self)
-        self.scenenodes  = dict()
+        self.handler        = handlers.SceneHandler(self)
+        self.scenenodes     = dict()
+
+        # temp attributes
+        self._hover_nodes   = []
 
     def initialize(self):
         """
@@ -589,6 +611,20 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if self.is_edge(node):
                 self.graph.remove_edge(*node.ids)
 
+    def is_top_level(self, widget):
+        """
+        Returns true if the given widget is a dag node type or edge.
+
+        params:
+            widget (obj) - QGraphicsObject widget.
+
+        returns:
+            (bool) - widget is a Dag node type. 
+        """
+        if self.is_node(widget) or self.is_edge(widget):
+            return True
+        return False
+
     def is_node(self, widget):
         """
         Returns true if the given widget is a dag node type.
@@ -600,7 +636,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             (bool) - widget is a Dag node type. 
         """
         if hasattr(widget, 'node_class'):
-            if widget.node_class in ['dagnode', 'dot', 'note']:
+            if widget.node_class in ['dagnode', 'dot', 'note', 'container']:
                 return True
         return False
 
@@ -743,7 +779,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         successors = self.graph.network.successors(dagnode.id)
         reconnect = len(predecessors) == 1 and len(successors) == 1
 
-        print '# reconnect: ', reconnect
+        #print '# reconnect: ', reconnect
 
         # get the connected edges
         connected_edges = []
@@ -868,26 +904,26 @@ class GraphicsScene(QtGui.QGraphicsScene):
                             self.addItem(self.line)
                             self.update(self.itemsBoundingRect())
 
-                            # disconnect the edge if this is an input
-                            if item.isInputConnection():
-                                # query the edge(s) attached.
-                                edges = item.connections.values()                    
-                                if edges:
-                                    if len(edges) == 1:
-                                        conn_edge = edges[0]
+                        # disconnect the edge if this is an input
+                        if item.isInputConnection():
+                            # query the edge(s) attached.
+                            edges = item.connections.values()                    
+                            if edges:
+                                if len(edges) == 1:
+                                    conn_edge = edges[0]
 
-                                        # remove the edge from the connections
-                                        if conn_edge.disconnect_terminal(item):
-                                            log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
-                                            # todo: call manage?
-                                            self.graph.remove_edge(*conn_edge.ids)
+                                    # remove the edge from the connections
+                                    if conn_edge.disconnect_terminal(item):
+                                        log.info('disconnecting edge: "%s"' % self.graph.edge_nice_name(*conn_edge.ids))
+                                        # todo: call manage?
+                                        self.graph.remove_edge(*conn_edge.ids)
 
-                                            edge_line = conn_edge.getLine()
-                                            p1 = edge_line.p1()
+                                        edge_line = conn_edge.getLine()
+                                        p1 = edge_line.p1()
 
-                                            self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
-                                            self.addItem(self.line)
-                                            self.update(self.itemsBoundingRect())
+                                        self.line = QtGui.QGraphicsLineItem(QtCore.QLineF(p1, event.scenePos()))
+                                        self.addItem(self.line)
+                                        self.update(self.itemsBoundingRect())
 
         if event.button() == QtCore.Qt.RightButton:
             pass
@@ -899,9 +935,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Update the line as the user draws.
         """
-        item = self.itemAt(event.scenePos())
+        modifiers = QtGui.QApplication.keyboardModifiers()
+        item = self.nodeAt(event.scenePos())
+        self._hover_nodes = []
+
         if item:
-            pass
+            if self.is_node(item) or self.is_edge(item):
+                self._hover_nodes.append(item)
 
         # if we're drawing a line...
         if self.line:

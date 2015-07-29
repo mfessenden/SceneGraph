@@ -555,6 +555,23 @@ class NodeWidget(QtGui.QGraphicsObject):
             painter.setPen(QtGui.QPen(yellow_color, 0.5, QtCore.Qt.SolidLine))   
             painter.drawEllipse(self.input_pos, 4, 4)
 
+            center_color = QtGui.QColor(*[164, 224, 255, 75])
+            painter.setPen(QtGui.QPen(center_color, 0.5, QtCore.Qt.DashLine))
+
+            # center point 
+            h1 = QtCore.QPoint(-self.width/2, 0)
+            h2 = QtCore.QPoint(self.width/2, 0)
+
+            v1 = QtCore.QPoint(0, -self.height/2)
+            v2 = QtCore.QPoint(0, self.height/2)
+
+            hline = QtCore.QLine(h1, h2)
+            vline = QtCore.QLine(v1, v2)
+
+            painter.drawLine(hline)
+            painter.drawLine(vline)
+
+
     def setDebug(self, value):
         """
         Set the debug value of all child nodes.
@@ -616,6 +633,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.is_enabled      = True                   # node is enabled (will eval)  
         self.is_selected     = False                  # indicates that the node is selected
         self.is_hover        = False                  # indicates that the node is under the cursor
+        self.alt_modifier    = False                  # indicates that the alt key is pressed  
         self._render_effects = True                   # enable fx
 
         self.weight          = weight
@@ -813,12 +831,28 @@ class EdgeWidget(QtGui.QGraphicsObject):
             return QtGui.QColor(*[200, 200, 200, 125])
 
         if self.is_selected:
-            return QtGui.QColor(*self._h_color)
+            return QtGui.QColor(*self._h_color)           
 
         if self.is_hover:
+            if self.alt_modifier:
+                return QtGui.QColor(*[164, 224, 255])
             return QtGui.QColor(*[109, 205, 255])
 
         return QtGui.QColor(*self._l_color)
+
+    #- Events -----
+    def hoverEnterEvent(self, event):
+        QtGui.QGraphicsObject.hoverEnterEvent(self, event)
+
+    def hoverLeaveEvent(self, event):
+        self.alt_modifier = False
+        QtGui.QGraphicsObject.hoverLeaveEvent(self, event)
+
+    def hoverMoveEvent(self, event):
+        QtGui.QGraphicsObject.hoverMoveEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+        QtGui.QGraphicsObject.mouseMoveEvent(self, event)
 
     def boundingRect(self):
         """
@@ -929,7 +963,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
             self.is_selected = True 
 
         if option.state & QtGui.QStyle.State_MouseOver:                 
-            self.is_hover = True 
+            self.is_hover = True
 
         self.setToolTip(self.name)
         self.show_conn = False
@@ -977,8 +1011,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
                 arrowhead.append(point)
 
             if line:
-                if draw_arrowhead:
-                    painter.drawPolygon(arrowhead)    
+                if not self.alt_modifier:
+                    if draw_arrowhead:
+                        painter.drawPolygon(arrowhead)
+                else:
+                    arrow_rect = arrowhead.boundingRect()
+                    painter.drawEllipse(arrow_rect.center(), 3,3)
 
                 painter.setBrush(QtCore.Qt.NoBrush)
 
