@@ -729,7 +729,7 @@ class QIntEditor(QtGui.QWidget):
     
     @property
     def default_value(self):
-        return self._default_value
+        return int(self._default_value)
 
     @default_value.setter
     def default_value(self, val):
@@ -767,6 +767,7 @@ class QIntEditor(QtGui.QWidget):
                 self.val1_edit.blockSignals(True)
 
                 editor_value = int(editor_value)
+
                 # set the current node values.
                 self.val1_edit.setText(str(editor_value))
                 self.val1_edit.blockSignals(False)
@@ -1062,7 +1063,7 @@ class QFloat3Editor(QtGui.QWidget):
 
 class QInt2Editor(QtGui.QWidget):
 
-    attr_type       = 'int'
+    attr_type       = 'int2'
     valueChanged    = QtCore.Signal(object)
 
     def __init__(self, parent=None, **kwargs):
@@ -1599,12 +1600,16 @@ class DocumentEditor(QtGui.QWidget):
 
         # value 1 editor
         self.val1_edit = QtGui.QPlainTextEdit(self)
+        self.val1_edit.setProperty("class", "AttributeEditor")
 
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
         self.val1_edit.document().contentsChanged.connect(self.valueUpdatedAction)
         self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+
+    def sizeHint(self):
+        return QtCore.QSize(200, 85)
 
     @property
     def attribute(self):

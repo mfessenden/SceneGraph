@@ -30,7 +30,7 @@ class NoteWidget(QtGui.QGraphicsObject):
         self.corner_size     = 20
         self.bufferX         = 3
         self.bufferY         = 3
-        self.pen_width       = 1.5                    # pen width for NoteBackground  
+        self.pen_width       = 1.5                            # pen width for NoteBackground  
 
         # fonts
         self._font           = 'SansSerif'
@@ -39,25 +39,26 @@ class NoteWidget(QtGui.QGraphicsObject):
         self._font_italic    = False
 
         # widget colors
-        self._l_color        = [5, 5, 5, 255]         # label color
-        self._p_color        = [10, 10, 10, 255]      # pen color (outer rim)
-        self._s_color        = [0, 0, 0, 60]          # shadow color
+        self._l_color        = [5, 5, 5, 255]                 # label color
+        self._p_color        = [10, 10, 10, 255]              # pen color (outer rim)
+        self._s_color        = [0, 0, 0, 60]                  # shadow color
 
         # widget globals
         self._debug          = False
-        self.is_selected     = False                  # indicates that the node is selected
-        self.is_hover        = False                  # indicates that the node is under the cursor
-        self.handle_selected = False                  # indicates that the node handle is selected
-        self._render_effects = True                   # enable fx
+        self.is_selected     = False                          # indicates that the node is selected
+        self.is_hover        = False                          # indicates that the node is under the cursor
+        self.handle_selected = False                          # indicates that the node handle is selected
+        self._render_effects = True                           # enable fx
 
-        # resizing
+        # temp resizing attributes
         self.top_left        = ()
         self.btm_right       = ()
 
         # label
-        self._evaluate_tag   = False                  # indicates the node is set to "evaluate" (a la Houdini)
+        self._evaluate_tag   = False                          # indicates the node is set to "evaluate" (a la Houdini)
         self.label           = NodeText(self)
         self.resize_handle   = QtGui.QGraphicsRectItem(self)
+        self.center_label    = QtGui.QGraphicsTextItem(self)  # debug  
 
         # undo/redo snapshots
         self._current_pos    = QtCore.QPointF(0,0)
@@ -153,43 +154,46 @@ class NoteWidget(QtGui.QGraphicsObject):
         """
         Scale the node as the resize handle is dragged.
         """
+        QtGui.QGraphicsItem.mouseMoveEvent(self, event)
+
         if self.handle_selected:
             scene_pos = event.scenePos()
 
             # if there's no stashed value, set it
             if not self.top_left:
+                # map scene coordinates to local
                 top_left = self.mapToScene(self.boundingRect().topLeft())
                 self.top_left = (top_left.x(), top_left.y())
 
             self.btm_right = (scene_pos.x(), scene_pos.y())
-
             # create a temporary rectangle with the current selection
-            rect = QtCore.QRectF(QtCore.QPointF(*self.top_left), QtCore.QPointF(*self.btm_right))            
+            rect = QtCore.QRectF(QtCore.QPointF(*self.top_left), QtCore.QPointF(*self.btm_right))    
             self.dagnode.width = rect.width()
             self.dagnode.height = rect.height()
-            #dag_pos = self.mapFromScene(QtCore.QPointF(*self.top_left))
-            dag_pos = self.mapFromScene(rect.center())
-
-            #posx = dag_pos.x() + self.dagnode.width/2
-            #posx = dag_pos.x() + self.dagnode.width/2
-            self.dagnode.pos = [dag_pos.x(), dag_pos.y()]            
-        QtGui.QGraphicsItem.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event):
         """
-        Help manage mouse movement undo/redos.
+        Set the handle selection state if the handle widget is clicked.
         """
         self.handle_selected = False
         QtGui.QGraphicsItem.mousePressEvent(self, event)
         scene_pos = event.scenePos()
-        #print 'scene pos: ', scene_pos
         if self.handleRect().contains(self.mapFromScene(scene_pos)):
             self.handle_selected = True
 
     def mouseReleaseEvent(self, event):
+        """
+        Reset resize values when the mouse is released.
+        """
         self.top_left = []
-        self.handle_selected = False
+        self.btm_right = []
+        #cpos = self.mapToScene(self.boundingRect().center())
+
+        if self.handle_selected:
+            self.handle_selected = False
+            #self.setPos(cpos.x(), cpos.y())            
         QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
+        
 
     def dagnodeUpdated(self, *args, **kwargs):
         """
@@ -209,9 +213,6 @@ class NoteWidget(QtGui.QGraphicsObject):
             self.nodeChanged.emit(self)
             #self.updateConnections()
         return super(NoteWidget, self).itemChange(change, value)
-
-    def handleClickedAction(self):
-        print 'handle clicked'
 
     def boundingRect(self):
         """
@@ -356,8 +357,8 @@ class NoteWidget(QtGui.QGraphicsObject):
         * testing
         """
         rect = self.boundingRect()
-        size = 8
-        buffer = 3
+        size = 6
+        buffer = 2
         p1 = rect.bottomRight() # need as p1
         p2 = QtCore.QPointF(p1.x() - (size+buffer), p1.y())
         topLeft = QtCore.QPointF(p2.x(), p2.y() - (size+buffer))
@@ -377,13 +378,15 @@ class NoteWidget(QtGui.QGraphicsObject):
             self.is_hover = True
 
         # draw resize handle
-        handle_color = QtGui.QColor(*[250, 250, 250, 25])
+        handle_color = self.bg_color
+        handle_color.setAlpha(75)
         if self.handle_selected:
-            handle_color = QtGui.QColor(*[250, 250, 250, 125])
-        self.resize_handle.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            handle_color = handle_color.lighter(250)
+        hpen_color = handle_color.darker(200)
+        hpen_color.setAlpha(125)
+        self.resize_handle.setPen(QtGui.QPen(hpen_color))
         self.resize_handle.setBrush(QtGui.QBrush(handle_color))
-
-        self.resize_handle.setRect(self.handleRect())
+        
         self.label.setPos(self.label_pos)
         self.label.label.setTextWidth(self.width * 0.8)
 
@@ -455,9 +458,23 @@ class NoteWidget(QtGui.QGraphicsObject):
         # draw corner
         painter.drawPolygon(corner_shape)
 
-        # draw handle
-        painter.setBrush(hbrush)
-        
+        self.center_label.hide()
+        cpos = self.mapToScene(self.boundingRect().center())
+
+        # if the handle is selected, update the position
+        if self.handle_selected:
+            painter.setPen(QtGui.QPen(QtCore.Qt.NoPen))
+            painter.setBrush(QtGui.QBrush(QtGui.QColor(*[200, 200, 200, 255])))
+            clabel = '%.2f, %.2f' % (cpos.x(), cpos.y())
+            self.center_label.setPlainText(clabel)
+            
+            # show the center coordinates if we're in debug mode
+            if self._debug:
+                self.center_label.show()
+                self.center_label.setPos(0,0)
+            self.setPos(cpos.x(),cpos.y())            
+        self.resize_handle.setRect(self.handleRect())
+            
     def setDebug(self, val):
         """
         Set the debug value of all child nodes.

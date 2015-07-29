@@ -396,6 +396,12 @@ QPlainTextEdit.Console {
     background-color: #222222;
 }
 
+QPlainTextEdit.AttributeEditor {
+    border: 1px solid #414141;
+    background-color: #3d3d3d;
+    border-radius: 3px;
+}
+
 QGraphicsView {
     background-color: #222222;
     

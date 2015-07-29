@@ -97,7 +97,6 @@ class DotWidget(QtGui.QGraphicsObject):
 
             #print 'radius:  ', radius
             #print 'yoffset: ', yoffset
-
             #conn_center = conn_widget.mapToParent(self.center)
             
             if conn_widget.is_input:

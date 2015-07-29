@@ -1416,11 +1416,21 @@ class SceneGraphUI(form_class, base_class):
             return True
         return False
 
-    def saveDialog(self):
+    def saveDialog(self, force=True):
         """
         Simple Qt file dialog.
+
+        params:
+            force (bool) - force file extension.
+
+        returns:
+            (str) - save file name.
         """
         filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
+        bn, fext = os.path.splitext(filename)
+        if not fext and force:
+            filename = '%s.json' % bn
+            
         if not filename:
             return
         return filename

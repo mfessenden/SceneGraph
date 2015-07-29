@@ -144,6 +144,12 @@ class DagNode(Observable):
                 Observable.notify(self)
         else:
             super(DagNode, self).__setattr__(name, value)
+
+            # set the position of any connected widgets
+            if name == 'pos':
+                if hasattr(self, '_widget'):
+                    if self._widget is not None:
+                        self._widget.setPos(*value)
             # callbacks
             Observable.set_changed(self)
             Observable.notify(self)        

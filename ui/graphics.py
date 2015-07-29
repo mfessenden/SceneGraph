@@ -315,6 +315,10 @@ class GraphicsView(QtGui.QGraphicsView):
 
         elif event.key() == QtCore.Qt.Key_F:
             boundsRect = self.scene().selectionArea().boundingRect()
+
+            if not boundsRect:
+                if self.scene().selectedNodes():
+                    boundsRect = self.scene().scelectedNodesRect()
             self.fitInView(boundsRect, QtCore.Qt.KeepAspectRatio)
 
         # delete nodes & edges...
@@ -448,6 +452,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
     def debug(self, value):
         self.ui.debug = value
 
+    @property
+    def view(self):
+        return self.views()[0]
+    
     @property 
     def undo_stack(self):
         return self.ui.undo_stack
@@ -509,9 +517,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
             #print 'dag id: ', dag_id
             if dag_id in self.graph.dagnodes:
                 dag = self.graph.dagnodes.get(dag_id)
-                if isinstance(dag, core.DagNode):              
-                    if dag_id not in self.scenenodes:
-                        
+
+                if issubclass(type(dag), core.DagNode):
+                    if dag_id not in self.scenenodes:                        
                         widget = self.plug_mgr.get_widget(dag)
 
                         if not widget:
@@ -528,6 +536,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
                         widget.nodeChanged.connect(self.nodeChangedEvent)
                         widget.nodeDeleted.connect(self.nodeDeletedEvent)
+                else:
+                    log.warning('invalid dag type: "%s"' % dag.__class__)
                
             else:
                 raise GraphException('invalid graph id: "%s"' % dag_id )
@@ -718,6 +728,25 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 if not nodes_only:
                     widgets.append(item)
         return widgets
+
+    def scelectedNodesRect(self, adjust=25):
+        """
+        Returns a rect of the currently selected nodes.
+
+        params:
+            adjust (int) - amount to buffer the result.
+
+        returns:
+            (QtCore.QRectF) - rect of currently selected nodes.
+        """
+        path = QtGui.QPainterPath()
+        for node in self.selectedNodes():
+            rect_poly = node.mapToScene(node.boundingRect())
+            path.addRect(rect_poly.boundingRect())
+
+        result = path.boundingRect()
+        result.adjust(-adjust, -adjust, adjust, adjust)
+        return result
 
     def selectedDagNodes(self):
         """
@@ -996,7 +1025,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             node (Node) - node widget.
         """
         if hasattr(node, 'dagnode'):
-            # update the 
+            # update the position
             pos = (node.pos().x(), node.pos().y())
             node.setToolTip('(%d, %d)' % (pos[0], pos[1]))
             node.dagnode.pos = pos
