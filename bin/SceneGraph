@@ -23,16 +23,19 @@ if __name__ == "__main__":
     parser.add_option("-m", action="store", dest="viewport_mode", help='set the Qt viewport mode (ie. "full", "smart", "minimal").')
     parser.add_option("-e", action="store", dest="edge_type", help='node edge style (ie. "bezier", "polygon").')
     parser.add_option("-s", action="store", dest="app_style", help='Qt application style (ie. "%s").' % '", "'.join(APP_STYLES))
+    parser.add_option("--style", action="store_false", dest="use_stylesheet", default=True, help='ignore builtin stylsheet.')
 
     # oxygen looks better in linux overall, but plastique groupBoxes look better
     # Designer previews in GTK+
+    # Maya style is close to plastique
     if PLATFORM == 'Linux':
         parser.set_default('app_style', 'oxygen')
 
     if PLATFORM == 'MacOSX':
         parser.set_default('app_style', 'cleanlooks')
 
-    (options, args) = parser.parse_args()    
+    (options, args) = parser.parse_args()
+
     app = QtGui.QApplication(sys.argv)
 
     # set the application style
@@ -51,7 +54,7 @@ if __name__ == "__main__":
         if options.edge_type.lower() in EDGE_TYPES:
             prefs.update(edge_type=options.edge_type.lower())
 
-    sgui = scenegraph.SceneGraphUI(use_gl=options.use_gl, render_fx=options.render_fx, **prefs)
+    sgui = scenegraph.SceneGraphUI(use_gl=options.use_gl, render_fx=options.render_fx, use_stylesheet=options.use_stylesheet, **prefs)
     sgui.show()
 
     if filename:

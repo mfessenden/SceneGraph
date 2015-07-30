@@ -41,15 +41,16 @@ class GraphicsView(QtGui.QGraphicsView):
         
         # Mouse Interaction
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
-        #self.setRenderHint(QtGui.QPainter.Antialiasing)
+        self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
 
         self.setInteractive(True)  # this allows the selection rectangles to appear
         self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
         self.setRenderHint(QtGui.QPainter.Antialiasing)
-
+        self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(*[34, 34, 34])))
         self.setMouseTracking(True)
+        
         self.boxing = False
         self.modifierBoxOrigin = None
         self.modifierBox = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)

@@ -23,9 +23,8 @@ class AttributeEditor(QtGui.QWidget):
         self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
-        
-        # reference parent fonts
-        self.fonts          = self._ui.fonts
+        self.flat_grp       = True
+
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -34,9 +33,9 @@ class AttributeEditor(QtGui.QWidget):
 
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
-        self.mainGroup.setProperty("class", "AttributeEditor") 
-        self.mainGroup.setFont(self.fonts.get("attr_editor"))
-        self.mainGroup.setFlat(True)
+        #self.mainGroup.setProperty("class", "AttributeEditor") 
+        #self.mainGroup.setFont(self.fonts.get("attr_editor"))
+        self.mainGroup.setFlat(self.flat_grp)
 
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -49,7 +48,6 @@ class AttributeEditor(QtGui.QWidget):
         # setup the main interface
         self.initializeUI()
         self.connectSignals()      
-        self.setFont(self.fonts.get("ui"))
 
     def initializeUI(self):
         """
@@ -59,7 +57,11 @@ class AttributeEditor(QtGui.QWidget):
         self.clearLayout(self.mainGroupLayout)
         self._nodes = []       
 
-    def initializeStylesheet(self):
+    @property
+    def use_stylesheet(self):
+        return self._ui.use_stylesheet    
+
+    def initializeStylesheet(self, fonts=True):
         """
         Setup the stylehsheet.
         """
@@ -67,7 +69,8 @@ class AttributeEditor(QtGui.QWidget):
         self.stylesheet = os.path.join(SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
-        self.setStyleSheet(str(ssf.readAll()))
+        if self.use_stylesheet:
+            self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
     def buildLayout(self, verbose=False):
@@ -81,9 +84,9 @@ class AttributeEditor(QtGui.QWidget):
         for section in self._sections:            
             
             group = QtGui.QGroupBox(self.mainGroup)
-            group.setFont(self.fonts.get("attr_editor_group"))
+            #group.setFont(self.fonts.get("attr_editor_group"))
             group.setTitle('%s' % section)
-            group.setFlat(True)
+            group.setFlat(self.flat_grp)
             group.setObjectName("%s_group" % section)
 
             # build a formlayout
@@ -126,7 +129,7 @@ class AttributeEditor(QtGui.QWidget):
                         editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
                         if editor:
-                            editor.setFont(self.fonts.get("attr_editor"))
+                            #editor.setFont(self.fonts.get("attr_editor"))
                             if editor:
                                 editor.initializeEditor()
 
@@ -134,7 +137,7 @@ class AttributeEditor(QtGui.QWidget):
                                 label_widget = formLayout.itemAt(row, QtGui.QFormLayout.LabelRole)
 
                                 label = label_widget.widget()
-                                label.setFont(self.fonts.get("attr_editor_label"))
+                                #label.setFont(self.fonts.get("attr_editor_label"))
                                 formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
                                 # add the description
                                 if desc is not None:
@@ -214,7 +217,7 @@ class AttributeEditor(QtGui.QWidget):
             parent (QWidget) - parent widget.
         """
         popup_menu = QtGui.QMenu(self)
-        popup_menu.setFont(self.fonts.get("ui"))
+        #popup_menu.setFont(self.fonts.get("ui"))
         popup_menu.clear()
         qcurs = QtGui.QCursor()
         add_action = QtGui.QAction('Add attribute', self) 
@@ -455,7 +458,7 @@ class AddAttributeDialog(QtGui.QDialog):
         self.groupBoxLayout.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
         self.groupBoxLayout.setFormAlignment(QtCore.Qt.AlignCenter)
         self.groupBoxLayout.setObjectName("groupBoxLayout")
-        self.groupBox.setProperty("class", "AttributeEditor")
+        #self.groupBox.setProperty("class", "AttributeEditor")
         self.groupBoxLayout.setContentsMargins(3, 15, 3, 3)
 
         # name editor
@@ -585,7 +588,7 @@ class QFloatEditor(QtGui.QWidget):
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -700,7 +703,7 @@ class QIntEditor(QtGui.QWidget):
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -822,8 +825,8 @@ class QFloat2Editor(QtGui.QWidget):
         self.val2_edit.setObjectName("val2_edit")
         self.mainLayout.addWidget(self.val2_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -955,9 +958,9 @@ class QFloat3Editor(QtGui.QWidget):
         self.val3_edit.setObjectName("val3_edit")
         self.mainLayout.addWidget(self.val3_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1091,8 +1094,8 @@ class QInt2Editor(QtGui.QWidget):
         self.val2_edit.setObjectName("val2_edit")
         self.mainLayout.addWidget(self.val2_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1225,9 +1228,9 @@ class QInt3Editor(QtGui.QWidget):
         self.val3_edit.setObjectName("val3_edit")
         self.mainLayout.addWidget(self.val3_edit)
 
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
-        self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val2_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val3_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1354,7 +1357,7 @@ class QBoolEditor(QtGui.QCheckBox):
         self._current_value = None
 
         self.toggled.connect(self.valueUpdatedAction)
-        self.setFont(self._ui.fonts.get("attr_editor"))
+        #self.setFont(self._ui.fonts.get("attr_editor"))
 
     @property
     def attribute(self):
@@ -1473,7 +1476,7 @@ class StringEditor(QtGui.QWidget):
         self.val1_edit.textEdited.connect(self.validate_text)
         self.val1_edit.editingFinished.connect(self.valueUpdatedAction)
         self.val1_edit.returnPressed.connect(self.valueUpdatedAction)
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     def validate_text(self, text):
         current_text = self.value
@@ -1599,13 +1602,13 @@ class DocumentEditor(QtGui.QWidget):
 
         # value 1 editor
         self.val1_edit = QtGui.QPlainTextEdit(self)
-        self.val1_edit.setProperty("class", "AttributeEditor")
+        #self.val1_edit.setProperty("class", "AttributeEditor")
 
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
         self.val1_edit.document().contentsChanged.connect(self.valueUpdatedAction)
-        self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     def sizeHint(self):
         return QtCore.QSize(200, 85)
@@ -1737,7 +1740,7 @@ class FileEditor(QtGui.QWidget):
         self.button_browse.clicked.connect(self.browseAction)
 
         self.mainLayout.setAlignment(self.file_edit, QtCore.Qt.AlignVCenter)
-        self.file_edit.setFont(self._ui.fonts.get("attr_editor"))
+        #self.file_edit.setFont(self._ui.fonts.get("attr_editor"))
 
 
     def browseAction(self):

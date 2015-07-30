@@ -5,8 +5,12 @@ from . import models
 from . import handlers
 from . import attributes
 from . import commands
+from . import stylesheet
+
 
 reload(node_widgets)
+reload(stylesheet)
+
 
 GraphicsView            = graphics.GraphicsView
 GraphicsScene           = graphics.GraphicsScene
@@ -23,15 +27,10 @@ SceneHandler            = handlers.SceneHandler
 
 
 AttributeEditor         = attributes.AttributeEditor
-QFloat2Editor           = attributes.QFloat2Editor
-QFloat3Editor           = attributes.QFloat3Editor
-QInt2Editor             = attributes.QInt2Editor
-QInt3Editor             = attributes.QInt3Editor
-QBoolEditor             = attributes.QBoolEditor        
-QFloatLineEdit          = attributes.QFloatLineEdit
-QIntLineEdit            = attributes.QIntLineEdit
-ColorPicker             = attributes.ColorPicker
 
 
 SceneNodesCommand       = commands.SceneNodesCommand
 SceneChangedCommand     = commands.SceneChangedCommand
+
+
+StylesheetManager       = stylesheet.StylesheetManager

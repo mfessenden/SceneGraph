@@ -63,6 +63,7 @@ class SceneGraphUI(form_class, base_class):
         # preferences
         self.debug            = kwargs.get('debug', False)
         self.use_gl           = kwargs.get('use_gl', False)
+        self.use_stylesheet   = kwargs.get('use_stylesheet', True)
 
         self._show_private    = False
         self._valid_plugins   = []  
@@ -189,6 +190,13 @@ class SceneGraphUI(form_class, base_class):
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
 
+    def initializeFonts(self):
+        """
+        Setup the fonts attribute.
+        """
+        reload(options)
+        self.fonts = options.SCENEGRAPH_FONTS
+
     def initializeStylesheet(self, fonts=True):
         """
         Setup the stylehsheet.
@@ -199,20 +207,21 @@ class SceneGraphUI(form_class, base_class):
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
-        self.setStyleSheet(str(ssf.readAll()))
+        if self.use_stylesheet:
+            self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
     def setApplicationFonts(self):
         """
         Set the font styles for the entire application.
         """
-        print '# DEBUG: setting fonts...'
         # apply fonts
-        self.outputTextBrowser.setFont(self.fonts.get('output'))
+        #self.outputTextBrowser.setFont(self.fonts.get('output'))
 
-        self.setFont(self.fonts.get("ui"))
+        #self.setFont(self.fonts.get("ui"))
         for menu in self.menubar.findChildren(QtGui.QMenu):
-            menu.setFont(self.fonts.get("ui"))
+            #menu.setFont(self.fonts.get("ui"))
+            pass
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -410,9 +419,9 @@ class SceneGraphUI(form_class, base_class):
         ssf.open(QtCore.QFile.ReadOnly)
         parent.setStyleSheet(str(ssf.readAll()))
 
-        parent.setFont(self.fonts.get("ui"))
-        menu_add_node.setFont(self.fonts.get("ui"))
-        menu_node_color.setFont(self.fonts.get("ui"))
+        #parent.setFont(self.fonts.get("ui"))
+        #menu_add_node.setFont(self.fonts.get("ui"))
+        #menu_node_color.setFont(self.fonts.get("ui"))
         #parent.exec_(qcurs.pos())
 
     def initializeRecentFilesMenu(self):
@@ -481,7 +490,7 @@ class SceneGraphUI(form_class, base_class):
         self.undoTabLayout.insertWidget(0,self.undoView)
         self.undoView.setStack(self.undo_stack)
         self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
-        self.consoleTextEdit.setFont(self.fonts.get("console"))
+        #self.consoleTextEdit.setFont(self.fonts.get("console"))
 
         # autosave prefs
         self.autosave_time_edit.setText(str(self.autosave_inc/1000))
@@ -519,9 +528,7 @@ class SceneGraphUI(form_class, base_class):
         if not self.undo_stack.isClean():
             title_str = '%s*' % title_str
             #self.autosave_timer.start(self.autosave_inc)
-
         self.setWindowTitle(title_str)
-        #self.initializeStylesheet()
 
     def sizeHint(self):
         return QtCore.QSize(800, 675)
@@ -544,7 +551,7 @@ class SceneGraphUI(form_class, base_class):
             self.statusBar().showMessage(self._getWarningStatus(msg))
             log.warning(msg)
         self.status_timer.start(4000)
-        self.statusBar().setFont(self.fonts.get("output"))     
+        #self.statusBar().setFont(self.fonts.get("output"))     
 
     def resetStatus(self):
         """
@@ -1092,8 +1099,8 @@ class SceneGraphUI(form_class, base_class):
 
         tab_menu.addMenu(add_menu)
         
-        tab_menu.setFont(self.fonts.get("ui"))
-        add_menu.setFont(self.fonts.get("ui"))
+        #tab_menu.setFont(self.fonts.get("ui"))
+        #add_menu.setFont(self.fonts.get("ui"))
 
         qcurs = QtGui.QCursor()
         view_pos =  self.view.current_cursor_pos
@@ -1104,7 +1111,7 @@ class SceneGraphUI(form_class, base_class):
             add_menu.addAction(node_action)
             # add the node at the scene pos
             node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=(scene_pos.x(), scene_pos.y())))
-            node_action.setFont(self.fonts.get("ui"))
+            #node_action.setFont(self.fonts.get("ui"))
 
         tab_menu.exec_(qcurs.pos())
 
@@ -1289,7 +1296,7 @@ class SceneGraphUI(form_class, base_class):
         graph_data = self.graph.snapshot()
         html_data = self.formatOutputHtml(graph_data)
         self.outputTextBrowser.setHtml(html_data)
-        self.outputTextBrowser.setFont(self.fonts.get('output'))
+        #self.outputTextBrowser.setFont(self.fonts.get('output'))
 
         self.outputTextBrowser.scrollContentsBy(0, posy)
         #self.outputTextBrowser.setReadOnly(True)

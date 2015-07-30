@@ -29,18 +29,16 @@ class SceneHandler(QtCore.QObject):
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self, parent)
         from SceneGraph.icn import icons
-        from SceneGraph.options import SCENEGRAPH_FONTS
+        
 
 
         self.icons          = icons.ICONS
         self.ui             = parent.ui 
-        self.fonts          = SCENEGRAPH_FONTS
         self.graph          = None
         self._initialized   = False # set to false until the current scene has been read & built
 
         if parent is not None:
             self.ui.icons = self.icons
-            self.ui.fonts = self.fonts
             self.ui.action_evaluate.triggered.connect(self.evaluate)
             if self.connectGraph(parent):
                 self.connectSignals()

@@ -4,7 +4,7 @@ import os
 
 PACKAGE                     = 'SceneGraph'
 API_MAJOR_VERSION           = 0.66
-API_REVISION                = 0
+API_REVISION                = 1
 API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                    = None
@@ -20,7 +20,7 @@ SCENEGRAPH_STYLESHEET_PATH  = os.path.join(SCENEGRAPH_PATH, 'css')
 SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE)
 SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
 SCENEGRAPH_USER_WORK_PATH   = os.path.join(os.getenv('HOME'), 'graphs')
-SCENEGRAPH_FONTS            = dict()
+SCENEGRAPH_CONFIG_PATH      = os.path.join(SCENEGRAPH_PATH, 'cfg')
 
 
 SCENEGRAPH_COLORS = {
@@ -109,6 +109,7 @@ VIEWPORT_MODES = dict(
                 bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
                 )
 
+
 def setup_platform_defaults():
     """
     Setup globals for a specific platform.
@@ -123,50 +124,6 @@ def setup_platform_defaults():
     return platform
 
 
-def setup_fonts(font='SansSerif', size=8, platform=None):
-    """
-    Initializes the global fonts attribute.
-    """
-    from PySide import QtGui
-    fonts = dict()
-    mono_font = 'Consolas'
-    ui_font = font
-    # standard sizes
-    size_ui = size
-    size_mn = size
-    size_sm = size
-
-    if platform == 'MacOSX':
-        size_ui = size + 4
-        size_mn = size + 7
-        size_sm = size_ui - 1        
-        mono_font = 'Menlo'
-
-    fonts["ui"] = QtGui.QFont(ui_font)
-    fonts["ui"].setPointSize(size_ui)
-
-    fonts["output"] = QtGui.QFont(mono_font)
-    fonts["output"].setPointSize(size_mn)
-
-    fonts["console"] = QtGui.QFont(mono_font)
-    fonts["console"].setPointSize(size_mn)
-
-    fonts["attr_editor"] = QtGui.QFont(ui_font)
-    fonts["attr_editor"].setPointSize(size_ui)
-
-    fonts["attr_editor_group"] = QtGui.QFont(ui_font)
-    fonts["attr_editor_group"].setPointSize(size_ui)
-    fonts["attr_editor_group"].setBold(True)
-
-    fonts["attr_editor_label"] = QtGui.QFont(ui_font)
-    fonts["attr_editor_label"].setPointSize(size_sm)
-
-    fonts["disabled"] = QtGui.QFont(ui_font)
-    fonts["disabled"].setPointSize(size_ui)
-    fonts["disabled"].setItalic(True)
-    return fonts
-
 
 # initialize globals
 PLATFORM         = setup_platform_defaults()
-SCENEGRAPH_FONTS = setup_fonts(platform=PLATFORM)
