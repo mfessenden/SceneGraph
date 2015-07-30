@@ -23,8 +23,8 @@ class AttributeEditor(QtGui.QWidget):
         self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
-
         
+        # reference parent fonts
         self.fonts          = self._ui.fonts
 
         self.setObjectName("AttributeEditor")
@@ -200,8 +200,6 @@ class AttributeEditor(QtGui.QWidget):
             for e in editors:
                 e.initializeEditor()
 
-
-
     def sizeHint(self):
         return QtCore.QSize(270, 550)
 
@@ -216,6 +214,7 @@ class AttributeEditor(QtGui.QWidget):
             parent (QWidget) - parent widget.
         """
         popup_menu = QtGui.QMenu(self)
+        popup_menu.setFont(self.fonts.get("ui"))
         popup_menu.clear()
         qcurs = QtGui.QCursor()
         add_action = QtGui.QAction('Add attribute', self) 

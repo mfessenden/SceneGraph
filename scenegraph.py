@@ -62,13 +62,14 @@ class SceneGraphUI(form_class, base_class):
 
         # preferences
         self.debug            = kwargs.get('debug', False)
-        self.use_gl           = kwargs.get('opengl', False)
+        self.use_gl           = kwargs.get('use_gl', False)
+
         self._show_private    = False
         self._valid_plugins   = []  
 
-        self.edge_type        = 'bezier'
-        self.viewport_mode    = 'smart'
-        self.render_fx        = True
+        self.edge_type        = kwargs.get('edge_type', 'bezier')
+        self.viewport_mode    = kwargs.get('viewport_mode', 'smart')
+        self.render_fx        = kwargs.get('render_fx', True)
         self.antialiasing     = 2
         self.environment      = kwargs.get('env', 'standalone')
 
@@ -111,7 +112,7 @@ class SceneGraphUI(form_class, base_class):
 
         # setup
         self.initializeWorkPath(self._work_path)
-        self.readSettings()
+        self.readSettings(**kwargs)
         self.initializeUI()           
 
         self.connectSignals()
@@ -158,9 +159,8 @@ class SceneGraphUI(form_class, base_class):
         """
         # build the graph
         self.initializeGraphicsView()
-        self.initializePreferencesUI()
-
-        self.outputTextBrowser.setFont(self.fonts.get('output'))
+        self.initializePreferencesPane()
+        
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
         self.resetStatus()
@@ -189,20 +189,30 @@ class SceneGraphUI(form_class, base_class):
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
 
-        # apply fonts
-        self.setFont(self.fonts.get("ui"))
-        for menu in self.menubar.findChildren(QtGui.QMenu):
-            menu.setFont(self.fonts.get("ui"))
-
-    def initializeStylesheet(self):
+    def initializeStylesheet(self, fonts=True):
         """
         Setup the stylehsheet.
         """
+        if fonts:
+            self.setApplicationFonts()
+
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         self.setStyleSheet(str(ssf.readAll()))
         ssf.close()
+
+    def setApplicationFonts(self):
+        """
+        Set the font styles for the entire application.
+        """
+        print '# DEBUG: setting fonts...'
+        # apply fonts
+        self.outputTextBrowser.setFont(self.fonts.get('output'))
+
+        self.setFont(self.fonts.get("ui"))
+        for menu in self.menubar.findChildren(QtGui.QMenu):
+            menu.setFont(self.fonts.get("ui"))
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -213,7 +223,7 @@ class SceneGraphUI(form_class, base_class):
         self.network = self.graph.network        
 
         # add our custom GraphicsView object (gview is defined in the ui file)
-        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, edge_type=self.edge_type)
+        self.view = ui.GraphicsView(self.gview, ui=self, use_gl=self.use_gl, edge_type=self.edge_type)
         self.gviewLayout.addWidget(self.view) 
 
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
@@ -252,10 +262,8 @@ class SceneGraphUI(form_class, base_class):
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
         self.action_revert.triggered.connect(self.revertGraph)
-        self.action_clear_graph.triggered.connect(self.resetGraph)
-        self.action_draw_graph.triggered.connect(self.refreshGraph)
+        self.action_clear_graph.triggered.connect(self.resetGraph)        
         self.action_show_all.triggered.connect(self.togglePrivate)
-
         
         self.action_reset_scale.triggered.connect(self.resetScale)
         self.action_restore_default_layout.triggered.connect(self.restoreDefaultSettings)
@@ -265,6 +273,8 @@ class SceneGraphUI(form_class, base_class):
 
         # debug menu
         self.action_reset_dots.triggered.connect(self.resetDotsAction)
+        self.action_evaluate.triggered.connect(self.evaluateScene)
+        self.action_reset_fonts.triggered.connect(self.setApplicationFonts)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -274,6 +284,7 @@ class SceneGraphUI(form_class, base_class):
         self.logging_level_menu.currentIndexChanged.connect(self.toggleLoggingLevel)
         self.check_render_fx.toggled.connect(self.toggleEffectsRendering)
         self.autosave_time_edit.editingFinished.connect(self.setAutosaveDelay)
+        self.app_style_menu.currentIndexChanged.connect(self.applicationStyleChanged)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -423,36 +434,30 @@ class SceneGraphUI(form_class, base_class):
                         i+=1
             self.menu_recent_files.setEnabled(True)
 
-    def initializePreferencesUI(self):
+    def initializePreferencesPane(self):
         """
         Setup the preferences area.
         """
-        edge_types = ['bezier', 'polygon']
-        view_modes = dict(
-                        full = 'QtGui.QGraphicsView.FullViewportUpdate',
-                        smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
-                        minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate'
-                        )
-
         self.edge_type_menu.blockSignals(True)
         self.viewport_mode_menu.blockSignals(True)
         self.check_use_gl.blockSignals(True)
         self.logging_level_menu.blockSignals(True)
         self.check_render_fx.blockSignals(True)
+        self.app_style_menu.blockSignals(True)
 
         self.edge_type_menu.clear()
         self.viewport_mode_menu.clear()
         self.logging_level_menu.clear()
 
         # edge type menu
-        self.edge_type_menu.addItems(edge_types)
+        self.edge_type_menu.addItems(options.EDGE_TYPES)
         self.edge_type_menu.setCurrentIndex(self.edge_type_menu.findText(self.edge_type))
 
         # render FX
         self.check_render_fx.setChecked(self.render_fx)
 
         # build the viewport menu
-        for item in view_modes.items():
+        for item in options.VIEWPORT_MODES.items():
             label, mode = item[0], item[1]
             self.viewport_mode_menu.addItem(label, str(mode))
         self.viewport_mode_menu.setCurrentIndex(self.viewport_mode_menu.findText(self.viewport_mode))
@@ -471,12 +476,6 @@ class SceneGraphUI(form_class, base_class):
             self.logging_level_menu.addItem(label.lower(), mode)            
         self.logging_level_menu.setCurrentIndex(self.logging_level_menu.findText(current_log_level.lower()))
     
-        self.edge_type_menu.blockSignals(False)
-        self.viewport_mode_menu.blockSignals(False)
-        self.check_use_gl.blockSignals(False)
-        self.logging_level_menu.blockSignals(False)
-        self.check_render_fx.blockSignals(False)
-
         # undo viewer
         self.undoView = QtGui.QUndoView(self.tab_undo)
         self.undoTabLayout.insertWidget(0,self.undoView)
@@ -486,6 +485,25 @@ class SceneGraphUI(form_class, base_class):
 
         # autosave prefs
         self.autosave_time_edit.setText(str(self.autosave_inc/1000))
+
+        # application style
+        app = QtGui.QApplication.instance()
+        current_style = app.style().metaObject().className()
+        current_style = current_style.split(':')[0]
+        app_styles = [current_style]
+        app_styles.extend(QtGui.QStyleFactory.keys())
+        app_styles = list(set(app_styles))
+
+        self.app_style_menu.clear()
+        self.app_style_menu.addItems(app_styles)
+        self.app_style_menu.setCurrentIndex(self.app_style_menu.findText(current_style))
+
+        self.edge_type_menu.blockSignals(False)
+        self.viewport_mode_menu.blockSignals(False)
+        self.check_use_gl.blockSignals(False)
+        self.logging_level_menu.blockSignals(False)
+        self.check_render_fx.blockSignals(False)
+        self.app_style_menu.blockSignals(False)
 
     def buildWindowTitle(self):
         """
@@ -743,12 +761,13 @@ class SceneGraphUI(form_class, base_class):
         widget.deleteLater()
 
         if self.use_gl:
-            from PySide import QtOpenGL
-            self.view.setViewport(QtOpenGL.QGLWidget())
+            from PySide import QtOpenGL            
+            self.view.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
             log.info('initializing OpenGL renderer.')
         else:
             self.view.setViewport(QtGui.QWidget())
-        self.initializeStylesheet()
+
+        self.initializeStylesheet(fonts=False)
         self.view.scene().update()
 
     def toggleEffectsRendering(self, val):
@@ -849,6 +868,16 @@ class SceneGraphUI(form_class, base_class):
         """
         edge_type = self.edge_type_menu.currentText()
         self.toggleEdgeTypes(edge_type)
+
+    def applicationStyleChanged(self, index):
+        """
+        Sets the current application style.
+        """
+        style_name = self.app_style_menu.currentText()
+        app = QtGui.QApplication.instance()
+        log.debug('setting application style: "%s"' % str(style_name))
+        app.setStyle(style_name)
+        self.initializeStylesheet()
 
     def resetDotsAction(self):
         """
@@ -966,6 +995,9 @@ class SceneGraphUI(form_class, base_class):
             #node.setSelected(True)
 
     def nodesModelChangedAction(self):
+        """
+        Runs when the widget in the nodes listView changes.
+        """
         self.view.scene().clearSelection()
         if self.nodeListSelModel.selectedRows():
             idx = self.nodeListSelModel.selectedRows()[0]
@@ -974,6 +1006,9 @@ class SceneGraphUI(form_class, base_class):
             self.updateAttributeEditor(node.dagnode)
 
     def edgesModelChangedAction(self):
+        """
+        Runs when the widget in the edges listView changes.
+        """
         self.view.scene().clearSelection()
         if self.edgeListSelModel.selectedRows():
             idx = self.edgeListSelModel.selectedRows()[0]
@@ -1081,9 +1116,10 @@ class SceneGraphUI(form_class, base_class):
         self.view.rotate(4)
 
     #- Settings -----
-    def readSettings(self):
+    def readSettings(self, **kwargs):
         """
-        Read Qt settings from file
+        Read user settings from preferences. Any arguments passed in kwargs are ignored,
+        as the have been passed to the UI.
         """
         self.qtsettings.beginGroup("MainWindow")
         self.restoreGeometry(self.qtsettings.value("geometry"))
@@ -1092,31 +1128,35 @@ class SceneGraphUI(form_class, base_class):
 
         self.qtsettings.beginGroup("Preferences")
 
-        # viewport mode (global?)   
-        viewport_mode = self.qtsettings.value("viewport_mode")
-        if viewport_mode is not None:
-            self.viewport_mode = viewport_mode
+        # viewport mode (ie smart, full, minimal) (global?)
+        if 'viewport_mode' not in kwargs:
+            viewport_mode = self.qtsettings.value("viewport_mode")
+            if viewport_mode is not None:
+                self.viewport_mode = viewport_mode
 
         # render fx (scene?)
-        render_fx = self.qtsettings.value("render_fx")
-        if render_fx is not None:
-            if render_fx == 'false':
-                self.render_fx =False
-            if render_fx == 'true':
-                self.render_fx =True
+        if not 'render_fx' in kwargs:
+            render_fx = self.qtsettings.value("render_fx")
+            if render_fx is not None:
+                if render_fx == 'false':
+                    self.render_fx =False
+                if render_fx == 'true':
+                    self.render_fx =True
 
         # edge type (scene)
-        edge_type = self.qtsettings.value("edge_type")
-        if edge_type is not None:
-            self.edge_type = edge_type
+        if not 'edge_type' in kwargs:
+            edge_type = self.qtsettings.value("edge_type")
+            if edge_type is not None:
+                self.edge_type = edge_type
 
         # OpenGL mode (global)
-        use_gl = self.qtsettings.value("use_gl")
-        if use_gl is not None:
-            if use_gl == 'false':
-                self.use_gl =False
-            if use_gl == 'true':
-                self.use_gl =True
+        if not 'use_gl' in kwargs:
+            use_gl = self.qtsettings.value("use_gl")
+            if use_gl is not None:
+                if use_gl == 'false':
+                    self.use_gl =False
+                if use_gl == 'true':
+                    self.use_gl =True
 
         #logging level (global)
         logging_level = self.qtsettings.value("logging_level")
@@ -1363,13 +1403,10 @@ class SceneGraphUI(form_class, base_class):
         self.nodesModel.addNodes(nodes)
         self.edgesModel.addEdges(edges)
 
-    def refreshGraph(self):
+    def evaluateScene(self):
         """
-        Refresh the current graph.
+        Evaluate the current scene.
         """
-        #self.view.scene().handler.updateConsole('refreshing graph...', clear=True)
-        #data = self.graph.snapshot()
-        #self.graph.restore(data, graph=False)
         self.view.scene().evaluate()
 
     def drawGraph(self, filename=None):

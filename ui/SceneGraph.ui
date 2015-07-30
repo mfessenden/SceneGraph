@@ -109,11 +109,22 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="button_update_draw">
-          <property name="text">
-           <string>Generate</string>
-          </property>
-         </widget>
+         <layout class="QHBoxLayout" name="drawTabButtonsLayout">
+          <item>
+           <widget class="QPushButton" name="button_update_draw">
+            <property name="text">
+             <string>Generate</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="button_clear_draw">
+            <property name="text">
+             <string>Clear</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -153,10 +164,16 @@
     <property name="title">
      <string>Graph</string>
     </property>
+    <widget class="QMenu" name="menu_edge_type">
+     <property name="title">
+      <string>Edge type:</string>
+     </property>
+     <addaction name="action_edge_type_polygon"/>
+    </widget>
     <addaction name="action_clear_graph"/>
-    <addaction name="action_draw_graph"/>
     <addaction name="separator"/>
-    <addaction name="action_evaluate"/>
+    <addaction name="menu_edge_type"/>
+    <addaction name="separator"/>
     <addaction name="action_debug_mode"/>
     <addaction name="separator"/>
     <addaction name="action_show_all"/>
@@ -203,6 +220,8 @@
      <string>Debug</string>
     </property>
     <addaction name="action_reset_dots"/>
+    <addaction name="action_evaluate"/>
+    <addaction name="action_reset_fonts"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_edit"/>
@@ -747,69 +766,79 @@
              <property name="margin">
               <number>3</number>
              </property>
-             <item row="0" column="0">
+             <item row="1" column="0">
               <widget class="QLabel" name="viewport_mode_label">
                <property name="text">
                 <string>Viewport Mode:</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QComboBox" name="viewport_mode_menu"/>
              </item>
-             <item row="2" column="0">
+             <item row="3" column="0">
               <widget class="QLabel" name="edge_type_label">
                <property name="text">
                 <string>Edge type:</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QComboBox" name="edge_type_menu"/>
              </item>
-             <item row="3" column="1">
+             <item row="4" column="1">
               <widget class="QCheckBox" name="check_render_fx">
                <property name="text">
                 <string>render FX</string>
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="5" column="1">
               <widget class="QCheckBox" name="check_use_gl">
                <property name="text">
                 <string>Use OpenGL</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="logging_level_label">
                <property name="text">
                 <string>Logging level:</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="6" column="1">
               <widget class="QComboBox" name="logging_level_menu"/>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <widget class="QLabel" name="antialiasing_label">
                <property name="text">
                 <string>Antialiasing:</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QComboBox" name="antialiasing_menu"/>
              </item>
-             <item row="6" column="0">
+             <item row="7" column="0">
               <widget class="QLabel" name="autosave_time_label">
                <property name="text">
                 <string>Autosave Time:</string>
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="7" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="app_style_label">
+               <property name="text">
+                <string>Style:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="app_style_menu"/>
              </item>
             </layout>
            </widget>
@@ -931,7 +960,7 @@
     <string>Ctrl+Y</string>
    </property>
   </action>
-  <action name="action_draw_graph">
+  <action name="action_refresh_graph">
    <property name="text">
     <string>Refresh graph</string>
    </property>
@@ -980,6 +1009,16 @@
    </property>
    <property name="toolTip">
     <string>Re-center dot nodes</string>
+   </property>
+  </action>
+  <action name="action_edge_type_polygon">
+   <property name="text">
+    <string>polygon</string>
+   </property>
+  </action>
+  <action name="action_reset_fonts">
+   <property name="text">
+    <string>Reset fonts</string>
    </property>
   </action>
  </widget>

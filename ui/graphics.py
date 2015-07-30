@@ -26,7 +26,7 @@ class GraphicsView(QtGui.QGraphicsView):
     selectionChanged  = QtCore.Signal()
     nodesChanged      = QtCore.Signal(list)
 
-    def __init__(self, parent=None, ui=None, opengl=False, debug=False, **kwargs):
+    def __init__(self, parent=None, ui=None, use_gl=False, debug=False, **kwargs):
         QtGui.QGraphicsView.__init__(self, parent)
 
         self.log                 = log
@@ -36,12 +36,12 @@ class GraphicsView(QtGui.QGraphicsView):
         self.current_cursor_pos  = QtCore.QPointF(0, 0)
         self._nodes_to_copy      = []   
 
-        self.initializeSceneGraph(ui.graph, ui, opengl=opengl, debug=debug)
+        self.initializeSceneGraph(ui.graph, ui, use_gl=use_gl, debug=debug)
         self.viewport_mode       = self._parent.viewport_mode
         
         # Mouse Interaction
         self.setCacheMode(QtGui.QGraphicsView.CacheBackground)
-        self.setRenderHint(QtGui.QPainter.Antialiasing)
+        #self.setRenderHint(QtGui.QPainter.Antialiasing)
         self.setTransformationAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtGui.QGraphicsView.AnchorUnderMouse)
 
@@ -67,9 +67,10 @@ class GraphicsView(QtGui.QGraphicsView):
             graph (Graph)       - graph instance.
             ui    (QMainWindow) - parent window.
         """
-        if ui.use_gl:
+        use_gl = kwargs.get('use_gl', ui.use_gl)
+        if use_gl:
             from PySide import QtOpenGL
-            self.setViewport(QtOpenGL.QGLWidget())
+            self.setViewport(QtOpenGL.QGLWidget(QtOpenGL.QGLFormat(QtOpenGL.QGL.SampleBuffers)))
             log.info('initializing OpenGL renderer.')
 
         # pass the Graph instance to the GraphicsScene 
@@ -92,6 +93,8 @@ class GraphicsView(QtGui.QGraphicsView):
             return 'smart'
         if mode == QtGui.QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate:
             return 'minimal'
+        if mode == QtGui.QGraphicsView.ViewportUpdateMode.BoundingRectViewportUpdate:
+            return 'bounding'
         return
 
     @viewport_mode.setter
@@ -110,6 +113,10 @@ class GraphicsView(QtGui.QGraphicsView):
 
         if mode == 'minimal':
             mode = QtGui.QGraphicsView.ViewportUpdateMode.MinimalViewportUpdate
+
+        if mode == 'bounding':
+            mode = QtGui.QGraphicsView.ViewportUpdateMode.BoundingRectViewportUpdate
+
         self.setViewportUpdateMode(mode)
 
     def connectSignals(self):
@@ -343,6 +350,7 @@ class GraphicsView(QtGui.QGraphicsView):
                 toggled = 'bezier'
             self._parent.toggleEdgeTypes(edge_type=toggled)
 
+        # update edges if the Alt key is pressed
         elif event.key() == QtCore.Qt.Key_Alt:
             if hover_nodes:
                 for node in hover_nodes:
@@ -354,7 +362,7 @@ class GraphicsView(QtGui.QGraphicsView):
 
     def keyReleaseEvent(self, event):
         """
-        Fit the viewport if the 'A' key is pressed
+        Update edges to remove the 'alt_modifier' flag.
         """
         hover_nodes = self.scene()._hover_nodes
         if hover_nodes:
@@ -565,6 +573,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             dest_attr = edge.get('dest_attr', 'input')
 
             weight = edge.get('weight', 1)
+            edge_type = edge.get('edge_type', self.ui.edge_type)
 
             source_node = self.get_node(src_id)
             dest_node  = self.get_node(dest_id)
@@ -586,10 +595,9 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 print 'cannot find a connection widget'
                 continue
 
-            edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget, weight=weight)
+            edge_widget = node_widgets.EdgeWidget(edge, src_conn_widget, dest_conn_widget, weight=weight, edge_type=edge_type)
             edge_widget.nodeDeleted.connect(self.nodeDeletedEvent)
             edge_widget._render_effects = self.ui.render_fx
-            edge_widget.edge_type = self.ui.edge_type
 
             # check that connection is valid. (implement this)
             if edge_widget.connect_terminal(src_conn_widget) and edge_widget.connect_terminal(dest_conn_widget):
@@ -880,8 +888,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
             dot = self.graph.add_node('dot', pos=[pos.x(), pos.y()])
 
             # add the two new edges
-            edge1 = self.graph.add_edge(src, dot, src_attr=src_attr, dest_attr='input')
-            edge2 = self.graph.add_edge(dot, dest, src_attr='output', dest_attr=dest_attr)
+            edge1 = self.graph.add_edge(src, dot, src_attr=src_attr, dest_attr='input', edge_type='polygon')
+            edge2 = self.graph.add_edge(dot, dest, src_attr='output', dest_attr=dest_attr, edge_type='polygon')
             if edge1 and edge2:
                 return True
         return False

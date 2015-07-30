@@ -43,10 +43,10 @@ form_class, base_class = loadUiType(SCENEGRAPH_TEST_UI)
 
 
 class TestGraph(form_class, base_class):
-    def __init__(self, parent=None, opengl=False, debug=False, **kwargs):
+    def __init__(self, parent=None, use_gl=False, debug=False, **kwargs):
         super(TestGraph, self).__init__(parent)
 
-        self.use_gl      = opengl
+        self.use_gl      = use_gl
         self._debug      = debug
         self.environment = 'standalone'
         self.setupUi(self)
@@ -79,7 +79,7 @@ class TestGraph(form_class, base_class):
         self.network.graph['environment'] = self.environment
 
         # add our custom GraphicsView object
-        self.view = ui.GraphicsView(self.gview, ui=self, opengl=self.use_gl, debug=self._debug)
+        self.view = ui.GraphicsView(self.gview, ui=self, use_gl=self.use_gl, debug=self._debug)
         self.gviewLayout.addWidget(self.view) 
 
     def connectSignals(self):

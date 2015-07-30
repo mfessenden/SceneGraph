@@ -17,8 +17,9 @@ class NoteNode(DagNode):
 
         self.corner_loc     = 'top'   
         self.base_height    = 75
-        self.doc_text       = kwargs.get('doc_text', "Sample note text.")
         self.font_size      = 6
+        self.show_name      = kwargs.get('show_name', False)
+        self.doc_text       = kwargs.get('doc_text', "Sample note text.")        
 
     @property
     def data(self):
@@ -29,5 +30,5 @@ class NoteNode(DagNode):
         for attr in self.REQUIRED:
             if hasattr(self, attr):
                 data[attr] = getattr(self, attr)
-        data.update(doc_text=self.doc_text, corner_loc=self.corner_loc, font_size=self.font_size)
+        data.update(doc_text=self.doc_text, corner_loc=self.corner_loc, font_size=self.font_size, show_name=self.show_name)
         return data

@@ -99,19 +99,28 @@ SCENEGRAPH_PREFERENCES = {
     }
 
 
+EDGE_TYPES = ['bezier', 'polygon']
+
+
+VIEWPORT_MODES = dict(
+                full = 'QtGui.QGraphicsView.FullViewportUpdate',
+                smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
+                minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate',
+                bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
+                )
 
 def setup_platform_defaults():
     """
     Setup globals for a specific platform.
     """
     import sys
-    plaform = 'Windows'
+    platform = 'Windows'
     if 'linux' in sys.platform:
-        plaform = 'Linux'
+        platform = 'Linux'
 
     if sys.platform == 'darwin':
-        plaform = 'MacOSX'
-    return plaform
+        platform = 'MacOSX'
+    return platform
 
 
 def setup_fonts(font='SansSerif', size=8, platform=None):

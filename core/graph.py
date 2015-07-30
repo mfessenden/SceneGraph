@@ -422,6 +422,7 @@ class Graph(object):
         src_attr = kwargs.pop('src_attr', 'output')
         dest_attr = kwargs.pop('dest_attr', 'input')
         weight = kwargs.pop('weight', 1.0)
+        edge_type = kwargs.pop('edge_type', 'bezier')
 
         if src is None or dest is None:
             log.warning('none type passed.')
@@ -440,18 +441,14 @@ class Graph(object):
         if conn_str in self.connections():
             log.warning('connection already exists: %s' % conn_str)
             return 
-    
-        edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr)
+        
+        # edge attributes for nx graph
+        edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr, edge_type=edge_type)
         
         src_conn = src.get_connection(src_attr)
         dest_conn = dest.get_connection(dest_attr)
         edge_id_str = '(%s,%s)' % (src.id, dest.id)
-        '''
-        print '# source dag:  ', src.name
-        print '# dest dag:    ', dest.name
-        print '# source conn: ', src_conn, src_attr
-        print '# dest conn:   ', dest_conn, dest_attr
-        '''
+
         if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:            
             # add the nx edge        
             self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)

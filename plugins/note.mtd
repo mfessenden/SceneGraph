@@ -24,3 +24,7 @@
         default             BOOL      false
         label               STRING    "Expand Node"
         private             BOOL      true  
+
+    [attr show_name]
+        default             BOOL      false
+        label               STRING    "Show name"

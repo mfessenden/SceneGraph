@@ -34,10 +34,10 @@ class NodeWidget(QtGui.QGraphicsObject):
         self._s_color        = [0, 0, 0, 60]          # shadow color
 
         # fonts
-        self._font          = 'Monospace'
-        self._font_size     = 8
-        self._font_bold     = False
-        self._font_italic   = False
+        self._font           = 'Monospace'
+        self._font_size      = 8
+        self._font_bold      = False
+        self._font_italic    = False
 
         self._cfont          = 'Monospace'
         self._cfont_size     = 6
@@ -177,7 +177,6 @@ class NodeWidget(QtGui.QGraphicsObject):
          * currently not using
         """
         val = self.label.is_editable
-        #self.label.setTextEditable(not val)
 
     #- Events ----
     def dagnodeUpdated(self, *args, **kwargs):
@@ -547,6 +546,7 @@ class NodeWidget(QtGui.QGraphicsObject):
             debug_color = QtGui.QColor(*[0, 0, 0])
             painter.setBrush(QtCore.Qt.NoBrush)
 
+            # draw circles at the input/output positions
             green_color = QtGui.QColor(0, 255, 0)
             painter.setPen(QtGui.QPen(green_color, 0.5, QtCore.Qt.SolidLine))
             painter.drawEllipse(self.output_pos, 4, 4)
@@ -614,7 +614,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         dest_item (Connection)   - destination node connection
     """
     def __init__(self, edge, source_item, dest_item, weight=1.0, *args, **kwargs):
-        QtGui.QGraphicsObject.__init__(self, *args, **kwargs)
+        QtGui.QGraphicsObject.__init__(self)
 
         #edge: (id, id, {attributes})
         # edge attributes
@@ -637,10 +637,11 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self._render_effects = True                   # enable fx
 
         self.weight          = weight
-        self.arrow_size      = 8 
+        self.arrow_size      = 8.0
+        self.cp_size         = 3.0                    # debug: control point size
         self.show_conn       = False                  # show connection string
         self.multi_conn      = False                  # multiple connections (future)
-        self.edge_type       = 'bezier'
+        self.edge_type       = edge.get('edge_type', 'bezier')
 
         # Connection widgets
         self.source_item     = weakref.ref(source_item, self.callback_source_deleted)
@@ -649,7 +650,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         # points
         self.source_point    = QtCore.QPointF(0,0)
         self.dest_point      = QtCore.QPointF(0,0)
-        self.center_point    = QtCore.QPointF(0,0)      
+        self.center_point    = QtCore.QPointF(0,0)  
         
         # geometry
         self.gline           = QtGui.QGraphicsLineItem(self)
@@ -828,6 +829,12 @@ class EdgeWidget(QtGui.QGraphicsObject):
         Returns the current line color.
         """
         if self._debug:
+            if self.is_selected:
+                return QtGui.QColor(*[199, 255, 200, 125])
+
+            if self.is_hover:
+                return QtGui.QColor(*[199, 227, 255, 125])
+
             return QtGui.QColor(*[200, 200, 200, 125])
 
         if self.is_selected:
@@ -934,15 +941,27 @@ class EdgeWidget(QtGui.QGraphicsObject):
         ep = line.p2()
         return QtCore.QPointF(ep.x(), ep.y())
 
-    def getEndItem(self):
-        return self.dest_item().parentItem()
-
     def getStartItem(self):
+        """
+        Returns the source item widget.
+
+        returns:
+            (object) - connection widget.
+        """
         return self.source_item().parentItem()
+
+    def getEndItem(self):
+        """
+        Returns the destination item widget.
+
+        returns:
+            (object) - connection widget.
+        """
+        return self.dest_item().parentItem()
 
     def shape(self):
         """
-        Need to add some adjustments to the line to make is more selectable.
+         * todo: add some adjustments to the line to make it more selectable.
         """
         path = QtGui.QPainterPath()
         stroker = QtGui.QPainterPathStroker()
@@ -968,7 +987,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.setToolTip(self.name)
         self.show_conn = False
 
-        #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing | QtGui.QPainter.HighQualityAntialiasing)
 
         line = self.getLine()
         painter.setBrush(self.line_color)
@@ -1028,6 +1047,16 @@ class EdgeWidget(QtGui.QGraphicsObject):
                 
                 # translate the center point
                 #self.center_point.setPos(self.mapToScene(self.getCenterPoint()))
+        if self._debug:
+            if self.edge_type == 'bezier':
+                painter.setPen(QtGui.QPen(QtGui.QColor(*[197, 255, 174, 80]), 0.5, QtCore.Qt.SolidLine))
+                painter.setBrush(QtCore.Qt.NoBrush)
+                painter.drawPolyline(self.poly_line)
+                # 145, 255, 161, 200
+                painter.setPen(QtGui.QPen(QtGui.QColor(*[145, 255, 161, 200]), 1.5, QtCore.Qt.SolidLine))
+                painter.setBrush(QtGui.QColor(*[145, 176, 255, 50]))
+                painter.drawEllipse(self.source_point, self.cp_size, self.cp_size)
+                painter.drawEllipse(self.dest_point, self.cp_size, self.cp_size)
 
 
 class Connection(QtGui.QGraphicsObject):
@@ -1544,7 +1573,10 @@ class NodeBackground(QtGui.QGraphicsItem):
         qbrush = QtGui.QBrush(gradient)
         
         if self._debug:
-            qpen = QtGui.QPen(QtGui.QColor(*[220, 220, 220]))
+            pcolor = QtGui.QColor(*[220, 220, 220])
+            if self.node.is_selected:
+                pcolor = QtGui.QColor(*[255, 180, 74])
+            qpen = QtGui.QPen(pcolor)
             qbrush = QtGui.QBrush(QtCore.Qt.NoBrush)
 
         painter.setPen(qpen)

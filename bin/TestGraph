@@ -8,7 +8,7 @@ from optparse import OptionParser
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-f", "--filename", action="store", dest="filename")
-    parser.add_option("-g", "--opengl", action="store_true", dest="opengl", default=False)
+    parser.add_option("-g", "--use_gl", action="store_true", dest="use_gl", default=False)
     parser.add_option("-d", "--debug", action="store_true", dest="debug", default=False)
     (options, args) = parser.parse_args()
     from SceneGraph.test import test
@@ -22,7 +22,7 @@ if __name__ == "__main__":
         app.setStyle("oxygen")
 
     #app.setStyle("gtk") # gtk is default
-    sgui = test.TestGraph(opengl=options.opengl, debug=options.debug)
+    sgui = test.TestGraph(use_gl=options.use_gl, debug=options.debug)
     sgui.show()
 
     if options.filename:

@@ -31,7 +31,8 @@ class NoteWidget(QtGui.QGraphicsObject):
         self.bufferX         = 3
         self.bufferY         = 3
         self.pen_width       = 1.5                            # pen width for NoteBackground  
-
+        self.handle_size     = 6                              # size of the resize handle
+          
         # fonts
         self._font           = 'SansSerif'
         self._font_size      = self.dagnode.font_size
@@ -53,6 +54,8 @@ class NoteWidget(QtGui.QGraphicsObject):
         # temp resizing attributes
         self.top_left        = ()
         self.btm_right       = ()
+        self.min_width       = 75                             # widget minimum size  
+        self.min_height      = 60                             # widget minimum size  
 
         # label
         self._evaluate_tag   = False                          # indicates the node is set to "evaluate" (a la Houdini)
@@ -168,8 +171,8 @@ class NoteWidget(QtGui.QGraphicsObject):
             self.btm_right = (scene_pos.x(), scene_pos.y())
             # create a temporary rectangle with the current selection
             rect = QtCore.QRectF(QtCore.QPointF(*self.top_left), QtCore.QPointF(*self.btm_right))    
-            self.dagnode.width = rect.width()
-            self.dagnode.height = rect.height()
+            self.dagnode.width = abs(rect.width())
+            self.dagnode.height = abs(rect.height())
 
     def mousePressEvent(self, event):
         """
@@ -193,7 +196,13 @@ class NoteWidget(QtGui.QGraphicsObject):
             self.handle_selected = False
             #self.setPos(cpos.x(), cpos.y())            
         QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
-        
+
+        # tidy up
+        if self.dagnode.width < self.min_width:
+            self.dagnode.width = self.min_width
+
+        if self.dagnode.height < self.min_height:
+            self.dagnode.height = self.min_height
 
     def dagnodeUpdated(self, *args, **kwargs):
         """
@@ -357,12 +366,11 @@ class NoteWidget(QtGui.QGraphicsObject):
         * testing
         """
         rect = self.boundingRect()
-        size = 6
-        buffer = 2
-        p1 = rect.bottomRight() # need as p1
-        p2 = QtCore.QPointF(p1.x() - (size+buffer), p1.y())
-        topLeft = QtCore.QPointF(p2.x(), p2.y() - (size+buffer))
-        return QtCore.QRectF(topLeft, QtCore.QSize(size, size))
+        hbuffer = self.handle_size/3.0
+        p1 = rect.bottomRight()
+        p2 = QtCore.QPointF(abs(p1.x()) - (self.handle_size + hbuffer), p1.y())
+        topLeft = QtCore.QPointF(p2.x(), p2.y() - (self.handle_size + hbuffer))
+        return QtCore.QRectF(topLeft, QtCore.QSize(self.handle_size, self.handle_size))
 
     def paint(self, painter, option, widget):
         """
@@ -452,11 +460,16 @@ class NoteWidget(QtGui.QGraphicsObject):
         painter.setBrush(qbrush)
 
         # draw background
-        painter.drawPolygon(note_shape)        
+        if not self.handle_selected:
+            painter.drawPolygon(note_shape)
+        else:
+            painter.drawRect(self.boundingRect())
         painter.setBrush(cbrush)
         painter.setPen(cpen)
+
         # draw corner
-        painter.drawPolygon(corner_shape)
+        if not self.handle_selected:
+            painter.drawPolygon(corner_shape)
 
         self.center_label.hide()
         cpos = self.mapToScene(self.boundingRect().center())
@@ -472,7 +485,7 @@ class NoteWidget(QtGui.QGraphicsObject):
             if self._debug:
                 self.center_label.show()
                 self.center_label.setPos(0,0)
-            self.setPos(cpos.x(),cpos.y())            
+            self.setPos(cpos.x(),cpos.y())
         self.resize_handle.setRect(self.handleRect())
             
     def setDebug(self, val):
