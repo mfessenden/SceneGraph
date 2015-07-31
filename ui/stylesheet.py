@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import re
 import sys
 from collections import OrderedDict as dict
 from string import Template
@@ -7,6 +8,11 @@ from string import Template
 
 from SceneGraph import options
 reload(options)
+
+
+regex = dict(
+    property = re.compile(r"\@(?P<attr>[\.\w\-]+):(?P<class>[\.\w\-]+):?(?P<subclass>[\.\w\-]+)?\s?=\s?(?P<value>[\.\w\-]+)"),
+    )
 
 
 class StylesheetManager(object):
@@ -34,6 +40,12 @@ class StylesheetManager(object):
     def _get_config_paths(self, paths=[]):
         """
         Read configs from config paths.
+
+        params:
+            paths (list) - list of paths to add to the scan.
+
+        returns:
+            (tuple) - array of search paths.
         """
         if paths and type(paths) in [str, unicode]:
             paths = [paths,]
@@ -62,6 +74,12 @@ class StylesheetManager(object):
     def _get_config_files(self, paths=[]):
         """
         Get config files.
+
+        params:
+            paths (list) - list of paths to add to the scan.
+
+        returns:
+            (dict) - dictionary of config names/filenames.
         """
         cfg_files = dict()
         if not paths:
@@ -80,6 +98,10 @@ class StylesheetManager(object):
     def add_config(self, filename, name=None):
         """
         Add a config to the config files attribute.
+
+        params:
+            filename (str) - filename to read.
+            name     (str) - name of the config.
         """
         if filename in self._config_files.values():
             for cfg_name, cfg_file in self._config_files.iteritems():

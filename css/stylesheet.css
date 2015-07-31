@@ -35,13 +35,15 @@ QMainWindow{
     text-decoration: none;
 }
 
-QWidget{
-    color: #b1b1b1;
-    background-color: #323232;
+QWidget {
     font-size: 8pt;
     font-family: "SansSerif";
+    color: #b1b1b1;
+    background-color: #323232;
 }
-
+/*
+DOCKS
+*/
 QDockWidget{
     /* affects dock widget title bar */
     font-weight: bold;
@@ -58,12 +60,49 @@ QDockWidget::title{
     padding-left: 12px;
     border-radius: 4px;
 }
-
-QTabBar{
-    /*font-weight: bold;*/
-    /*font-size: 11;*/
+/*
+GROUPS
+*/
+QGroupBox { 
+    border: 2px groove #323232;
+    border-radius: 5px;
+    margin-top: 0.5em;  
 }
 
+QGroupBox::title {
+    padding: 0 3px 0 3px;
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px; 
+}
+
+QGroupBox::flat { 
+    border-radius: 0px; 
+    border-left-style: none;
+    border-right-style: none;
+    border-bottom-style: none;
+}
+
+QGroupBox::title::flat {
+    padding: 0 3px 0 3px;
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 6px; 
+}
+
+QGroupBox.attr_main_group {
+    color: #efefef;
+    font-weight: bold;
+}
+
+QGroupBox.attr_sub_group {
+    color: #bfbfbf;
+    font-style: italic;
+    font-weight: bold;
+}
+/*
+BUTTONS
+*/
 QPushButton{
     border-color: #454545;
     border-style: outset;
@@ -78,7 +117,9 @@ QPushButton{
 QPushButton:!enabled{
     background-color: #595959;
 }
-
+/*
+LINE EDIT
+*/
 QLineEdit{
     background-color: #3a3a3a;
 }
@@ -88,6 +129,10 @@ QLineEdit.Connected{
     background-color: #323232;
     font-style: italic;
 }
+
+/*
+MENU
+*/
 
 QMenuBar.AttributeMenu::item{
     border-width: 1px;
@@ -216,7 +261,9 @@ QScrollBar::sub-line:horizontal {
     border: 1px solid #737373; 
     background: none;
 }
-
+/*
+TABLE VIEW
+*/
 QTableView {
     selection-background-color: #707070;
     border-radius: 2px;
@@ -252,15 +299,25 @@ ColorSwatch {
     border-radius: 4px;
 }
 
+QLabel {
+    background-color: none;
+    font-weight: bold;
+}
+
 QLabel.ListHeader{
     font-weight: bold;
-    /*font-size: 8pt;*/
+    font-size: 8pt;
+}
+
+QLabel.attr_label {
+    font-weight: normal;
 }
 
 QTextBrowser.Output{
     font-family: "Monospace";
     /*font-size: medium;*/
     background-color: #222222;
+    border: #292929;
 }
 
 /*
@@ -333,30 +390,7 @@ QTabBar::tab::top:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
 }
 
-QGroupBox { 
-    border: 2px groove #272727;
-    /* groove & ridge work with 2px border; seems to work best with lighter colors */
-    /* inset works with 1px borders */
-    /*border-style: groove;*/
-    font-size: 8pt;
-    border-radius: 5px;
-    margin-top: 0.5em;  
-    font-weight: bold;
-}
 
-QGroupBox::title { 
-    padding: 0 3px 0 3px;
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 10px; 
-}
-
-QGroupBox::flat { 
-    border-radius: 0px; 
-    border-left-style: none;
-    border-right-style: none;
-    border-bottom-style: none;
-}
 
 QListView {
     alternate-background-color: yellow;
@@ -376,10 +410,10 @@ QPlainTextEdit.Console {
     background-color: #222222;
 }
 
-QPlainTextEdit.AttributeEditor {
-    border: 1px solid #414141;
-    background-color: #3d3d3d;
+QPlainTextEdit.attr_text_edit {
+    border: 1px inset #292929;
     border-radius: 3px;
+    background-color: #3a3a3a;
 }
 
 QGraphicsView {

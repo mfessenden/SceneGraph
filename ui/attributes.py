@@ -23,7 +23,6 @@ class AttributeEditor(QtGui.QWidget):
         self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
-        self.flat_grp       = True
 
 
         self.setObjectName("AttributeEditor")
@@ -33,9 +32,7 @@ class AttributeEditor(QtGui.QWidget):
 
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
-        #self.mainGroup.setProperty("class", "AttributeEditor") 
-        #self.mainGroup.setFont(self.fonts.get("attr_editor"))
-        self.mainGroup.setFlat(self.flat_grp)
+        self.mainGroup.setProperty("class", "attr_main_group")
 
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -84,10 +81,10 @@ class AttributeEditor(QtGui.QWidget):
         for section in self._sections:            
             
             group = QtGui.QGroupBox(self.mainGroup)
-            #group.setFont(self.fonts.get("attr_editor_group"))
             group.setTitle('%s' % section)
-            group.setFlat(self.flat_grp)
+            group.setFlat(True)
             group.setObjectName("%s_group" % section)
+            group.setProperty("class", "attr_sub_group")
 
             # build a formlayout
             formLayout = QtGui.QFormLayout(group)
@@ -131,21 +128,23 @@ class AttributeEditor(QtGui.QWidget):
                         if editor:
                             #editor.setFont(self.fonts.get("attr_editor"))
                             if editor:
-                                editor.initializeEditor()
+                                editor.initializeEditor()                                
 
                                 formLayout.addRow("%s:" % attr_label, editor)
                                 label_widget = formLayout.itemAt(row, QtGui.QFormLayout.LabelRole)
 
                                 label = label_widget.widget()
+                                label.setProperty("class", "attr_label")
                                 #label.setFont(self.fonts.get("attr_editor_label"))
                                 formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
+
                                 # add the description
                                 if desc is not None:
                                     editor.setToolTip(desc)
-                                    #attr_label.setToolTip(desc)
                                     
                                 # signal here when editor changes
                                 editor.valueChanged.connect(self.nodeAttributeChanged)
+
                                 #editor.setEnabled(not locked)
 
                                 # connected edges
@@ -202,6 +201,7 @@ class AttributeEditor(QtGui.QWidget):
 
             for e in editors:
                 e.initializeEditor()
+        self.initializeStylesheet()
 
     def sizeHint(self):
         return QtCore.QSize(270, 550)
@@ -1602,13 +1602,12 @@ class DocumentEditor(QtGui.QWidget):
 
         # value 1 editor
         self.val1_edit = QtGui.QPlainTextEdit(self)
-        #self.val1_edit.setProperty("class", "AttributeEditor")
+        self.val1_edit.setProperty("class", "attr_text_edit")
 
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
-
         self.val1_edit.document().contentsChanged.connect(self.valueUpdatedAction)
-        #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
+        self.setAutoFillBackground(False)
 
     def sizeHint(self):
         return QtCore.QSize(200, 85)
@@ -1865,6 +1864,7 @@ class ColorPicker(QtGui.QWidget):
         # Env Attribute attrs
         self.attr           = None
 
+
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setContentsMargins(4, 2, 2, 2)
         self.mainLayout.setSpacing(1)
@@ -1889,8 +1889,6 @@ class ColorPicker(QtGui.QWidget):
         self.colorSwatch.clicked.connect(self.colorPickedAction)
         self.slider.sliderReleased.connect(self.sliderReleasedAction)
 
-        #print 'initial color: ', self.colorSwatch.color
-        #print 'cached:        ', self._current_value
 
     @property
     def attribute(self):

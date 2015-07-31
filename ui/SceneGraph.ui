@@ -17,6 +17,9 @@
    <iconset>
     <normaloff>../../../icn/graph_icon.png</normaloff>../../../icn/graph_icon.png</iconset>
   </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
   <property name="dockOptions">
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
   </property>
@@ -51,6 +54,9 @@
        <layout class="QVBoxLayout" name="outputTabLayout">
         <item>
          <widget class="QTextBrowser" name="outputTextBrowser">
+          <property name="autoFillBackground">
+           <bool>false</bool>
+          </property>
           <property name="class" stdset="0">
            <string>Output</string>
           </property>
