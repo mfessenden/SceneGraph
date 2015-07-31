@@ -386,3 +386,29 @@ QGraphicsView {
     background-color: #222222;
     
 }
+
+QSlider::groove:horizontal {
+    border: 1px solid #999999;
+    height: 9px;    
+    border-radius: 9px;
+}
+
+QSlider::handle:horizontal {
+    width: 18px;
+}
+
+QSlider::add-page:qlineargradient {
+    background: lightgrey;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+QSlider::sub-page:qlineargradient {
+    background: darkgrey;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 9px;
+    border-bottom-left-radius: 9px;
+}

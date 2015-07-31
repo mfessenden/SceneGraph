@@ -1,11 +1,11 @@
-#### branch: windows
-- add windows batch file launcher
-- platform-specific tweaks to globals
+SceneGraph
+----------
 
+=====
+Usage
+=====
 
-##### Usage:
-
-###### UI:
+**Launching the interface**::
 
     from SceneGraph import scenegraph
     sgui = scenegraph.SceneGraphUI()
@@ -47,8 +47,17 @@
     # get connected nodes from an edge
     e1.listConnections()
 
+**Loading in Maya**::
 
-###### API:
+    from SceneGraph import scenegraph_maya
+    scenegraph_maya.main()
+
+**Loading in Nuke**::
+
+    from SceneGraph import scenegraph_nuke
+    scenegraph_nuke.main()
+
+**Using the API**::
 
     # create a graph
     from SceneGraph import core
@@ -94,7 +103,7 @@
     g.add_edge(d, m, dest_attr='inputA')
     m.rename_connection('inputA', 'newInput')
 
-####### Advanced API:
+**Advanced API**::
 
     # add attributes to a dag node, flag it as an input connection
     attr=n1.addAttr('env', value='maya', input=True)
@@ -105,22 +114,18 @@
     # set the value via the attribute instance
     attr.value = 'houdini'
 
+**Dependencies:**
 
-###### Maya:
-    from SceneGraph import scenegraph_maya
-    scenegraph_maya.main()
+* Python 2.7
+* simplejson
+* NetworkX 1.9.1
 
+**Branch: windows:**
 
+* add windows batch file launcher
+* platform-specific tweaks to globals
 
-####### To Do:
-###### API:
-- Node defaults, private attributes not yet re-implemented in new API
-- Node.__setstate__, __getstate__ not yet re-implemented
+**To Do:**
 
-
-##### Dependencies:
-- Python 2.7
-- simplejson
-- NetworkX 1.9.1
-
-
+* Node defaults, private attributes not yet re-implemented in new API
+* Node.__setstate__, __getstate__ not yet re-implemented
