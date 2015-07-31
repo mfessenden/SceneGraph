@@ -5,7 +5,17 @@ from PySide import QtGui, QtCore
 from optparse import OptionParser
 
 
+def _path_fix():
+    """
+    Append path for windows.
+    """
+    dname = os.path.dirname(__file__)
+    rootdir = os.path.dirname(os.path.dirname(dname))
+    sys.path.append(rootdir)
+
+
 if __name__ == "__main__":
+    _path_fix()
     from SceneGraph import scenegraph
     from SceneGraph.options import PACKAGE, PLATFORM, EDGE_TYPES, VIEWPORT_MODES
 
@@ -33,6 +43,9 @@ if __name__ == "__main__":
 
     if PLATFORM == 'MacOSX':
         parser.set_default('app_style', 'cleanlooks')
+
+    if PLATFORM == 'Windows':
+        parser.set_default('app_style', 'plastique')
 
     (options, args) = parser.parse_args()
 

@@ -35,15 +35,34 @@ QMainWindow{
     text-decoration: none;
 }
 
-QWidget {
-    font-size: 8pt;
-    font-family: "SansSerif";
+QMainWindow::separator{
+    /*turns off that dashed buttons image*/
+    image: none;
+    width: 4px;
+}
+
+QMainWindow::separator:hover {
+    background: #3d3d3d;
+}
+
+QWidget{
     color: #b1b1b1;
     background-color: #323232;
+    font-size: 8pt;
+    font-family: Verdana, Arial, SansSerif;
 }
-/*
-DOCKS
-*/
+
+/* item (list, table, etc) hover/selection behaviors */
+QWidget:item:hover{
+    background-color: #C7C7C7;
+    color: #222222;
+}
+
+QWidget:item:selected{
+    background-color: #B9B9B9;
+    color: #222222;
+}
+
 QDockWidget{
     /* affects dock widget title bar */
     font-weight: bold;
@@ -51,58 +70,36 @@ QDockWidget{
 
 QDockWidget::title{
     text-align: left;
-    border-bottom: 1px solid #252525;
-    border-right: 1px solid #252525;
-    border-top: 1px solid #616161;
-    border-left: 1px solid #616161;
+    border: 1px outset #232323;
     spacing: 3px; /* spacing between items in the tool bar */
     background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 #323232);
     padding-left: 12px;
-    border-radius: 4px;
-}
-/*
-GROUPS
-*/
-QGroupBox { 
-    border: 2px groove #323232;
-    border-radius: 5px;
-    margin-top: 0.5em;  
+    margin-left: 3px;
+    border-radius: 2px;
 }
 
-QGroupBox::title {
-    padding: 0 3px 0 3px;
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 10px; 
+QDockWidget::close-button, QDockWidget::float-button {
+    /*border: 1px inset #323232;
+    background: #4b4b4b;
+    border-radius: 1px;
+    padding: -3px, 3px, 3px, 3px;
+    margin: 3px, 3px, 3px, 3px;
+    subcontrol-origin: margin;  */
+    background: transparent;
 }
 
-QGroupBox::flat { 
-    border-radius: 0px; 
-    border-left-style: none;
-    border-right-style: none;
-    border-bottom-style: none;
+QDockWidget::close-button:hover, QDockWidget::float-button:hover {
+    border: 1px outset #4d4d4d;
 }
 
-QGroupBox::title::flat {
-    padding: 0 3px 0 3px;
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 6px; 
+QDockWidget::close-button:pressed, QDockWidget::float-button:pressed {
 }
 
-QGroupBox.attr_main_group {
-    color: #efefef;
-    font-weight: bold;
+QTabBar{
+    /*font-weight: bold;*/
+    /*font-size: 11;*/
 }
 
-QGroupBox.attr_sub_group {
-    color: #bfbfbf;
-    font-style: italic;
-    font-weight: bold;
-}
-/*
-BUTTONS
-*/
 QPushButton{
     border-color: #454545;
     border-style: outset;
@@ -117,9 +114,7 @@ QPushButton{
 QPushButton:!enabled{
     background-color: #595959;
 }
-/*
-LINE EDIT
-*/
+
 QLineEdit{
     background-color: #3a3a3a;
 }
@@ -130,10 +125,6 @@ QLineEdit.Connected{
     font-style: italic;
 }
 
-/*
-MENU
-*/
-
 QMenuBar.AttributeMenu::item{
     border-width: 1px;
     border-bottom-color: #939393;
@@ -141,30 +132,27 @@ QMenuBar.AttributeMenu::item{
 }
 
 QMenuBar{
+    /* background of the menubar widget */
     background: #363636;
     padding: 1px 1px;
     spacing: 5px; /* spacing between menu bar items */
 }
 
+/* menu items (top level) */
 QMenuBar::item{
     padding: 1px 4px;
     background: transparent;
     border-radius: 4px;
 }
 
-QMenuBar::item:selected { /* when selected using mouse or keyboard */
-    background: #707070;
+QMenuBar::item:selected { 
+    /* mouseOver selection */
+    background: #8D8D8D;
 }
 
 QMenu{
-    /*font-size: 9pt;*/
-    border: 1px solid;
-    border-bottom-color: #1f1f1f;
-    border-top-color: #333333;
-    border-left-color: #585858;
-    border-right-color: #1f1f1f;
-    background-color: #333333;
-    /*box-shadow: 0px 1px 0px 0px #191919;*/
+    border: 1px outset rgba(59, 59, 59, 125);
+    border-radius: 2px;
 }
 
 QMenu::item {
@@ -172,8 +160,10 @@ QMenu::item {
     border: 1px solid transparent; /* reserve space for selection border */
 }
 
+/* menu item mouseOver (no hover?) */
 QMenu::item:selected {
-    background: rgba(100, 100, 100, 150);
+    border-radius: 2px;
+    background: #8D8D8D;
 }
 
 QMenu::tearoff {
@@ -197,8 +187,9 @@ QMenu::item:disabled {
 }
 
 QStatusBar {
-    font-family: "Monospace";
-    /*font-size: 9pt;*/
+    font-family: Consolas, Courier, Monospace;
+    font-size: 8pt;
+    color: #c4c4c4;
 }
 
 QScrollBar:horizontal {
@@ -214,11 +205,13 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:horizontal {
+    border: 1px outset #5A5A5A;
     background: #646464;
     min-height: 20px;
     border-radius: 2px;
 }
 QScrollBar::handle:vertical {
+    border: 1px outset #5A5A5A;
     background: #646464;
     min-height: 20px;
     border-radius: 2px;
@@ -233,39 +226,65 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none;
 }
+/*
+##### ARROWS #####
+*/
 
 /* arrow & background */
 QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal{     
     /* arrow box border */
-    border: 1px solid #585858; 
     background: none;
     color: none;
 }
 
 QScrollBar::up-arrow, QScrollBar::down-arrow{
-    /* green */
-    border: 1px solid #585858; 
+    /* arrow box border */
     background: none;
     color: none;
 }
+/*
+##### END ARROWS #####
+*/
+
+
+/*
+##### ARROW BOXES #####
+*/
+
 /* arrow button outer */
 QScrollBar::add-line:horizontal {
     /* pink */
-    border: 1px solid #737373; 
-    background: none;
+    border: 1px outset #5A5A5A; 
+    background: #5A5A5A;
+    border-radius: 2px;
 }
 
 /* arrow button outer */
 QScrollBar::sub-line:horizontal {
-    /* pink ff31cc */
-    border: 1px solid #737373; 
-    background: none;
+    border: 1px outset #5A5A5A; 
+    background: #5A5A5A;
+    border-radius: 2px;
 }
+/* arrow button outer */
+QScrollBar::add-line:vertical {
+    border: 1px outset #5A5A5A; 
+    background: #5A5A5A;
+    border-radius: 2px;
+}
+
+/* arrow button outer */
+QScrollBar::sub-line:vertical {
+    /* pink ff31cc */
+    border: 1px outset #5A5A5A; 
+    background: #5A5A5A;
+    border-radius: 2px;
+}
+
 /*
-TABLE VIEW
+##### END ARROW BOXES #####
 */
+
 QTableView {
-    selection-background-color: #707070;
     border-radius: 2px;
     border: 1px solid #2e2e2d;
 }
@@ -273,6 +292,7 @@ QTableView {
 QTableView.Plugins {
     background-color: #4a4a4a;
 }
+
 
 QHeaderView::section {
     padding-left: 4px;
@@ -299,25 +319,15 @@ ColorSwatch {
     border-radius: 4px;
 }
 
-QLabel {
-    background-color: none;
-    font-weight: bold;
-}
-
 QLabel.ListHeader{
     font-weight: bold;
-    font-size: 8pt;
-}
-
-QLabel.attr_label {
-    font-weight: normal;
+    /*font-size: 8pt;*/
 }
 
 QTextBrowser.Output{
-    font-family: "Monospace";
+    font-family: Consolas, Courier, Monospace;
     /*font-size: medium;*/
     background-color: #222222;
-    border: #292929;
 }
 
 /*
@@ -390,7 +400,30 @@ QTabBar::tab::top:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
 }
 
+QGroupBox { 
+    border: 2px groove #272727;
+    /* groove & ridge work with 2px border; seems to work best with lighter colors */
+    /* inset works with 1px borders */
+    /*border-style: groove;*/
+    font-size: 8pt;
+    border-radius: 5px;
+    margin-top: 0.5em;  
+    font-weight: bold;
+}
 
+QGroupBox::title { 
+    padding: 0 3px 0 3px;
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px; 
+}
+
+QGroupBox::flat { 
+    border-radius: 0px; 
+    border-left-style: none;
+    border-right-style: none;
+    border-bottom-style: none;
+}
 
 QListView {
     alternate-background-color: yellow;
@@ -406,17 +439,49 @@ TableView {
 }
 
 QPlainTextEdit.Console {
-    font-family: "Monospace";
+    font-family: Consolas, Courier, Monospace;
     background-color: #222222;
 }
 
-QPlainTextEdit.attr_text_edit {
-    border: 1px inset #292929;
+QPlainTextEdit.AttributeEditor {
+    border: 1px solid #414141;
+    background-color: #3d3d3d;
     border-radius: 3px;
-    background-color: #3a3a3a;
 }
 
 QGraphicsView {
-    background-color: #222222;
-    
+    background-color: #222222;    
+}
+
+/*
+SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
+*/
+
+QSlider::groove:horizontal {
+    border: 1px inset #1C1C1C;
+    height: 6px;
+    border-radius: 3px;
+}
+
+QSlider::sub-page:horizontal {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #373737, stop: 1 #4A4A4A);
+    border: 1px inset #1C1C1C;
+    border-radius: 3px;
+}
+
+/* groove background on right of slider */
+QSlider::add-page:horizontal {
+    background: #7D7D7D;
+    border: 1px outset #1C1C1C;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6C6C6C, stop:1 #9D9D9D);
+    border: 1px solid #373737;
+    width: 6px;
+    height: 10px;
+    margin-top: -4px;
+    margin-bottom: -4px;
+    border-radius: 2px;
 }
