@@ -23,8 +23,6 @@ class AttributeEditor(QtGui.QWidget):
         self._graph         = self._handler.graph    
         self._add_dialog    = None
         self.icons          = self._handler.icons
-        self.flat_grp       = True
-
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -33,9 +31,7 @@ class AttributeEditor(QtGui.QWidget):
 
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
-        #self.mainGroup.setProperty("class", "AttributeEditor") 
-        #self.mainGroup.setFont(self.fonts.get("attr_editor"))
-        self.mainGroup.setFlat(self.flat_grp)
+        self.mainGroup.setFlat(False)
 
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -61,13 +57,12 @@ class AttributeEditor(QtGui.QWidget):
     def use_stylesheet(self):
         return self._ui.use_stylesheet    
 
-    def initializeStylesheet(self, fonts=True):
+    def initializeStylesheet(self):
         """
         Setup the stylehsheet.
         """
         import os        
-        self.stylesheet = os.path.join(SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
-        ssf = QtCore.QFile(self.stylesheet)
+        ssf = QtCore.QFile(self._ui.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         if self.use_stylesheet:
             self.setStyleSheet(str(ssf.readAll()))
@@ -84,9 +79,8 @@ class AttributeEditor(QtGui.QWidget):
         for section in self._sections:            
             
             group = QtGui.QGroupBox(self.mainGroup)
-            #group.setFont(self.fonts.get("attr_editor_group"))
             group.setTitle('%s' % section)
-            group.setFlat(self.flat_grp)
+            group.setFlat(True)
             group.setObjectName("%s_group" % section)
 
             # build a formlayout
@@ -1875,6 +1869,7 @@ class ColorPicker(QtGui.QWidget):
         self.colorSwatch.setMinimumSize(QtCore.QSize(75, 20))
         self.mainLayout.addWidget(self.colorSwatch)
         self.slider = QtGui.QSlider(self)
+        self.slider.setAutoFillBackground(True)
 
         self.slider.setOrientation(QtCore.Qt.Horizontal)
         self.mainLayout.addWidget(self.slider)

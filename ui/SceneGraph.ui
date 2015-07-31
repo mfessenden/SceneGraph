@@ -316,7 +316,7 @@
           <x>0</x>
           <y>0</y>
           <width>323</width>
-          <height>189</height>
+          <height>194</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -421,7 +421,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>307</width>
-                  <height>363</height>
+                  <height>358</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -658,7 +658,7 @@
               <x>0</x>
               <y>0</y>
               <width>317</width>
-              <height>400</height>
+              <height>387</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -750,7 +750,7 @@
               <x>0</x>
               <y>0</y>
               <width>317</width>
-              <height>400</height>
+              <height>387</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">

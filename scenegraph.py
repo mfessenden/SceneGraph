@@ -202,10 +202,14 @@ class SceneGraphUI(form_class, base_class):
         Setup the stylehsheet.
         """
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
+        print '# loading stylesheet: "%s"' % self.stylesheet
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         if self.use_stylesheet:
             self.setStyleSheet(str(ssf.readAll()))
+            attr_editor = self.getAttributeEditorWidget()
+            if attr_editor:
+                attr_editor.setStyleSheet(str(ssf.readAll()))
         ssf.close()
 
     def initializeGraphicsView(self, filter=False):
@@ -759,7 +763,7 @@ class SceneGraphUI(form_class, base_class):
         else:
             self.view.setViewport(QtGui.QWidget())
 
-        self.initializeStylesheet(fonts=False)
+        self.initializeStylesheet()
         self.view.scene().update()
 
     def toggleEffectsRendering(self, val):
@@ -1455,12 +1459,11 @@ class SceneGraphUI(form_class, base_class):
             (str) - save file name.
         """
         filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
+        if not filename:
+            return
         bn, fext = os.path.splitext(filename)
         if not fext and force:
             filename = '%s.json' % bn
-            
-        if not filename:
-            return
         return filename
 
     def openDialog(self):

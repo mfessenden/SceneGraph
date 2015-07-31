@@ -23,12 +23,13 @@ def setup_platform_defaults():
     # windows hackery
     else:
         os.environ['TMPDIR'] = os.getenv('TEMP')
+        os.environ['HOME'] = HOME
     return ( platform, HOME )
 
 
 PACKAGE                         = 'SceneGraph'
 API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 2
+API_REVISION                    = 3
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
