@@ -324,6 +324,10 @@ QLabel.ListHeader{
     /*font-size: 8pt;*/
 }
 
+QLabel.attr_label {
+    font-weight: normal;
+}
+
 QTextBrowser.Output{
     font-family: Consolas, Courier, Monospace;
     /*font-size: medium;*/
@@ -443,14 +447,24 @@ QPlainTextEdit.Console {
     background-color: #222222;
 }
 
-QPlainTextEdit.AttributeEditor {
-    border: 1px solid #414141;
-    background-color: #3d3d3d;
+QPlainTextEdit.attr_text_edit {
+    border: 1px inset #292929;
     border-radius: 3px;
+    background-color: #3a3a3a;
 }
 
 QGraphicsView {
     background-color: #222222;    
+}
+
+/*
+SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
+*/
+
+QSlider::groove:horizontal {
+    border: 1px inset #1C1C1C;
+    height: 6px;
+    border-radius: 3px;
 }
 
 /*

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>420</width>
+    <height>101</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget{
+    color: #b1b1b1;
+    background-color: #323232;
+    font-size: 8pt;
+    font-family: &quot;SansSerif&quot;;
+}
+
+QSlider::groove:horizontal {
+    border: 1px inset #1C1C1C;
+    height: 6px;
+    border-radius: 3px;
+}
+
+QSlider::sub-page:horizontal {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #373737, stop: 1 #4A4A4A);
+    border: 1px inset #1C1C1C;
+    border-radius: 3px;
+}
+
+/* groove background on right of slider */
+QSlider::add-page:horizontal {
+    background: #7D7D7D;
+    border: 1px inset #1C1C1C;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6C6C6C, stop:1 #9D9D9D);
+    border: 1px solid #373737;
+    width: 6px;
+    height: 10px;
+    margin-top: -4px;
+    margin-bottom: -4px;
+    border-radius: 2px;
+}</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Slider:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSlider" name="horizontalSlider">
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="value">
+      <number>50</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
