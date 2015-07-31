@@ -24,7 +24,6 @@ class AttributeEditor(QtGui.QWidget):
         self._add_dialog    = None
         self.icons          = self._handler.icons
 
-
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
         self.mainLayout.setObjectName("mainLayout")
@@ -33,6 +32,7 @@ class AttributeEditor(QtGui.QWidget):
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
         self.mainGroup.setProperty("class", "attr_main_group")
+	self.mainGroup.setFlat(False)
 
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -58,13 +58,12 @@ class AttributeEditor(QtGui.QWidget):
     def use_stylesheet(self):
         return self._ui.use_stylesheet    
 
-    def initializeStylesheet(self, fonts=True):
+    def initializeStylesheet(self):
         """
         Setup the stylehsheet.
         """
         import os        
-        self.stylesheet = os.path.join(SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
-        ssf = QtCore.QFile(self.stylesheet)
+        ssf = QtCore.QFile(self._ui.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         if self.use_stylesheet:
             self.setStyleSheet(str(ssf.readAll()))
@@ -1607,7 +1606,6 @@ class DocumentEditor(QtGui.QWidget):
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
         self.val1_edit.document().contentsChanged.connect(self.valueUpdatedAction)
-        self.setAutoFillBackground(False)
 
     def sizeHint(self):
         return QtCore.QSize(200, 85)
@@ -1863,7 +1861,6 @@ class ColorPicker(QtGui.QWidget):
 
         # Env Attribute attrs
         self.attr           = None
-
 
         self.mainLayout = QtGui.QHBoxLayout(self)
         self.mainLayout.setContentsMargins(4, 2, 2, 2)

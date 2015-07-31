@@ -1,8 +1,11 @@
-#### branch: development
+SceneGraph
+----------
 
-##### Usage:
+=====
+Usage
+=====
 
-###### UI:
+**Launching the interface**::
 
     from SceneGraph import scenegraph
     sgui = scenegraph.SceneGraphUI()
@@ -44,8 +47,17 @@
     # get connected nodes from an edge
     e1.listConnections()
 
+**Loading in Maya**::
 
-###### API:
+    from SceneGraph import scenegraph_maya
+    scenegraph_maya.main()
+
+**Loading in Nuke**::
+
+    from SceneGraph import scenegraph_nuke
+    scenegraph_nuke.main()
+
+**Using the API**::
 
     # create a graph
     from SceneGraph import core
@@ -91,7 +103,7 @@
     g.add_edge(d, m, dest_attr='inputA')
     m.rename_connection('inputA', 'newInput')
 
-####### Advanced API:
+**Advanced API**::
 
     # add attributes to a dag node, flag it as an input connection
     attr=n1.addAttr('env', value='maya', input=True)
@@ -102,43 +114,18 @@
     # set the value via the attribute instance
     attr.value = 'houdini'
 
+**Dependencies:**
 
-###### Maya:
-    from SceneGraph import scenegraph_maya
-    scenegraph_maya.main()
+* Python 2.7
+* simplejson
+* NetworkX 1.9.1
 
+**Branch: windows:**
 
+* add windows batch file launcher
+* platform-specific tweaks to globals
 
-####### To Do:
-###### API:
-- Node defaults, private attributes not yet re-implemented in new API
-- Node.__setstate__, __getstate__ not yet re-implemented
+**To Do:**
 
-##### Dependencies:
-- Python 2.7
-- simplejson
-- NetworkX 1.9.1
-- matplotlib
-
-
-####### Admin:
-pyside-rcc ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/scenegraph_rc.py
-icn_build -f ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/icons.py
-
-# scratch
-from SceneGraph import core
-g=core.Graph(debug=True)
-g.edge_nice_name('732e7908-6264-4e96-b95b-1fe72c9e2f61', '0abdbeaf-681c-4d85-a712-7b3bd7e7a8d4')
-pm=g.pmanager
-m1=g.get_node('merge1')[0]
-e1=g.edges()[0]
-c=m1.get_input('input')
-
-
-from SceneGraph import core
-g=core.Graph()
-n=g.add_node('lookdev')
-n.metadata.input_connections()
-
-
-m.model = '/home/michael/graphs/connections.json'
+* Node defaults, private attributes not yet re-implemented in new API
+* Node.__setstate__, __getstate__ not yet re-implemented

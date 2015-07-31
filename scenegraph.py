@@ -201,27 +201,16 @@ class SceneGraphUI(form_class, base_class):
         """
         Setup the stylehsheet.
         """
-        if fonts:
-            self.setApplicationFonts()
-
         self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
+        print '# loading stylesheet: "%s"' % self.stylesheet
         ssf = QtCore.QFile(self.stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         if self.use_stylesheet:
             self.setStyleSheet(str(ssf.readAll()))
+            attr_editor = self.getAttributeEditorWidget()
+            if attr_editor:
+                attr_editor.setStyleSheet(str(ssf.readAll()))
         ssf.close()
-
-    def setApplicationFonts(self):
-        """
-        Set the font styles for the entire application.
-        """
-        # apply fonts
-        #self.outputTextBrowser.setFont(self.fonts.get('output'))
-
-        #self.setFont(self.fonts.get("ui"))
-        for menu in self.menubar.findChildren(QtGui.QMenu):
-            #menu.setFont(self.fonts.get("ui"))
-            pass
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -283,7 +272,7 @@ class SceneGraphUI(form_class, base_class):
         # debug menu
         self.action_reset_dots.triggered.connect(self.resetDotsAction)
         self.action_evaluate.triggered.connect(self.evaluateScene)
-        self.action_reset_fonts.triggered.connect(self.setApplicationFonts)
+        self.action_reload_style.triggered.connect(self.initializeStylesheet)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -774,7 +763,7 @@ class SceneGraphUI(form_class, base_class):
         else:
             self.view.setViewport(QtGui.QWidget())
 
-        self.initializeStylesheet(fonts=False)
+        self.initializeStylesheet()
         self.view.scene().update()
 
     def toggleEffectsRendering(self, val):
@@ -1188,7 +1177,6 @@ class SceneGraphUI(form_class, base_class):
         log.setLevel(int(logging_level))
         self.qtsettings.endGroup()
 
-
         # read the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
@@ -1471,12 +1459,11 @@ class SceneGraphUI(form_class, base_class):
             (str) - save file name.
         """
         filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
+        if not filename:
+            return
         bn, fext = os.path.splitext(filename)
         if not fext and force:
             filename = '%s.json' % bn
-            
-        if not filename:
-            return
         return filename
 
     def openDialog(self):
