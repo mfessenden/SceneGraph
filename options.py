@@ -2,25 +2,53 @@
 import os
 
 
-PACKAGE                     = 'SceneGraph'
-API_MAJOR_VERSION           = 0.66
-API_REVISION                = 1
-API_VERSION                 = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
-API_VERSION_AS_STRING       = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
-PLATFORM                    = None
-API_MINIMUM                 = 0.647
+def setup_platform_defaults():
+    """
+    Setup globals for a specific platform.
+    """
+    import sys
+    platform = 'Windows'
+    HOME = os.getenv('HOMEPATH')
+
+    # linux
+    if 'linux' in sys.platform:
+        platform = 'Linux'
+        HOME = os.getenv('HOME')
+
+    # macintosh
+    elif sys.platform == 'darwin':
+        platform = 'MacOSX'
+        HOME = os.getenv('HOME')
+
+    # windows hackery
+    else:
+        os.environ['TMPDIR'] = os.getenv('TEMP')
+    return ( platform, HOME )
 
 
-SCENEGRAPH_PATH             = os.path.dirname(__file__)
-SCENEGRAPH_PLUGIN_PATH      = os.path.join(SCENEGRAPH_PATH, 'plugins')
-SCENEGRAPH_UI               = os.path.join(SCENEGRAPH_PATH, 'ui', 'SceneGraph.ui')
-SCENEGRAPH_ATTR_EDITOR_UI   = os.path.join(SCENEGRAPH_PATH, 'ui', 'designer', 'NodeAttributes.ui')
-SCENEGRAPH_ICON_PATH        = os.path.join(SCENEGRAPH_PATH, 'icn')
-SCENEGRAPH_STYLESHEET_PATH  = os.path.join(SCENEGRAPH_PATH, 'css')
-SCENEGRAPH_PREFS_PATH       = os.path.join(os.getenv('HOME'), '.config', PACKAGE)
-SCENEGRAPH_TEST_PATH        = os.path.join(SCENEGRAPH_PATH, 'test')
-SCENEGRAPH_USER_WORK_PATH   = os.path.join(os.getenv('HOME'), 'graphs')
-SCENEGRAPH_CONFIG_PATH      = os.path.join(SCENEGRAPH_PATH, 'cfg')
+PACKAGE                         = 'SceneGraph'
+API_MAJOR_VERSION               = 0.66
+API_REVISION                    = 2
+API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
+API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
+PLATFORM                        = None
+API_MINIMUM                     = 0.647
+
+# initialize globals
+PLATFORM, USER_HOME             = setup_platform_defaults()
+
+SCENEGRAPH_PATH                 = os.path.dirname(__file__)
+SCENEGRAPH_PLUGIN_PATH          = os.path.join(SCENEGRAPH_PATH, 'plugins')
+SCENEGRAPH_UI                   = os.path.join(SCENEGRAPH_PATH, 'ui', 'SceneGraph.ui')
+SCENEGRAPH_ATTR_EDITOR_UI       = os.path.join(SCENEGRAPH_PATH, 'ui', 'designer', 'NodeAttributes.ui')
+SCENEGRAPH_ICON_PATH            = os.path.join(SCENEGRAPH_PATH, 'icn')
+SCENEGRAPH_STYLESHEET_PATH      = os.path.join(SCENEGRAPH_PATH, 'css')
+SCENEGRAPH_TEST_PATH            = os.path.join(SCENEGRAPH_PATH, 'test')
+SCENEGRAPH_CONFIG_PATH          = os.path.join(SCENEGRAPH_PATH, 'cfg')
+
+SCENEGRAPH_PREFS_PATH           = os.path.join(USER_HOME, '.config', PACKAGE)
+SCENEGRAPH_USER_WORK_PATH       = os.path.join(USER_HOME, 'graphs')
+
 
 
 SCENEGRAPH_COLORS = {
@@ -109,21 +137,3 @@ VIEWPORT_MODES = dict(
                 bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
                 )
 
-
-def setup_platform_defaults():
-    """
-    Setup globals for a specific platform.
-    """
-    import sys
-    platform = 'Windows'
-    if 'linux' in sys.platform:
-        platform = 'Linux'
-
-    if sys.platform == 'darwin':
-        platform = 'MacOSX'
-    return platform
-
-
-
-# initialize globals
-PLATFORM         = setup_platform_defaults()

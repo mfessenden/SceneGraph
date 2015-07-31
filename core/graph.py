@@ -569,9 +569,12 @@ class Graph(object):
         Returns a connection string from ids.
         """
         edges = self.get_edge(*args)
-        if edges:
-            if len(edges) > 1:
-                return '(Invalid)'
+
+        if not edges:
+            return '(Invalid)'
+
+        if len(edges) > 1:
+            return '(Invalid)'
 
         # edge: (id, id, attrs)
         edge = edges[0]

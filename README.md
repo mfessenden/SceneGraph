@@ -1,4 +1,7 @@
-#### branch: development
+#### branch: windows
+- add windows batch file launcher
+- platform-specific tweaks to globals
+
 
 ##### Usage:
 
@@ -114,31 +117,10 @@
 - Node defaults, private attributes not yet re-implemented in new API
 - Node.__setstate__, __getstate__ not yet re-implemented
 
+
 ##### Dependencies:
 - Python 2.7
 - simplejson
 - NetworkX 1.9.1
-- matplotlib
 
 
-####### Admin:
-pyside-rcc ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/scenegraph_rc.py
-icn_build -f ~/git/SceneGraph/icn/scenegraph.qrc -o ~/git/SceneGraph/icn/icons.py
-
-# scratch
-from SceneGraph import core
-g=core.Graph(debug=True)
-g.edge_nice_name('732e7908-6264-4e96-b95b-1fe72c9e2f61', '0abdbeaf-681c-4d85-a712-7b3bd7e7a8d4')
-pm=g.pmanager
-m1=g.get_node('merge1')[0]
-e1=g.edges()[0]
-c=m1.get_input('input')
-
-
-from SceneGraph import core
-g=core.Graph()
-n=g.add_node('lookdev')
-n.metadata.input_connections()
-
-
-m.model = '/home/michael/graphs/connections.json'
