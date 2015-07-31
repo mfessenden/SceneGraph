@@ -144,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>18</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -273,7 +273,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>638</height>
+          <height>620</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -321,8 +321,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>323</width>
-          <height>194</height>
+          <width>377</width>
+          <height>169</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -426,8 +426,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>307</width>
-                  <height>358</height>
+                  <width>361</width>
+                  <height>336</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -577,6 +577,12 @@
              </item>
              <item>
               <widget class="QToolButton" name="button_console_clear">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
                  <width>90</width>
@@ -663,8 +669,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>387</height>
+              <width>371</width>
+              <height>377</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -755,8 +761,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>387</height>
+              <width>208</width>
+              <height>211</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -772,6 +778,16 @@
              <property name="margin">
               <number>3</number>
              </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="app_style_label">
+               <property name="text">
+                <string>Style:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="app_style_menu"/>
+             </item>
              <item row="1" column="0">
               <widget class="QLabel" name="viewport_mode_label">
                <property name="text">
@@ -782,69 +798,49 @@
              <item row="1" column="1">
               <widget class="QComboBox" name="viewport_mode_menu"/>
              </item>
-             <item row="3" column="0">
+             <item row="2" column="0">
               <widget class="QLabel" name="edge_type_label">
                <property name="text">
                 <string>Edge type:</string>
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
+             <item row="2" column="1">
               <widget class="QComboBox" name="edge_type_menu"/>
              </item>
-             <item row="4" column="1">
+             <item row="3" column="1">
               <widget class="QCheckBox" name="check_render_fx">
                <property name="text">
                 <string>render FX</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="4" column="1">
               <widget class="QCheckBox" name="check_use_gl">
                <property name="text">
                 <string>Use OpenGL</string>
                </property>
               </widget>
              </item>
-             <item row="6" column="0">
+             <item row="5" column="0">
               <widget class="QLabel" name="logging_level_label">
                <property name="text">
                 <string>Logging level:</string>
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="5" column="1">
               <widget class="QComboBox" name="logging_level_menu"/>
              </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="antialiasing_label">
-               <property name="text">
-                <string>Antialiasing:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QComboBox" name="antialiasing_menu"/>
-             </item>
-             <item row="7" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="autosave_time_label">
                <property name="text">
                 <string>Autosave Time:</string>
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="6" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="app_style_label">
-               <property name="text">
-                <string>Style:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="app_style_menu"/>
              </item>
             </layout>
            </widget>
@@ -862,7 +858,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../icn/scenegraph.qrc">
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">

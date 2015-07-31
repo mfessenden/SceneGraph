@@ -78,14 +78,24 @@ QDockWidget::title{
     border-radius: 2px;
 }
 
-QDockWidget::close-button, QDockWidget::float-button {
+QDockWidget::float-button {
     /*border: 1px inset #323232;
-    background: #4b4b4b;
+    border-radius: 1px;
+    padding: -3px, 3px, 3px, 3px;    
+    subcontrol-origin: margin;  */
+    margin: 3px, 3px, 3px, 3px;
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-float-button.png);
+}
+
+QDockWidget::close-button {
+    /*border: 1px inset #323232;
     border-radius: 1px;
     padding: -3px, 3px, 3px, 3px;
-    margin: 3px, 3px, 3px, 3px;
     subcontrol-origin: margin;  */
     background: transparent;
+    margin: 3px, 3px, 3px, 3px;
+    image: url(:/icons/icons/ui-dock-close-button.png);
 }
 
 QDockWidget::close-button:hover, QDockWidget::float-button:hover {

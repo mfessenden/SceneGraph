@@ -4,6 +4,8 @@ import scenegraph_rc
 
 
 ICONS = dict(    
+    ui_dock_close_button            = QtGui.QIcon(":/icons/icons/ui-dock-close-button.png"),
+    ui_dock_float_button            = QtGui.QIcon(":/icons/icons/ui-dock-float-button.png"),
     folder_horizontal_open          = QtGui.QIcon(":/icons/icons/folder-horizontal-open.png"),
     arrow_curve_000_double          = QtGui.QIcon(":/icons/icons/arrow-curve-000-double.png"),
     arrow_curve_000_left            = QtGui.QIcon(":/icons/icons/arrow-curve-000-left.png"),

@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="icons">
+    <file>icons/ui-dock-close-button.png</file>
+    <file>icons/ui-dock-float-button.png</file>
     <file>icons/folder-horizontal-open.png</file>
     <file>icons/arrow-curve-000-double.png</file>
     <file>icons/arrow-curve-000-left.png</file>
