@@ -31,12 +31,12 @@ QWidget{
 /* item (list, table, etc) hover/selection behaviors */
 QWidget:item:hover{
     background-color: #C7C7C7;
-    color: #222222;
+    color: @hover-dark;
 }
 
 QWidget:item:selected{
     background-color: #B9B9B9;
-    color: #222222;
+    color: @hover-dark;
 }
 
 QDockWidget{
@@ -117,7 +117,7 @@ QPushButton:!enabled{
 }
 
 QLineEdit{
-    background-color: #3a3a3a;
+    background-color: @widget-bg-color ;
 }
 
 QLineEdit.Connected{
@@ -148,7 +148,7 @@ QMenuBar::item{
 
 QMenuBar::item:selected { 
     /* mouseOver selection */
-    background: #8D8D8D;
+    background: @selected-color;
 }
 
 QMenu{
@@ -164,7 +164,7 @@ QMenu::item {
 /* menu item mouseOver (no hover?) */
 QMenu::item:selected {
     border-radius: 2px;
-    background: #8D8D8D;
+    background: @selected-color;
 }
 
 QMenu::tearoff {
@@ -183,7 +183,7 @@ QMenu::indicator {
 }
 
 QMenu::item:disabled {
-    color: #646464;
+    color: @mid-color;
     background: none; /* remove menu highlighting on disabled items */
 }
 
@@ -194,26 +194,26 @@ QStatusBar {
 }
 
 QScrollBar:horizontal {
-  border-color: #646464;
-  background-color: #404040;
+  border-color: @mid-color;
+  background-color: @mid-darkest;
   height: 15px;  
 }
 
 QScrollBar:vertical {
-  border-color: #646464;
-  background-color: #404040;
+  border-color: @mid-color;
+  background-color: @mid-darkest;
   width: 15px;
 }
 
 QScrollBar::handle:horizontal {
-    border: 1px outset #5A5A5A;
-    background: #646464;
+    border: 1px outset @mid-darker;
+    background: @mid-color;
     min-height: 20px;
     border-radius: 2px;
 }
 QScrollBar::handle:vertical {
-    border: 1px outset #5A5A5A;
-    background: #646464;
+    border: 1px outset @mid-darker;
+    background: @mid-color;
     min-height: 20px;
     border-radius: 2px;
 }
@@ -255,29 +255,29 @@ QScrollBar::up-arrow, QScrollBar::down-arrow{
 /* arrow button outer */
 QScrollBar::add-line:horizontal {
     /* pink */
-    border: 1px outset #5A5A5A; 
-    background: #5A5A5A;
+    border: 1px outset @mid-darker; 
+    background: @mid-darker;
     border-radius: 2px;
 }
 
 /* arrow button outer */
 QScrollBar::sub-line:horizontal {
-    border: 1px outset #5A5A5A; 
-    background: #5A5A5A;
+    border: 1px outset @mid-darker; 
+    background: @mid-darker;
     border-radius: 2px;
 }
 /* arrow button outer */
 QScrollBar::add-line:vertical {
-    border: 1px outset #5A5A5A; 
-    background: #5A5A5A;
+    border: 1px outset @mid-darker; 
+    background: @mid-darker;
     border-radius: 2px;
 }
 
 /* arrow button outer */
 QScrollBar::sub-line:vertical {
     /* pink ff31cc */
-    border: 1px outset #5A5A5A; 
-    background: #5A5A5A;
+    border: 1px outset @mid-darker; 
+    background: @mid-darker;
     border-radius: 2px;
 }
 
@@ -332,7 +332,7 @@ QLabel.attr_label {
 QTextBrowser.Output{
     font-family: Consolas, Courier, Monospace;
     /*font-size: medium;*/
-    background-color: #222222;
+    background-color: @hover-dark;
 }
 
 /*
@@ -342,7 +342,7 @@ TABS
 */
 
 QTabWidget::pane { /* The tab widget frame */
-    border-top: 1px solid #292929;
+    border-top: 1px solid @border-dark;
 }
 
 QTabWidget::tab-bar {
@@ -352,7 +352,7 @@ QTabWidget::tab-bar {
 /* Style the tab using the tab sub-control. Note that
     it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {    
-    border: 1px solid #292929;
+    border: 1px solid @border-dark;
     border-bottom-color: @background-color; /* same as the pane color */
     min-width: 8ex;
     /*min-height: 2ex;*/
@@ -394,7 +394,7 @@ QTabBar::tab::bottom.subtab{
 
 
 QTabBar::tab:selected, QTabBar::tab:hover {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #707070, stop: 1.0 #646464);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #707070, stop: 1.0 @mid-color);
 }
 
 QTabBar::tab::bottom:!selected {
@@ -445,17 +445,17 @@ TableView {
 
 QPlainTextEdit.Console {
     font-family: Consolas, Courier, Monospace;
-    background-color: #222222;
+    background-color: @hover-dark;
 }
 
 QPlainTextEdit.attr_text_edit {
-    border: 1px inset #292929;
+    border: 1px inset @border-dark;
     border-radius: 3px;
-    background-color: #3a3a3a;
+    background-color: @widget-bg-color ;
 }
 
 QGraphicsView {
-    background-color: #222222;    
+    background-color: @hover-dark;    
 }
 
 /*
