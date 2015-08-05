@@ -1,39 +1,14 @@
 /*
-Grey Values:
-
-10%:
-1a1a1a;
-
-20%:
-333333;
-
-30%:
-4d4d4d;
-
-40%:
-666666;
-
-50%:
-808080;
-
-60%:
-999999;
-
-70%:
-b5b5b5;
-
-80%:
-cccccc;
-
-90%:
-e6e6e6;
-
+/*  SceneGraph default stylesheet
+/*
+/*  Copyright © 2015 Michael Fessenden. All rights reserved.
+/*
 */
 
-QMainWindow{
-    background-color: #323232;
-    text-decoration: none;
-}
+/*
+@STYLENAME = default
+*/
+
 
 QMainWindow::separator{
     /*turns off that dashed buttons image*/
@@ -47,9 +22,10 @@ QMainWindow::separator:hover {
 
 QWidget{
     color: #b1b1b1;
-    background-color: #323232;
-    font-size: 8pt;
-    font-family: Verdana, Arial, SansSerif;
+    background-color: @background-color;
+    font-size: @font-size-ui;
+    /*font-family: Verdana, Arial, SansSerif;*/
+    font-family: @font-family-ui;
 }
 
 /* item (list, table, etc) hover/selection behaviors */
@@ -72,37 +48,52 @@ QDockWidget::title{
     text-align: left;
     border: 1px outset #232323;
     spacing: 3px; /* spacing between items in the tool bar */
-    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 #323232);
+    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 @background-color);
     padding-left: 12px;
     margin-left: 3px;
     border-radius: 2px;
 }
 
 QDockWidget::float-button {
-    /*border: 1px inset #323232;
-    border-radius: 1px;
-    padding: -3px, 3px, 3px, 3px;    
-    subcontrol-origin: margin;  */
+    /*border: 1px inset @background-color;*/
     margin: 3px, 3px, 3px, 3px;
     background: transparent;
-    image: url(:/icons/icons/ui-dock-float-button.png);
+    image: url(:/icons/icons/ui-dock-float-off.png);
 }
 
 QDockWidget::close-button {
-    /*border: 1px inset #323232;
-    border-radius: 1px;
-    padding: -3px, 3px, 3px, 3px;
-    subcontrol-origin: margin;  */
-    background: transparent;
+    /*border: 1px inset @background-color;*/  
     margin: 3px, 3px, 3px, 3px;
-    image: url(:/icons/icons/ui-dock-close-button.png);
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-close-off.png);
 }
 
-QDockWidget::close-button:hover, QDockWidget::float-button:hover {
-    border: 1px outset #4d4d4d;
+QDockWidget::close-button:hover{
+    border: none;
+    margin: 3px, 3px, 3px, 3px;
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-close-on.png);
 }
 
-QDockWidget::close-button:pressed, QDockWidget::float-button:pressed {
+QDockWidget::float-button:hover{
+    border: none;
+    margin: 3px, 3px, 3px, 3px;
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-float-on.png);
+}
+
+QDockWidget::close-button:pressed{
+    border: none;
+    margin: 3px, 3px, 3px, 3px;
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-close-on.png);
+}
+
+QDockWidget::float-button:pressed{
+    border: none;
+    margin: 3px, 3px, 3px, 3px;
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-float-on.png);
 }
 
 QTabBar{
@@ -131,7 +122,7 @@ QLineEdit{
 
 QLineEdit.Connected{
     color: #93aebd;
-    background-color: #323232;
+    background-color: @background-color;
     font-style: italic;
 }
 
@@ -306,9 +297,9 @@ QTableView.Plugins {
 
 QHeaderView::section {
     padding-left: 4px;
-    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #323232, stop: 0.5 #242424, stop:1 #323232);
+    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 @background-color, stop: 0.5 #242424, stop:1 @background-color);
     color: #d4d4d4;    
-    border: .5px solid #323232;
+    border: .5px solid @background-color;
 }
 
 QHeaderView::section:checked{
@@ -362,7 +353,7 @@ QTabWidget::tab-bar {
     it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {    
     border: 1px solid #292929;
-    border-bottom-color: #323232; /* same as the pane color */
+    border-bottom-color: @background-color; /* same as the pane color */
     min-width: 8ex;
     /*min-height: 2ex;*/
     /*font-size: 9pt;*/

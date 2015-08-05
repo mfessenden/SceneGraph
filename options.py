@@ -29,7 +29,7 @@ def setup_platform_defaults():
 
 PACKAGE                         = 'SceneGraph'
 API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 3
+API_REVISION                    = 4
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
@@ -43,7 +43,7 @@ SCENEGRAPH_PLUGIN_PATH          = os.path.join(SCENEGRAPH_PATH, 'plugins')
 SCENEGRAPH_UI                   = os.path.join(SCENEGRAPH_PATH, 'ui', 'SceneGraph.ui')
 SCENEGRAPH_ATTR_EDITOR_UI       = os.path.join(SCENEGRAPH_PATH, 'ui', 'designer', 'NodeAttributes.ui')
 SCENEGRAPH_ICON_PATH            = os.path.join(SCENEGRAPH_PATH, 'icn')
-SCENEGRAPH_STYLESHEET_PATH      = os.path.join(SCENEGRAPH_PATH, 'css')
+SCENEGRAPH_STYLESHEET_PATH      = os.path.join(SCENEGRAPH_PATH, 'qss')
 SCENEGRAPH_TEST_PATH            = os.path.join(SCENEGRAPH_PATH, 'test')
 SCENEGRAPH_CONFIG_PATH          = os.path.join(SCENEGRAPH_PATH, 'cfg')
 
@@ -121,20 +121,30 @@ SCENEGRAPH_PREFERENCES = {
     'render_fx' : {'default': True, 'desc':'Render node drop shadows and effects.'},
     'antialiasing' : {'default': 2, 'desc':'Antialiasing level.'},
     'logging_level' : {'default':30, 'desc':'Verbosity level.'},
-    'font_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.'},
-    'font_mono' : {'default':'Menlo', 'desc':'Monospace font for UI.'},
-    'font_nodes' : {'default':'Menlo', 'desc':'Font for node labels.'},
+    'font_family_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.'},
+    'font_family_mono' : {'default':'Consolas', 'desc':'Monospace font for UI.'},
+    'font_size_ui' : {'default':'8pt', 'desc':'Default UI font size.'},
+    'font_size_mono' : {'default':'9pt', 'desc':'Default fixed size.'},
+    'font_nodes' : {'default':'Consolas', 'desc':'Font for node labels.'},
     'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).'},
     }
+
+
+
+SCENEGRAPH_VALID_FONTS = dict(
+    ui=['DejaVu Sans', 'DejaVu Serif', 'Serif', 'Sans Serif'], 
+    mono=['Consolas', 'DejaVu Sans Mono', 'Courier', 'Menlo', 'Monospace']
+    )
 
 
 EDGE_TYPES = ['bezier', 'polygon']
 
 
 VIEWPORT_MODES = dict(
-                full = 'QtGui.QGraphicsView.FullViewportUpdate',
-                smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
-                minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate',
-                bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
-                )
+    full = 'QtGui.QGraphicsView.FullViewportUpdate',
+    smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
+    minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate',
+    bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
+    )
+
 

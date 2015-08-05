@@ -54,7 +54,7 @@ if __name__ == "__main__":
     # set the application style
     if options.app_style:
         if options.app_style.lower() in APP_STYLES:
-            print '[%s]: INFO: setting Qt style: "%s".' % (PACKAGE, options.app_style)
+            #print '[%s]: INFO: setting Qt style: "%s".' % (PACKAGE, options.app_style)
             app.setStyle(options.app_style)
 
     # update prefs

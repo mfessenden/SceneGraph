@@ -2,6 +2,7 @@
 from PySide import QtCore, QtGui
 from functools import partial
 import os
+import re
 import pysideuic
 import xml.etree.ElementTree as xml
 from cStringIO import StringIO
@@ -57,13 +58,19 @@ class SceneGraphUI(form_class, base_class):
 
         self.fonts            = dict()  
         self.icons            = None  
-        self.view             = None
-        self.pmanager         = None
+        self.view             = None                                    # GraphicsView
+        self.pmanager         = None                                    # Plugin manager UI
 
         # preferences
         self.debug            = kwargs.get('debug', False)
         self.use_gl           = kwargs.get('use_gl', False)
         self.use_stylesheet   = kwargs.get('use_stylesheet', True)
+        self.stylesheet       = ui.StylesheetManager(self)              # stylesheet manager
+        # font prefs
+        self.font_family_ui   = None
+        self.font_family_mono = None
+        self.font_size_ui     = None
+        self.font_size_mono   = None
 
         self._show_private    = False
         self._valid_plugins   = []  
@@ -197,20 +204,11 @@ class SceneGraphUI(form_class, base_class):
         reload(options)
         self.fonts = options.SCENEGRAPH_FONTS
 
-    def initializeStylesheet(self, fonts=True):
+    def initializeStylesheet(self, fonts=True, paths=[]):
         """
         Setup the stylehsheet.
-        """
-        self.stylesheet = os.path.join(options.SCENEGRAPH_STYLESHEET_PATH, 'stylesheet.css')
-        print '# loading stylesheet: "%s"' % self.stylesheet
-        ssf = QtCore.QFile(self.stylesheet)
-        ssf.open(QtCore.QFile.ReadOnly)
-        if self.use_stylesheet:
-            self.setStyleSheet(str(ssf.readAll()))
-            attr_editor = self.getAttributeEditorWidget()
-            if attr_editor:
-                attr_editor.setStyleSheet(str(ssf.readAll()))
-        ssf.close()
+        """        
+        self.stylesheet.run(paths=paths)       
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -283,6 +281,9 @@ class SceneGraphUI(form_class, base_class):
         self.check_render_fx.toggled.connect(self.toggleEffectsRendering)
         self.autosave_time_edit.editingFinished.connect(self.setAutosaveDelay)
         self.app_style_menu.currentIndexChanged.connect(self.applicationStyleChanged)
+
+        self.ui_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
+        self.mono_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -442,6 +443,10 @@ class SceneGraphUI(form_class, base_class):
         self.logging_level_menu.blockSignals(True)
         self.check_render_fx.blockSignals(True)
         self.app_style_menu.blockSignals(True)
+        self.ui_font_menu.blockSignals(True)
+        self.mono_font_menu.blockSignals(True)
+        self.ui_fontsize_spinbox.blockSignals(True)
+        self.mono_fontsize_spinbox.blockSignals(True)
 
         self.edge_type_menu.clear()
         self.viewport_mode_menu.clear()
@@ -496,12 +501,28 @@ class SceneGraphUI(form_class, base_class):
         self.app_style_menu.addItems(app_styles)
         self.app_style_menu.setCurrentIndex(self.app_style_menu.findText(current_style))
 
+        # font preferences
+        self.ui_font_menu.clear()
+        self.mono_font_menu.clear()
+        self.ui_font_menu.addItems(self.stylesheet.buildUIFontList())
+        self.mono_font_menu.addItems(self.stylesheet.buildMonospaceFontList())
+
+        ui_font_size = float(re.sub('pt$', '', self.font_size_ui))
+        mono_font_size = float(re.sub('pt$', '', self.font_size_mono))
+
+        self.ui_fontsize_spinbox.setValue(ui_font_size)
+        self.mono_fontsize_spinbox.setValue(mono_font_size)
+
         self.edge_type_menu.blockSignals(False)
         self.viewport_mode_menu.blockSignals(False)
         self.check_use_gl.blockSignals(False)
         self.logging_level_menu.blockSignals(False)
         self.check_render_fx.blockSignals(False)
         self.app_style_menu.blockSignals(False)
+        self.ui_font_menu.blockSignals(False)
+        self.mono_font_menu.blockSignals(False)
+        self.ui_fontsize_spinbox.blockSignals(False)
+        self.mono_fontsize_spinbox.blockSignals(False)
 
     def buildWindowTitle(self):
         """
@@ -875,6 +896,15 @@ class SceneGraphUI(form_class, base_class):
         app.setStyle(style_name)
         self.initializeStylesheet()
 
+    def stylsheetChangedAction(self, index):
+        """
+        Runs when the user updates a font/stylesheet pref.
+        """
+        ui_font = self.ui_font_menu.currentText()
+        mono_font = self.mono_font_menu.currentText()
+        ui_fontsize = self.ui_fontsize_spinbox.value()
+        mono_fontsize = self.mono_fontsize_spinbox.value()       
+
     def resetDotsAction(self):
         """
         * Debug
@@ -1173,6 +1203,18 @@ class SceneGraphUI(form_class, base_class):
                 if plugin not in self._valid_plugins:
                     self._valid_plugins.append(plugin)
 
+        # font preferences
+        for attr in ['font_family_ui', 'font_family_mono', 'font_size_ui', 'font_size_mono']:
+            if attr not in kwargs:
+                value = self.qtsettings.value(attr)
+                if value is None:
+                    default = self.qtsettings.getDefaultValue(attr, 'Preferences')
+                    if default is not None:
+                        value = default
+
+                if value is not None:
+                    setattr(self, attr, value)
+
         self.autosave_inc = int(autosave_inc)
         log.setLevel(int(logging_level))
         self.qtsettings.endGroup()
@@ -1205,6 +1247,12 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.setValue("logging_level", log.level)
         self.qtsettings.setValue("autosave_inc", self.autosave_inc)
         self.qtsettings.setValue('plugins', self.graph.plug_mgr.node_types().keys())
+
+        # font/stylesheet preferences
+        self.qtsettings.setValue("font_family_ui", self.font_family_ui)
+        self.qtsettings.setValue("font_family_mono", self.font_family_mono)
+        self.qtsettings.setValue("font_size_ui", self.font_size_ui)
+        self.qtsettings.setValue("font_size_mono", self.font_size_mono)
         self.qtsettings.endGroup()
 
         # write the dock settings
@@ -1508,9 +1556,7 @@ class Settings(QtCore.QSettings):
 
         while self.group():
             self.endGroup()
-
         self.initializePreferences()
-
 
     def initializePreferences(self):
         """
@@ -1600,6 +1646,12 @@ class Settings(QtCore.QSettings):
         params:
             key (str)    - key to look for.
         """
+        if self.group():
+            try:
+                self.endGroup()
+            except:
+                pass
+
         result = None
         group_name = groups[0]
         for group in groups[1:]:
