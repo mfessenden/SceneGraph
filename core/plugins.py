@@ -48,8 +48,8 @@ class PluginManager(object):
         """
         Builds a list of external plugins paths. 
 
-        returns:
-            (tuple) - plugin scan paths.
+        :returns: plugin scan paths.
+        :rtype: tuple 
         """
         result = ()
         ext_pp = os.getenv('SCENEGRAPH_PLUGIN_PATH')
@@ -62,8 +62,8 @@ class PluginManager(object):
         """
         Returns a list of all plugin paths, starting with builting.
 
-        returns:
-            (tuple) - plugin scan paths.
+        :returns: plugin scan paths.
+        :rtype: tuple 
         """
         result = (self._default_plugin_path,)
         if self._external_plugin_paths:
@@ -79,8 +79,8 @@ class PluginManager(object):
         """
         Query globals for loaded plugins.
 
-        returns:
-            (dict) - class name, filename
+        :returns: dictionay of class name, filename.
+        :rtype: dict 
         """
         plugin_data = dict()
         for k, v in globals().iteritems():
@@ -120,12 +120,11 @@ class PluginManager(object):
         """
         Return a list of loaded node types.
 
-        params:
-            plugins (list)  - plugins to filter.
-            disabled (bool) - show disabled plugins.
+        :param list plugins: plugins to filter.
+        :param bool disabled: return disabled plugins.
 
-        returns:
-            (list) - list of node types (strings).
+        :returns: list of node types (strings).
+        :rtype: list
         """
         return self.get_plugins(plugins=plugins, disabled=disabled) 
 
@@ -134,8 +133,8 @@ class PluginManager(object):
         """
         Return the default plugin path.
 
-        returns:
-            (str) - current default plugin path.
+        :returns: current default plugin path.
+        :rtype: str
         """
         return self._default_plugin_path
 
@@ -144,11 +143,10 @@ class PluginManager(object):
         """
         Set the default plugin path.
 
-        params:
-            path (str) - directory path.
+        :param str path: directory path.
 
-        returns:
-            (str) - current default plugin path.
+        :returns: current default plugin path.
+        :rtype: str
         """
         if path != self._default_plugin_path:
             self.flush()
@@ -160,8 +158,8 @@ class PluginManager(object):
         """
         Returns the default plugin modules.
 
-        returns:
-            (list) - list of default plugin module names.
+        :returns: list of default plugin module names.
+        :rtype: list
         """
         return self._default_modules
 
@@ -170,8 +168,8 @@ class PluginManager(object):
         """
         Returns a list of external plugin paths.
 
-        returns:
-            (list) - list of external plugin paths.
+        :returns: list of external plugin paths.
+        :rtype: list
         """
         return self._external_plugin_paths    
 
@@ -180,8 +178,8 @@ class PluginManager(object):
         """
         Returns a list of external plugin module names.
 
-        returns:
-            (list) - list of external plugin module names.
+        :returns: list of external plugin module names.
+        :rtype: list
         """
         return self._external_modules  
 
@@ -193,10 +191,8 @@ class PluginManager(object):
 
          *todo: load the external plugins as well.
 
-        params:
-            path        (str) - path to scan.
-            plugin_name (str) - plugin name to filter.
-
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
         """
         log.info('loading plugins...')
 
@@ -212,12 +208,11 @@ class PluginManager(object):
         Dynamically load all submodules/asset classes
         in this package.
 
-        params:
-            path        (str) - path to scan.
-            plugin_name (str) - plugin name to filter.
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
 
-        returns:
-            (list) - list of loaded plugin names.
+        :returns: list of loaded plugin names.
+        :rtype: list
         """
         imported = []
         fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")

@@ -29,7 +29,7 @@ def setup_platform_defaults():
 
 PACKAGE                         = 'SceneGraph'
 API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 5
+API_REVISION                    = 7
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
@@ -147,5 +147,4 @@ VIEWPORT_MODES = dict(
     minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate',
     bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
     )
-
 

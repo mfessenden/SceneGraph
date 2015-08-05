@@ -60,6 +60,12 @@ class MetadataParser(object):
 
     @property
     def data(self):
+        """
+        Returns the parsed metadata.
+
+        :returns: parsed metadata.
+        :rtype: str
+        """
         import simplejson as json
         return json.dumps(self._data, indent=4)
 
@@ -68,8 +74,10 @@ class MetadataParser(object):
         Parses a single template file. Data is structured into groups
         of attributes (ie: 'Transform', 'Attributes')
 
-        params:
-            filename (str) - file on disk to read.
+        :param str filename: file on disk to read.
+
+        :returns: dictionary of metadata parameters.
+        :rtype: dict
         """
         if self._initialized:
             self.initialize()

@@ -1,24 +1,54 @@
+==============
 SceneGraph API
 ==============
 
 The SceneGraph API allows you to interact with graphs without using the UI.
 
+Core Modules
+============
+
+.. _Graph:
+
 Graph
 -----
+
 The Graph class is a wrapper for a networkx.MultiDiGraph graph.
 
 .. automodule:: core.graph
 .. autoclass:: Graph
     :members:
 
+.. _PluginManager:
+
+PluginManager
+-------------
+The PluginManager manages how SceneGraph finds and loads plugins.
+
+
+.. automodule:: core.plugins
+.. autoclass:: PluginManager
+    :members:
+
+.. _MetadataParser:
+
+MetadataParser
+--------------
+The MetadataParser reads and translates metadata to the widget.
+
+
+.. automodule:: core.metadata
+.. autoclass:: MetadataParser
+    :members:
+
+
+Core Nodes
+==========
 .. automodule:: core.nodes
 
-
-DAG Nodes
----------
+.. _SimpleNode:
 
 SimpleNode
-^^^^^^^^^^
+----------
 The SimpleNode class contains basic DAG node attributes.
 
 .. autoclass:: SimpleNode
@@ -27,104 +57,56 @@ The SimpleNode class contains basic DAG node attributes.
 .. _DagNode:
 
 DagNode
-^^^^^^^
+-------
 The DagNode class is the base class for all nodes.
 
 .. autoclass:: DagNode
     :members:
 
+
+UI Modules
+==========
+
 .. automodule:: ui
 
-Qt Graphics
------------
-Custom QGraphics classes for managing nodes.
-
-
-GraphicsView
-^^^^^^^^^^^^
-The GraphicsView class is a custom QGraphicsView.
-
-.. autoclass:: GraphicsView
-    :members:
-
-GraphicsScene
-^^^^^^^^^^^^^
-The GraphicsScene class is a custom QGraphicsView.
-
-.. autoclass:: GraphicsScene
-    :members:
-
-.. _GraphicsScene:
-
-Widgets
--------
-Node/Edge widgets.
-
-NodeWidget
-^^^^^^^^^^
-.. autoclass:: NodeWidget
-    :members:
-
-EdgeWidget
-^^^^^^^^^^
-.. autoclass:: EdgeWidget
-    :members:
-
-Connection
-^^^^^^^^^^
-.. autoclass:: Connection
-    :members:
-
-Scene Handler
--------------
-The SceneHandlder is responsible from sending and recieving signals from the API to the UI.
-
-SceneHandler
-^^^^^^^^^^^^
-.. autoclass:: SceneHandler
-    :members:
-
-Attribute Editor
-----------------
-The node AttributeEditor is a dynamically-generated UI that allows the user to display, add & edit node properties.
-
-AttributeEditor
-^^^^^^^^^^^^^^^
-.. autoclass:: AttributeEditor
-    :members:
-
-Undo/Redo Commands
-------------------
-Commands to handle undo & redo in the UI.
-
-SceneNodesCommand
-^^^^^^^^^^^^^^^^^
-.. autoclass:: SceneNodesCommand
-    :members:
-
-SceneChangedCommand
-^^^^^^^^^^^^^^^^^^^
-.. autoclass:: SceneChangedCommand
-    :members:
-
-Stylesheet Manager
-------------------
-The Stylesheet manager manages the application stylesheets, and dynamically substitutes user-defined font & color preferences.
 
 StylesheetManager
-^^^^^^^^^^^^^^^^^
+-----------------
+The StylesheetManager parses stylesheets and font/color preferences.
+
 .. autoclass:: StylesheetManager
     :members:
 
+.. _NodeWidget:
 
-.. automodule:: ui.PluginManager
+NodeWidget
+----------
+The NodeWidget is the base class for node widgets. NodeWidgets are custom QtGui.QGraphicsObjects that contain a reference to their referenced DagNode. The NodeWidget *must* be instantiated with the DagNode as the first argument:
 
-PluginManager
--------------
-.. _PluginManager:
+::
 
-PluginManager
-^^^^^^^^^^^^^
+    g = core.Graph()
+    dag = g.add_node('default')
+    widget = NodeWidget(dag)
 
-.. autoclass:: PluginManager
+
+The NodeWidget reads its base attributes from the DagNode, and conversely, updates are passed back to the DagNode.
+
+.. autoclass:: NodeWidget
+    :members:
+
+
+EdgeWidget
+----------
+The EdgeWidget is the base class for edge widgets.
+
+.. autoclass:: EdgeWidget
+    :members:
+
+
+Connection
+----------
+The Connection defines connections between nodes.
+
+.. autoclass:: Connection
     :members:

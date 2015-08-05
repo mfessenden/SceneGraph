@@ -124,6 +124,7 @@ class SceneGraphUI(form_class, base_class):
         # setup
         self.initializeWorkPath(self._work_path)
         self.readSettings(**kwargs)
+
         self.initializeStylesheet()
         self.initializeUI()           
         self.connectSignals()       
@@ -206,12 +207,20 @@ class SceneGraphUI(form_class, base_class):
         reload(options)
         self.fonts = options.SCENEGRAPH_FONTS
 
-    def initializeStylesheet(self, fonts=True, paths=[]):
+    def initializeStylesheet(self, paths=[], style='default', **kwargs):
         """
         Setup the stylehsheet.
-        """        
+        """
+        overrides = dict(
+            font_family_ui = kwargs.get('font_family_ui', self.font_family_ui),
+            font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
+            font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
+            font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
+            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
+            )
+
         self.stylesheet.run(paths=paths)    
-        style_data = self.stylesheet.style_data
+        style_data = self.stylesheet.style_data(style=style, **overrides)
 
         if self.use_stylesheet:
             self.setStyleSheet(style_data)
@@ -294,6 +303,8 @@ class SceneGraphUI(form_class, base_class):
         self.ui_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
         self.mono_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
         self.stylesheet_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
+        self.ui_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
+        self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -383,7 +394,7 @@ class SceneGraphUI(form_class, base_class):
 
         self.action_reset_dots.setEnabled(has_dots)
 
-    def initializeNodesMenu(self, parent, pos, color=True):
+    def initializeNodesMenu(self, parent, pos, color=True, **kwargs):
         """
         Build a context menu at the current pointer pos.
         """
@@ -392,6 +403,14 @@ class SceneGraphUI(form_class, base_class):
 
         menu_add_node   = QtGui.QMenu('Add node:   ', parent)
         menu_node_color = QtGui.QMenu('Node color: ', parent)
+
+        overrides = dict(
+            font_family_ui = kwargs.get('font_family_ui', self.font_family_ui),
+            font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
+            font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
+            font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
+            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
+            )
 
         for node in self.graph.node_types():
             node_action = menu_add_node.addAction(node)
@@ -415,7 +434,7 @@ class SceneGraphUI(form_class, base_class):
         if color:
             parent.addMenu(menu_node_color)
 
-        style_data = self.stylesheet.style_data
+        style_data = self.stylesheet.style_data(**overrides)
         parent.setStyleSheet(style_data)
 
     def initializeRecentFilesMenu(self):
@@ -910,13 +929,27 @@ class SceneGraphUI(form_class, base_class):
         """
         Runs when the user updates a font/stylesheet pref.
         """
-        ui_font = self.ui_font_menu.currentText()
-        mono_font = self.mono_font_menu.currentText()
+        self.font_family_ui = str(self.ui_font_menu.currentText())
+        self.font_family_mono = str(self.mono_font_menu.currentText())
+
         ui_fontsize = self.ui_fontsize_spinbox.value()
         mono_fontsize = self.mono_fontsize_spinbox.value()
 
+        ui_fontsize = '%.2fpt' % ui_fontsize
+        mono_fontsize = '%.2fpt' % mono_fontsize
+
+        self.font_size_ui = ui_fontsize
+        self.font_size_mono = mono_fontsize
         stylesheet_name = self.stylesheet_menu.currentText()
-        print '# stylesheet name: ', stylesheet_name     
+
+        overrides = dict(
+            font_family_ui = self.font_family_ui,
+            font_family_mono = self.font_family_mono,
+            font_size_ui = self.font_size_ui,
+            font_size_mono = self.font_size_mono,
+            )
+
+        self.initializeStylesheet(**overrides)  
 
     def resetDotsAction(self):
         """
@@ -1112,7 +1145,7 @@ class SceneGraphUI(form_class, base_class):
         return super(SceneGraphUI, self).closeEvent(event)
 
     #- Menus -----
-    def createTabMenu(self, parent):
+    def createTabMenu(self, parent, **kwargs):
         """
         Build a context menu at the current pointer pos.
 
@@ -1123,8 +1156,16 @@ class SceneGraphUI(form_class, base_class):
         tab_menu.clear()
         add_menu = QtGui.QMenu('Add node:')
 
+        overrides = dict(
+            font_family_ui = kwargs.get('font_family_ui', self.font_family_ui),
+            font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
+            font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
+            font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
+            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
+            )
+
         # apply the stylesheet
-        style_data = self.stylesheet.style_data
+        style_data = self.stylesheet.style_data(**overrides)
         add_menu.setStyleSheet(style_data)
         tab_menu.setStyleSheet(style_data)
 

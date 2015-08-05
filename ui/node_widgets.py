@@ -136,13 +136,18 @@ class NodeWidget(QtGui.QGraphicsObject):
     def color(self):
         """
         Return the 'node color' (background color)
+
+        :returns: node rgba background color.
+        :rtype: list
         """
         return self.dagnode.color
 
     @color.setter
     def color(self, val):
         """
-        Return the 'node color' (background color)
+        Set the 'node color' (background color) attributes.
+
+        :param list color: rgba value.
         """
         self.dagnode.color = val
 
@@ -306,8 +311,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Returns the widget background color.
 
-        returns:
-            (QColor) - widget background color.
+        :returns: widget background color.
+        :rtype: QtGui.QColor
         """
         if not self.is_enabled:
             return QtGui.QColor(*[125, 125, 125])
@@ -325,8 +330,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Returns the widget pen color.
 
-        returns:
-            (QColor) - widget pen color.
+        returns:  widget pen color.
+        :rtype: QtGui.QColor
         """
         if not self.is_enabled:
             return QtGui.QColor(*[40, 40, 40])
@@ -339,8 +344,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Returns the widget label color.
 
-        returns:
-            (QColor) - widget label color.
+        returns:  widget label color.
+        :rtype: QtGui.QColor
         """
         if not self.is_enabled:
             return QtGui.QColor(*[50, 50, 50])
@@ -354,8 +359,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         Returns the node shadow color, as dictated
         by the dagnode.
 
-        returns:
-            (QColor) - shadow color.
+        returns:  widget shadow color.
+        :rtype: QtGui.QColor
         """
         if not self.is_enabled:
             return QtGui.QColor(*[35, 35, 35, 60])

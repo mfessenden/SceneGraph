@@ -1,3 +1,4 @@
+# -- coding: utf-8 --
 #!/usr/bin/env python
 import os
 import re
@@ -42,9 +43,8 @@ class StylesheetManager(object):
         """
         Read all of the currently defined config files/stylesheets.
 
-        params:
-            style (str)  - style name to parse.
-            paths (list) - additional search paths.
+        :param str style: style name to parse.
+        :param list paths: additional search paths.
         """
         self._fonts = self.initializeFontsList()
 
@@ -60,27 +60,27 @@ class StylesheetManager(object):
     def style(self):
         return self._style
 
-    @property
-    def style_data(self, style=None):
+    def style_data(self, style=None, **kwargs):
         """
         Return the stylesheet data.
 
-        returns:
-            (str) - parsed stylesheet data.
+        :returns: parsed stylesheet data.
+        :rtype: str
         """
         if style is None:
             style = self._style
         parser = StyleParser(self, style=style)
         parser.run()
-        return parser.data
+        data = parser.data(**kwargs)
+        return data
 
     @property
     def config_names(self):
         """
         Returns a list of config file names.
 
-        returns:
-            (list) - list of config names.
+        :returns: list of config names.
+        :rtype: list
         """
         return self._config_files.keys()    
 
@@ -88,11 +88,10 @@ class StylesheetManager(object):
         """
         Returns a dictionary of config files for the given style.
 
-        params:
-            style (str) - style name to return.
+        :param str style: style name to return.
 
-        returns:
-            (dict) - font/palette config files.
+        :returns: font/palette config files.
+        :rtype: dict
         """
         return self._config_files.get(style, {})
 
@@ -101,8 +100,8 @@ class StylesheetManager(object):
         """
         Returns a list of stylesheet file names.
 
-        returns:
-            (list) - list of stylesheet names.
+        :returns: list of stylesheet names.
+        :rtype: list
         """
         return self._qss_files.keys()    
 
@@ -114,11 +113,10 @@ class StylesheetManager(object):
         """
         Read configs from config paths.
 
-        params:
-            paths (list) - list of paths to add to the scan.
+        :param list paths: list of paths to add to the scan.
 
-        returns:
-            (tuple) - array of search paths.
+        :returns: array of search paths.
+        :rtype: tuple
         """
         if paths and type(paths) in [str, unicode]:
             paths = [paths,]
@@ -207,7 +205,7 @@ class StylesheetManager(object):
                     if style_name not in cfg_files:
                         cfg_files[style_name] = dict(fonts=None, palette=None)
 
-                    log.info('adding %s config "%s" from "%s".' % (cfg_type, style_name, cfg_file))
+                    log.debug('adding %s config "%s" from "%s".' % (cfg_type, style_name, cfg_file))
                     cfg_files[style_name][cfg_type] = cfg_file
         return cfg_files
 
@@ -236,7 +234,7 @@ class StylesheetManager(object):
                             log.warning('cannot parse style name from "%s".' % qss_file)
                             style_name = 'no-style'
 
-                        log.info('adding stylesheet "%s" from "%s".' % (style_name, qss_file))
+                        log.debug('adding stylesheet "%s" from "%s".' % (style_name, qss_file))
 
                         if style_name not in qss_files:
                             qss_files[style_name] = qss_file
@@ -265,9 +263,8 @@ class StylesheetManager(object):
         """
         Add a config to the config files attribute.
 
-        params:
-            filename (str) - filename to read.
-            name     (str) - name of the config.
+        :param str filename: filename to read.
+        :param str name: name of the config.
         """
         if filename in self._config_files.values():
             for cfg_name, cfg_file in self._config_files.iteritems():
@@ -338,7 +335,10 @@ class StyleParser(object):
 
     def run(self, style='default'):
         """
-        Parse the stylesheet data and 
+        Parse the stylesheet data and substitute values from config file data.
+
+        :param str style: style name to parse.
+        :param dict kwargs: overrides.
         """
         stylesheet = self.manager._qss_files.get(style, None)
         configs    = self.manager.config_files(style)
@@ -349,43 +349,12 @@ class StyleParser(object):
         if configs:
             if 'fonts' in configs:
                 self._config_fonts = configs.get('fonts')
+
             if 'palette' in configs:
                 self._config_palette = configs.get('palette')
 
         if self._stylesheet is not None:
             self._data = self._parse_configs()
-            print json.dumps(self._data, indent=5)
-
-    @property
-    def data(self):
-        import copy
-        data = dict()
-        style_data = copy.deepcopy(self._data)
-        for k, v in style_data.pop('defaults', {}).iteritems():
-            data['%s' % k] = v
-
-        for class_name in style_data.keys():
-            class_attrs = style_data.get(class_name)
-            for attr, value in class_attrs.iteritems():
-                cname = '%s-%s' % (attr, class_name)
-                data[cname] = value
-
-        ff = open(self._stylesheet, 'r')
-        ss_lines = ""
-        for line in ff.readlines():
-            if line:
-                if '@' in line:
-                    if not '@STYLENAME' in line:
-                        smatch = re.search(regex.get('value'), line)
-                        if smatch:
-                            value = smatch.group('value')
-                            if value in data:
-                                new_value = data.get(value)
-                                ss_lines += '%s' % re.sub('@%s' % value, new_value, line)
-                                continue
-
-                ss_lines += '%s' % line
-        return ss_lines
 
     def _parse_configs(self):
         """
@@ -423,7 +392,52 @@ class StyleParser(object):
                             data[class_name][attr_name] = attr_val
                             if subclass:
                                 data[class_name][attr_name]['subclass'] = subclass
+
         return data
+
+    def data(self, **kwargs):
+        """
+        Returns the raw stylesheet data with config values substituted.
+
+        :returns: stylesheet data.
+        :rtype: str
+        """
+        import copy
+        data = dict()
+        style_data = copy.deepcopy(self._data)
+        for k, v in style_data.pop('defaults', {}).iteritems():
+            data['%s' % k] = v
+
+        if options.PLATFORM in style_data:
+            platform_defaults = style_data.get(options.PLATFORM)
+            for attr, val in platform_defaults.iteritems():
+                data[attr] = val
+
+        # print data
+        #print json.dumps(data, indent=5)
+
+        if kwargs:
+            for kattr, kval in kwargs.iteritems():
+                attr_name = re.sub('_', '-', kattr)
+                #print '# override: "%s": %s' % (attr_name, kval)
+                data[attr_name] = kval
+
+        ff = open(self._stylesheet, 'r')
+        ss_lines = ""
+        for line in ff.readlines():
+            if line:
+                if '@' in line:
+                    if not '@STYLENAME' in line:
+                        smatch = re.search(regex.get('value'), line)
+                        if smatch:
+                            value = str(smatch.group('value'))
+                            if value in data:
+                                new_value = str(data.get(value))
+                                ss_lines += '%s' % re.sub('@%s' % value, new_value, line)
+                                continue
+
+                ss_lines += '%s' % line
+        return ss_lines
 
     def apply(self, stylesheet=None, style=None):
         """

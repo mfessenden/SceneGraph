@@ -15,10 +15,10 @@
     Header4
     ~~~~~~~
 
-SceneGraph |version| documentation
+SceneGraph v |version| documentation
 ==================================
 
-**SceneGraph** is a fast & flexible framework for defining a node graph using PySide. Scenes can be saved and loaded in a variety of applications, and users can easily add their own nodes to suit their needs.
+**SceneGraph** is a fast & flexible framework for defining node graphs using PySide. Scenes can be saved and loaded in a variety of applications, and users can easily add their own nodes to suit their needs.
 
 .. image:: ../images/intro.png
 
@@ -27,8 +27,9 @@ Supported Systems
 -----------------
 **SceneGraph** works on Linux, OSX* and Windows platforms. It currently supports the following DCC platforms:
 
-- Maya 2015, 2016
-- Nuke 8, 9
+- Maya 2015 & 2016
+- Nuke 8 & 9
+- Houdini 14 & 15
 
 Applications that only support Python 2.6 are not supported.
 
@@ -46,11 +47,16 @@ Requirements
 .. _NetworkX 1.9.1: https://github.com/networkx/networkx
 .. _simplejson 3.7.2: https://github.com/simplejson/simplejson 
 
+
+Contents
+--------
 .. toctree::
     :maxdepth: 3
 
+    overview
     tutorial
     api
+    extending
 
 
 

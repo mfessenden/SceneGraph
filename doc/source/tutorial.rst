@@ -5,12 +5,31 @@ Tutorial
 Getting started
 ===============
 
-To start using SceneGraph, simply run the appropriate launcher from a shell. For Linux & OSX, run the **/bin/SceneGraph** launcher, for Windows run **/bin/SceneGraph.bat**.
+To start using SceneGraph, simply run **/bin/SceneGraph** from a shell. (Windows users run **/bin/SceneGraph.bat**)
+
+On Linux and OSX, you can specify a file to open on launch:
+
+::
+    
+    SceneGraph ~/graphs/my_graph_v001.json
+
+
+Command-line flags
+------------------
+
+::
+
+    # use OpenGL renderer
+    -g
+
+    # set Qt style
+    -s @STYLE
+
 
 DCC Applications
 ----------------
 
-SceneGraph contains modules for Maya, Nuke & Houdini (todo).
+SceneGraph contains modules for Maya, Nuke & Houdini.
 
 Maya
 ^^^^
@@ -28,6 +47,12 @@ Nuke
     scenegraph_nuke.main()
 
 
+Houdini
+^^^^^^^
+
+Coming soon.
+
+
 Other Applications
 ^^^^^^^^^^^^^^^^^^
 To use SceneGraph in another application, simply import the UI from the standard module: 
@@ -36,6 +61,7 @@ To use SceneGraph in another application, simply import the UI from the standard
     from SceneGraph import scenegraph
     sgui = scenegraph.SceneGraphUI()
     sgui.show()
+
 
 Node Types
 ==========
@@ -72,6 +98,17 @@ To connect two nodes, click on a green output terminal of one node, and drag the
 
 .. image:: ../images/drag_edge01.png
 
+Working with the Graph
+======================
+
+You can delete nodes with the delete key, split nodes by clicking on the midpoint arrow in an edge.
+
+Viewing Dependencies
+--------------------
+
+Selected nodes' dependencies are visible in the **Dependencies** pane.
+
+
 Saving & Loading Scenes
 =======================
 
@@ -83,6 +120,19 @@ Autosaving
 
 Attribute Editor
 ================
+
+The **AttributeEditor** is a powerful tool to interface with nodes in the graph.
+
+Adding Attributes
+-----------------
+
+To add an attribute to a node, select it and right-click in the **AttributeEditor** pane. Choose **Add Attribute** which will open a dialog:
+
+.. image:: ../images/add_attribute_dialog.png
+
+
+Choose a name and type, and click okay to add it. By default it will appear in the **User** group in the **AttributeEditor**. You can also choose to make the attribute connectable, in which case it will show up as a terminal in the graph (user attributes will render with an italicized label).
+
 
 Keyboard Commands
 =================
@@ -119,7 +169,6 @@ Plugins
 
 Node types are loaded as plugins. New plugins can be added via the SCENEGRAPH_PLUGIN_PATH_. variable.
 
-.. _SCENEGRAPH_PLUGIN_PATH_:
 
 Enabling/disabling plugins
 --------------------------
@@ -132,95 +181,13 @@ The **PluginManager** interface allows the user to enable, disable or load new p
 
 .. image:: ../images/plugins_manager.png
 
-Extending SceneGraph
-====================
-
-Environment Variables
----------------------
-
-SCENEGRAPH_PLUGIN_PATH
-^^^^^^^^^^^^^^^^^^^^^^
-
-SCENEGRAPH_CONFIG_PATH
-^^^^^^^^^^^^^^^^^^^^^^
-
-SCENEGRAPH_STYLESHEET_PATH
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Writing your own plugins
-------------------------
-
-To write your own plugins, you'll need three things:
-
-- DagNode object file
-- NodeWidget object file
-- Metadata attribute description file (optional)
-
-You'll need to subclass the default :ref:`DagNode` object type, as well as a corresponding widget type.
-
-
-Plugin Files
-^^^^^^^^^^^^
-
-Metadata Description Files
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-The metadata is used to describe your node's parameters to the application. You'll need to define attributes and groups. Private attributes will not show in the UI by default. Each node will inherit all of its parent classes metadata descriptors, so you won't have to manage parent attributes unless you choose to.
-
-::
-
-    # dot node attributes
-    [group Node Transform]
-
-        [attr width]
-            default             FLOAT     8.0
-            required            BOOL      true
-            private             BOOL      true   
-
-        [attr radius]
-            default             FLOAT    8.0
-            label               STRING   "dot radius"
-            required            BOOL     true
-
-
-The above metadata is the builtin **Dot** node's description. Rendered in the **AttributeEditor**, it looks like this:
-
-.. image:: ../images/attr_editor_dot.png
-
-Under the **Node Transform** group, we see the **Position** attribute. That attribute is inherited from the parent :ref:`DagNode` object. If we add it to the descriptor above and set the **private** paremeter, it will no longer render in the **AttributeEditor**:
-
-::
-
-    # dot node attributes
-    [group Node Transform]
-
-        [attr pos]
-            private             BOOL      true
-
-        [attr width]
-            default             FLOAT     8.0
-            required            BOOL      true
-            private             BOOL      true   
-
-        [attr radius]
-            default             FLOAT    8.0
-            label               STRING   "dot radius"
-            required            BOOL     true
-
-
-The **group** determines which group the attributes will be grouped under. Note that the **width** attribute is not shown, while the **radius** is. Setting the **width.private** paramenter to **false** will allow the user to change it. 
-
-Warning: exposing private :ref:`DagNode` attributes can lead to system unstability. It is strongly recommended that you do not do that.
-
 Preferences
 ===========
 
 **SceneGraph** includes a robust preferences system. Users can save and load UI layouts, as well as customize the graph drawing style to suit their preference.
 
-Render FX
----------
-Unchecking this will turn off FX like dropshadows and glows on nodes, labels and edges. Can be used to increase draw performance.
+.. image:: ../images/prefs_pane.png
 
-.. image:: ../images/render_fx.png
 
 Viewport Mode
 -------------
@@ -234,16 +201,39 @@ Edges can be rendered as **bezier** or **polygon**. Use polygon mode to increase
 
 .. image:: ../images/edge_type.png
 
+Render FX
+---------
+Unchecking this will turn off FX like dropshadows and glows on nodes, labels and edges. Can be used to increase draw performance.
+
+.. image:: ../images/render_fx.png
+
 OpenGL
 ------
 
 Enable the **OpenGL** option to use OpenGL to render the node graph. 
 
+Autosave
+--------
+
+In the **Preferences** pane, users can edit the autosave increment (measured in seconds):
+
+.. image:: ../images/autosave_time.png
+
+Autosave files are saved alongside the working files, or the **TMPDIR** directory if the file has not yet been saved.
+
 Stylesheets
 -----------
+
+This menu displays all of the currently loaded stylesheets, and allows the user to update the style on the fly.
 
 Layouts
 -------
 
-Autosave
---------
+You can save and load UI layouts in the **Windows** menu. To save a layout, select the **Windows>Save layout** menu option and input a name into the dialog:
+
+.. image:: ../images/layouts_add.png
+
+Restore a layout from the **Windows>Restore layout** menu:
+
+.. image:: ../images/layouts_restore.png
+
