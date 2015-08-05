@@ -8,7 +8,7 @@
 
     [attr radius]
         default             FLOAT    8.0
-        label               STRING   "dot radius."
+        label               STRING   "dot radius"
         required            BOOL     true
         #private            BOOL     true
 

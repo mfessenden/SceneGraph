@@ -743,10 +743,11 @@ class DagNode(Observable):
     def ParentClasses(self, p=None):
         """
         Returns all of this objects' parent classes.
-        params:
-            p (obj) - parent class.
-        returns:
-            (list) - list of parent class names.
+
+        :param obj p: parent class.
+
+        :returns: list of parent class names.
+        :rtype: list
         """
         base_classes = []
         cl = p if p is not None else self.__class__

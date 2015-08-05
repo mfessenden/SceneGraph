@@ -32,7 +32,7 @@ class AttributeEditor(QtGui.QWidget):
         self.mainGroup = QtGui.QGroupBox(self)
         self.mainGroup.setObjectName("mainGroup")
         self.mainGroup.setProperty("class", "attr_main_group")
-	self.mainGroup.setFlat(False)
+        self.mainGroup.setFlat(False)
 
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
@@ -58,16 +58,11 @@ class AttributeEditor(QtGui.QWidget):
     def use_stylesheet(self):
         return self._ui.use_stylesheet    
 
-    def initializeStylesheet(self):
+    def initializeStylesheet(self, paths=[]):
         """
-        Setup the stylehsheet.
+        Setup the stylesheet.
         """
-        import os        
-        ssf = QtCore.QFile(self._ui.stylesheet)
-        ssf.open(QtCore.QFile.ReadOnly)
-        if self.use_stylesheet:
-            self.setStyleSheet(str(ssf.readAll()))
-        ssf.close()
+        self._ui.stylesheet.run(paths=paths) 
 
     def buildLayout(self, verbose=False):
         """

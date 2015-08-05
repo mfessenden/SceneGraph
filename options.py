@@ -29,7 +29,7 @@ def setup_platform_defaults():
 
 PACKAGE                         = 'SceneGraph'
 API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 4
+API_REVISION                    = 5
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
@@ -125,8 +125,9 @@ SCENEGRAPH_PREFERENCES = {
     'font_family_mono' : {'default':'Consolas', 'desc':'Monospace font for UI.'},
     'font_size_ui' : {'default':'8pt', 'desc':'Default UI font size.'},
     'font_size_mono' : {'default':'9pt', 'desc':'Default fixed size.'},
-    'font_nodes' : {'default':'Consolas', 'desc':'Font for node labels.'},
+    'font_family_nodes' : {'default':'Consolas', 'desc':'Font for node labels.'},
     'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).'},
+    'stylesheet_name' : {'default':'default', 'desc':'Stylesheet to use.'},
     }
 
 

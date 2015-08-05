@@ -12,9 +12,6 @@ from SceneGraph import options
 reload(options)
 
 
-log.setLevel('INFO')
-
-
 regex = dict(
     style_name = re.compile(r"@STYLENAME\s?=\s?(?P<style>\w+)"),
     property = re.compile(r"\@(?P<attr>[\.\w\-]+):?\s?(?P<class>[\.\w\-]+)?:?\s?(?P<subclass>[\.\w\-]+)?\s?=\s?(?P<value>[\.\w\-\s\#]+)"),
@@ -24,48 +21,89 @@ regex = dict(
 
 class StylesheetManager(object):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, style='default', paths=[]):
 
         self._ui            = parent                    # parent UI
+        self._style         = style                     # style to parse
+        self._font_db       = QtGui.QFontDatabase()     # font database
+        self._fonts         = dict()                    # dictionary of font types
 
-        self._font_db       = QtGui.QFontDatabase()
-        self._config_paths  = ()
-        self._config_files  = dict()
+        self._config_paths  = ()                        # paths for cfg mods
+        self._config_files  = dict()                    # cfg files
 
-        self._qss_paths     = ()
-        self._qss_files     = dict()
+        self._qss_paths     = ()                        # qss file paths
+        self._qss_files     = dict()                    # qss files
+        self._initialized   = False
 
-    def run(self, paths=[], style='default'):
+        if not self._initialized:
+            self.run(paths=paths)
+
+    def run(self, paths=[]):
         """
-        Read files from the 
+        Read all of the currently defined config files/stylesheets.
+
+        params:
+            style (str)  - style name to parse.
+            paths (list) - additional search paths.
         """
+        self._fonts = self.initializeFontsList()
+
         self._config_paths = self._get_config_paths(paths=paths)
         self._config_files = self._get_config_files(self._config_paths)
 
         self._qss_paths = self._get_qss_paths(paths=paths)
         self._qss_files = self._get_qss_files(self._qss_paths)
 
-        style = StyleParser(self, style=style)
-        style.run()
+        self._initialized = True
 
-        if self._ui is not None:
-            if self._ui.use_stylesheet:
-                style_data = style.data
-                self._ui.setStyleSheet(style_data)
-                attr_editor = self._ui.getAttributeEditorWidget()
-                if attr_editor:
-                    attr_editor.setStyleSheet(style_data)
+    @property
+    def style(self):
+        return self._style
+
+    @property
+    def style_data(self, style=None):
+        """
+        Return the stylesheet data.
+
+        returns:
+            (str) - parsed stylesheet data.
+        """
+        if style is None:
+            style = self._style
+        parser = StyleParser(self, style=style)
+        parser.run()
+        return parser.data
 
     @property
     def config_names(self):
+        """
+        Returns a list of config file names.
+
+        returns:
+            (list) - list of config names.
+        """
         return self._config_files.keys()    
 
-    @property
-    def config_files(self):
-        return self._config_files.values() 
+    def config_files(self, style='default'):
+        """
+        Returns a dictionary of config files for the given style.
+
+        params:
+            style (str) - style name to return.
+
+        returns:
+            (dict) - font/palette config files.
+        """
+        return self._config_files.get(style, {})
 
     @property
     def qss_names(self):
+        """
+        Returns a list of stylesheet file names.
+
+        returns:
+            (list) - list of stylesheet names.
+        """
         return self._qss_files.keys()    
 
     @property
@@ -101,7 +139,7 @@ class StylesheetManager(object):
                     if not os.path.exists(path):
                         log.warning('config path "%s" does not exist, skipping.' % path)
                         continue
-                    log.info('reading config external path: "%s".' % path)
+                    log.debug('reading config external path: "%s".' % path)
                     cfg_paths = cfg_paths + (path,)
 
         return cfg_paths
@@ -135,7 +173,7 @@ class StylesheetManager(object):
                     if not os.path.exists(path):
                         log.warning('stylesheet path "%s" does not exist, skipping.' % path)
                         continue
-                    log.info('reading external stylesheet path: "%s".' % path)
+                    log.debug('reading external stylesheet path: "%s".' % path)
                     qss_paths = qss_paths + (path,)
 
         return qss_paths
@@ -159,9 +197,18 @@ class StylesheetManager(object):
                 bn, fext = os.path.splitext(fn)
                 if fext.lower() in ['.ini', '.cfg']:
                     cfg_file = os.path.join(path, fn)
-                    if cfg_file not in cfg_files.values():
-                        log.info('adding config "%s" from "%s".' % (bn, cfg_file))
-                        cfg_files[bn] = cfg_file
+
+                    names = bn.split('-')
+                    if len(names) < 2:
+                        log.warning('improperly named config file: "%s"' % cfg_file)
+                        continue
+
+                    style_name, cfg_type = names
+                    if style_name not in cfg_files:
+                        cfg_files[style_name] = dict(fonts=None, palette=None)
+
+                    log.info('adding %s config "%s" from "%s".' % (cfg_type, style_name, cfg_file))
+                    cfg_files[style_name][cfg_type] = cfg_file
         return cfg_files
 
     def _get_qss_files(self, paths=[]):
@@ -230,6 +277,24 @@ class StylesheetManager(object):
         self._config_files[name] = filename
 
     #- Fonts -----
+    def initializeFontsList(self, valid=[]):
+        """
+        Builds the manager fonts list.
+
+        params:
+            valid (list) - list of valid font names.
+        """
+        if not valid:
+            valid = [x for fontlist in options.SCENEGRAPH_VALID_FONTS.values() for x in fontlist]
+
+        result = dict(ui=[], mono=[])
+        for font_name in self._font_db.families():
+            if font_name in valid:
+                if not self._font_db.isFixedPitch(font_name):                
+                    result['ui'].append(font_name)
+                else:
+                    result['mono'].append(font_name)
+        return result
 
     def buildUIFontList(self, valid=[]):
         """
@@ -239,10 +304,9 @@ class StylesheetManager(object):
             valid = options.SCENEGRAPH_VALID_FONTS.get('ui')
 
         families = []
-        for font_name in self._font_db.families():
-            if not self._font_db.isFixedPitch(font_name):
-                if font_name in valid:
-                    families.append(font_name)
+        for font_name in self._fonts.get('ui'):
+            if font_name in valid:
+                families.append(font_name)
         return families
 
     def buildMonospaceFontList(self, valid=[]):
@@ -253,10 +317,9 @@ class StylesheetManager(object):
             valid = options.SCENEGRAPH_VALID_FONTS.get('mono')
 
         families = []
-        for font_name in self._font_db.families():
-            if self._font_db.isFixedPitch(font_name):
-                if font_name in valid:
-                    families.append(font_name)
+        for font_name in self._fonts.get('mono'):
+            if font_name in valid:
+                families.append(font_name)
         return families
 
 
@@ -264,13 +327,34 @@ class StyleParser(object):
 
     def __init__(self, parent, style=None):
 
-        self.manager        = parent
-        self.style          = style
+        self.manager            = parent
+        self.style              = style
 
-        self._stylesheet    = None
-        self._config        = None
+        self._stylesheet        = None
+        self._config_fonts      = None
+        self._config_palette    = None
 
-        self._data          = dict()
+        self._data              = dict()
+
+    def run(self, style='default'):
+        """
+        Parse the stylesheet data and 
+        """
+        stylesheet = self.manager._qss_files.get(style, None)
+        configs    = self.manager.config_files(style)
+
+        if stylesheet and os.path.exists(stylesheet):
+            self._stylesheet = stylesheet
+
+        if configs:
+            if 'fonts' in configs:
+                self._config_fonts = configs.get('fonts')
+            if 'palette' in configs:
+                self._config_palette = configs.get('palette')
+
+        if self._stylesheet is not None:
+            self._data = self._parse_configs()
+            print json.dumps(self._data, indent=5)
 
     @property
     def data(self):
@@ -303,51 +387,42 @@ class StyleParser(object):
                 ss_lines += '%s' % line
         return ss_lines
 
-    def run(self, style='default'):
-        stylesheet = self.manager._qss_files.get(style, None)
-        config     = self.manager._config_files.get(style, None)
-
-        if stylesheet and os.path.exists(stylesheet):
-            self._stylesheet = stylesheet
-
-        if config and os.path.exists(config):
-            self._config = config
-
-        if self._stylesheet is not None and self._config is not None:
-            self._data = self._parse_config(self._config)
-
-    def _parse_config(self, config):
+    def _parse_configs(self):
         """
-        Parse a config file.
+        Parse config data into a dictionary.
         """
         data = dict()
         data.update(defaults=dict())
 
-        with open(config) as f:
-            for line in f.readlines():
-                line = line.rstrip('\n')
-                rline = line.lstrip(' ')
-                rline = rline.rstrip()
-                smatch = re.search(regex.get('property'), rline)
-                if smatch:
-                    match_data = smatch.groupdict()
-                    class_name = 'defaults'
-                    if 'class' in match_data:
-                        cname = match_data.pop('class')
-                        if cname:
-                            class_name = cname
+        for config in [self._config_fonts, self._config_palette]:
+            if not config or not os.path.exists(config):
+                continue
 
-                    if class_name not in data:
-                        data[class_name] = dict()
+            with open(config) as f:
+                for line in f.readlines():
+                    line = line.rstrip('\n')
+                    rline = line.lstrip(' ')
+                    rline = rline.rstrip()
+                    smatch = re.search(regex.get('property'), rline)
+                    if smatch:
+                        match_data = smatch.groupdict()
+                        class_name = 'defaults'
+                        if 'class' in match_data:
+                            cname = match_data.pop('class')
+                            if cname:
+                                class_name = cname
 
-                    attr_name = match_data.get('attr')
-                    attr_val = match_data.get('value')
-                    subclass = match_data.get('subclass')
+                        if class_name not in data:
+                            data[class_name] = dict()
 
-                    if attr_val:
-                        data[class_name][attr_name] = attr_val
-                        if subclass:
-                            data[class_name][attr_name]['subclass'] = subclass
+                        attr_name = match_data.get('attr')
+                        attr_val = match_data.get('value')
+                        subclass = match_data.get('subclass')
+
+                        if attr_val:
+                            data[class_name][attr_name] = attr_val
+                            if subclass:
+                                data[class_name][attr_name]['subclass'] = subclass
         return data
 
     def apply(self, stylesheet=None, style=None):

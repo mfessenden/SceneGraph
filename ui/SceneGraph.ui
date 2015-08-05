@@ -842,45 +842,55 @@
              <item row="6" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
              </item>
-             <item row="7" column="0">
+             <item row="8" column="0">
               <widget class="QLabel" name="ui_font_label">
                <property name="text">
                 <string>UI font:</string>
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="8" column="1">
               <widget class="QComboBox" name="ui_font_menu"/>
              </item>
-             <item row="8" column="0">
+             <item row="9" column="0">
               <widget class="QLabel" name="ui_fontsize_label">
                <property name="text">
                 <string>UI font size:</string>
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="9" column="1">
               <widget class="QDoubleSpinBox" name="ui_fontsize_spinbox"/>
              </item>
-             <item row="9" column="0">
+             <item row="10" column="0">
               <widget class="QLabel" name="mono_font_label">
                <property name="text">
                 <string>Monospace font:</string>
                </property>
               </widget>
              </item>
-             <item row="9" column="1">
+             <item row="10" column="1">
               <widget class="QComboBox" name="mono_font_menu"/>
              </item>
-             <item row="10" column="0">
+             <item row="11" column="0">
               <widget class="QLabel" name="mono_fontsize_label">
                <property name="text">
                 <string>Monospace size:</string>
                </property>
               </widget>
              </item>
-             <item row="10" column="1">
+             <item row="11" column="1">
               <widget class="QDoubleSpinBox" name="mono_fontsize_spinbox"/>
+             </item>
+             <item row="7" column="0">
+              <widget class="QLabel" name="stylesheet_label">
+               <property name="text">
+                <string>Stylesheet:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="1">
+              <widget class="QComboBox" name="stylesheet_menu"/>
              </item>
             </layout>
            </widget>

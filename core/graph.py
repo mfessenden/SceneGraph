@@ -15,16 +15,8 @@ from SceneGraph import util
 
 class Graph(object):
     """
-    Wrapper for NetworkX graph. Adds methods to query nodes,
+    Wrapper for NetworkX MultiDiGraph. Adds methods to query nodes,
     read & write graph files, etc.
-
-    Nodes are stored:
-
-        # NetworkX graph
-        Graph.network.nodes()
-
-        # dictionary of id, DagNode type
-        Graph.dagnodes 
     """
     def __init__(self, *args, **kwargs):
 
@@ -66,8 +58,8 @@ class Graph(object):
         """
         Add default attributes to the networkx graph.
 
-        params:
-            scene (str) - name of scene file.
+        :param scene: name of scene file.
+        :type scene: str
         """
         self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = scene
@@ -77,6 +69,12 @@ class Graph(object):
     def getNetworkPreferences(self, key=None):
         """
         Return the network preferences.
+
+        :param key: section of key to isolate.
+        :type key: str
+
+        :returns: graph preferences.
+        :rtype: dict
         """
         return self.network.graph.get('preferences', {})
 
@@ -120,17 +118,22 @@ class Graph(object):
             self.network.graph.get('preferences').update(self.handler.updateGraphAttributes())
 
     def clean_legacy_attrs(self, attributes=['autosave']):
+        """
+        For cleaning up legacy scenes.
+
+        :param attributes: deprecated attributes.
+        :type attributes: list
+        """
         for attr in attributes:
             if attr in self.network.graph:
-                print '# DEBUG: Graph: removing old attribute: ', attr
                 self.network.graph.pop(attr)
 
     def updateDagNodes(self, dagnodes):
         """
         Update the networkx nodes and links attributes from scene values.
 
-        params:
-            dagnodes (list) - list of dag node objects.
+        :param dagnodes: list of dag node objects.
+        :type dagnodes: list
         """
         if type(dagnodes) not in [list, tuple]:
             dagnodes=[dagnodes,]
@@ -145,7 +148,6 @@ class Graph(object):
         """
         Evalute the Graph, updating networkx graph.
         """
-        #print '\n# Evaluating: ', inspect.stack()[1][3]
         result = True
         if not dagnodes:
             dagnodes = self.dagnodes.values()
@@ -187,8 +189,8 @@ class Graph(object):
         """
         Return the current graphs' scene attribute
         
-        returns:
-            (str)
+        :returns: scene file name.
+        :rtype: str
         """
         return self.network.graph.get('scene', None)
 
@@ -196,11 +198,11 @@ class Graph(object):
         """
         Set the current scene value.
 
-        params:
-            filename (str) - scene file name.
+        :param filename: scene file name.
+        :type filename: str
 
-        returns:
-            (str) - scene file name.
+        :returns: scene file name.
+        :rtype: str
         """
         tmp_dir = os.getenv('TMPDIR')
         if not tmp_dir:
@@ -211,10 +213,10 @@ class Graph(object):
 
     def listNodes(self):
         """
-        Returns a list of nodes in the scene
+        Returns a dictionary of networkx node data.
         
-        returns:
-            (list)
+        :returns: networkx node data.
+        :rtype: dict
         """
         return self.network.nodes(data=True)
 
@@ -222,8 +224,8 @@ class Graph(object):
         """
         Returns a list of nx node names in the scene.
         
-        returns:
-            (list)
+        :returns: networkx node names.
+        :rtype: list
         """
         node_names = []
         nodes = self.network.nodes(data=True)
@@ -320,13 +322,21 @@ class Graph(object):
         """
         Creates a node in the parent graph
 
-        params:
-            node_type - (str) type of node to create
+        :param node_type: node type.
+        :type node_type: str
 
-        returns:
-            (object)  - created node:
-                          - dag in standalone mode
-                          - node widget in ui mode
+        :returns:
+            
+            :type: `core.DagNode`
+                
+                - in standalone mode
+
+            :type: `ui.NodeWidget`
+                
+                - in ui mode
+
+        :rtype: DagNode
+        :rtype: NodeWidget
         """
         # check to see if node type is valid
         if node_type not in self.node_types():
@@ -378,11 +388,11 @@ class Graph(object):
         """
         Removes a node from the graph
 
-        params:
-            (str) node name or id
+        :param *args: node name, node id
+        :type *args: str
 
-        returns:
-            (bool) - node was removed.
+        :returns: node was removed.
+        :rtype: bool
         """
         node_ids = []
         nodes = self.get_node(*args)
@@ -411,13 +421,14 @@ class Graph(object):
         """
         Add an edge connecting two nodes.
 
-        params:
-            src  - (DagNode) source node
-            dest - (DagNode) destination node
+        :param src: source node
+        :type src: DagNode
 
-        returns:
-            (DagEdge) - edge object
+        :param dest: destination node
+        :type dest: DagNode
 
+        :returns: edge object
+        :rtype: dict
         """
         src_attr = kwargs.pop('src_attr', 'output')
         dest_attr = kwargs.pop('dest_attr', 'input')
@@ -839,12 +850,14 @@ class Graph(object):
         """
         Connect two nodes via a "Node.attribute" string
 
-        params:
-            source (str) - connection string (ie: 'node1.output')
-            dest   (str) - connection string (ie: 'node2.input')
+        :param src: connection string (ie: 'node1.output')
+        :type src: str
 
-        returns:
-            (bool) - edge was added successfully.
+        :param dest: connection string (ie: 'node2.input')
+        :type dest: str
+
+        :returns: edge was added successfully.
+        :rtype: bool
         """
         if not '.' in source or not '.' in dest:
             return False
