@@ -29,7 +29,7 @@ def setup_platform_defaults():
 
 PACKAGE                         = 'SceneGraph'
 API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 8
+API_REVISION                    = 9
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
@@ -116,25 +116,25 @@ PROPERTY_TYPES = dict(
 
 # Default preferences
 SCENEGRAPH_PREFERENCES = {
-    'use_gl' : {'default':False, 'desc':'Render graph with OpenGL.'},
-    'edge_type' : {'default':'bezier', 'desc':'Draw edges with bezier paths.'},
-    'render_fx' : {'default': True, 'desc':'Render node drop shadows and effects.'},
-    'antialiasing' : {'default': 2, 'desc':'Antialiasing level.'},
-    'logging_level' : {'default':30, 'desc':'Verbosity level.'},
-    'font_family_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.'},
-    'font_family_mono' : {'default':'Consolas', 'desc':'Monospace font for UI.'},
-    'font_size_ui' : {'default':'8pt', 'desc':'Default UI font size.'},
-    'font_size_mono' : {'default':'9pt', 'desc':'Default fixed size.'},
-    'font_family_nodes' : {'default':'Consolas', 'desc':'Font for node labels.'},
-    'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).'},
-    'stylesheet_name' : {'default':'default', 'desc':'Stylesheet to use.'},
+    'use_gl' : {'default':False, 'desc':'Render graph with OpenGL.', 'label':'Use OpenGL'},
+    'edge_type' : {'default':'bezier', 'desc':'Draw edges with bezier paths.', 'label':''},
+    'render_fx' : {'default': True, 'desc':'Render node drop shadows and effects.', 'label':'render FX'},
+    'antialiasing' : {'default': 2, 'desc':'Antialiasing level.', 'label':'Antialiasing'},
+    'logging_level' : {'default':30, 'desc':'Verbosity level.', 'label':'Logging level'},
+    'font_family_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.', 'label':'Font - ui'},
+    'font_family_mono' : {'default':'Consolas', 'desc':'Monospace font for UI.', 'label':'Font - mono'},
+    'font_size_ui' : {'default':'8pt', 'desc':'Default UI font size.', 'label':'Font size - ui'},
+    'font_size_mono' : {'default':'9pt', 'desc':'Default fixed size.', 'label':'Font size - mono'},
+    'font_family_nodes' : {'default':'Consolas', 'desc':'Font for node labels.', 'label':'Node font'},
+    'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).', 'label':'Autosave time'},
+    'stylesheet_name' : {'default':'default', 'desc':'Stylesheet to use.', 'label':'Stylesheet'},
     }
 
 
 
 SCENEGRAPH_VALID_FONTS = dict(
-    ui=['DejaVu Sans', 'DejaVu Serif', 'Serif', 'Sans Serif'], 
-    mono=['Consolas', 'DejaVu Sans Mono', 'Courier', 'Menlo', 'Monospace']
+    ui=['Cantarell', 'DejaVu Sans', 'DejaVu Serif', 'FreeSans', 'Liberation Sans', 'Open Sans', 'PT Sans', 'Verdana'], 
+    mono=['Consolas', 'Courier', 'Courier 10 Pitch', 'DejaVu Sans Mono', 'Fixed', 'FreeMono', 'Liberation Mono', 'Menlo', 'Monaco']
     )
 
 

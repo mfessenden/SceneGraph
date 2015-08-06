@@ -102,12 +102,11 @@ QTabBar{
 }
 
 QPushButton{
-    border-color: #454545;
+    border-color: @button-border-dark;
     border-style: outset;
     border-width: 1px;
-    border-radius: 6px;
-    font-weight: bold;
-    background-color: #383838;
+    border-radius: 5px;
+    background-color: @button-bg-dark;
     min-width: 88px;
     min-height: 20px;
 }
@@ -116,8 +115,18 @@ QPushButton:!enabled{
     background-color: #595959;
 }
 
+QPushButton::hover{
+    border-color: @button-border-hover;
+    background-color: @button-bg-dark-hover;
+}
+
+QPushButton::selected{
+    border-color: @button-border-selected;
+    background-color: @button-bg-dark-selected;
+}
+
 QLineEdit{
-    background-color: @widget-bg-color ;
+    background-color: @widget-bg-color;
 }
 
 QLineEdit.Connected{
@@ -134,7 +143,7 @@ QMenuBar.AttributeMenu::item{
 
 QMenuBar{
     /* background of the menubar widget */
-    background: #363636;
+    background: @menubar-bg;
     padding: 1px 1px;
     spacing: 5px; /* spacing between menu bar items */
 }
@@ -188,8 +197,8 @@ QMenu::item:disabled {
 }
 
 QStatusBar {
-    font-family: Consolas, Courier, Monospace;
-    font-size: 8pt;
+    font-family: @font-family-mono;
+    font-size: @font-size-mono:status;
     color: #c4c4c4;
 }
 
@@ -291,19 +300,19 @@ QTableView {
 }
 
 QTableView.Plugins {
-    background-color: #4a4a4a;
+    background-color: @mid-darkest;
 }
 
 
 QHeaderView::section {
     padding-left: 4px;
-    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 @background-color, stop: 0.5 #242424, stop:1 @background-color);
-    color: #d4d4d4;    
+    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 @background-color, stop: 0.5 @header-section-dark, stop:1 @background-color);
+    color: @header-section-light;    
     border: .5px solid @background-color;
 }
 
 QHeaderView::section:checked{
-    /* background-color: #707070; */
+    /* background-color: @tab-hover-bg1; */
 }
 
 /* style the sort indicator */
@@ -316,7 +325,7 @@ QHeaderView::up-arrow {
 }
 
 ColorSwatch { 
-    border: 1px solid #2a2a2a;
+    border: 1px solid @border-dark;
     border-radius: 4px;
 }
 
@@ -330,8 +339,8 @@ QLabel.attr_label {
 }
 
 QTextBrowser.Output{
-    font-family: Consolas, Courier, Monospace;
-    /*font-size: medium;*/
+    font-family: @font-family-mono;
+    font-size: @font-size-mono;
     background-color: @hover-dark;
 }
 
@@ -341,12 +350,14 @@ TABS
 ##################
 */
 
-QTabWidget::pane { /* The tab widget frame */
+/* The tab widget frame */
+QTabWidget::pane { 
     border-top: 1px solid @border-dark;
 }
 
 QTabWidget::tab-bar {
-    left: 5px; /* move the tab right 5px */
+    /* move the tab right 5px */
+    left: 5px; 
 }
 
 /* Style the tab using the tab sub-control. Note that
@@ -360,12 +371,12 @@ QTabBar::tab {
     /*padding: 2px;*/
     padding-left: 4px;
     padding-right: 4px;
-    color: #b5b5b5; /* tab title text color */
+    color: @tab-title-color; /* tab title text color */
 
 }
 
 QTabBar::tab::top{
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #434343, stop: 1.0 #343434);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 @tab-top-bg1, stop: 1.0 @tab-top-bg2);
     border-top-left-radius: 6px;
     border-top-right-radius: 6px;
     padding-top: 3px;
@@ -374,7 +385,7 @@ QTabBar::tab::top{
 
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #343434, stop: 1.0 #434343);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 @tab-bar-bg1, stop: 1.0 @tab-bar-bg2);
     padding-bottom: 3px;
     padding-top: 3px;
     border-bottom-left-radius: 6px;
@@ -383,18 +394,18 @@ QTabBar::tab::bottom{
 
 QTabBar::tab::top.subtab{
     color: #f4ff75;
-    background: #657682;
+    background: @tab-subtab-bg;
 }
 
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom.subtab{
     color: #f4ff75;
-    background: #658269;
+    background: @tab-subtab-bg;
 }
 
 
 QTabBar::tab:selected, QTabBar::tab:hover {
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #707070, stop: 1.0 @mid-color);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 @tab-hover-bg1, stop: 1.0 @mid-color);
 }
 
 QTabBar::tab::bottom:!selected {
@@ -406,11 +417,11 @@ QTabBar::tab::top:!selected {
 }
 
 QGroupBox { 
-    border: 2px groove #272727;
+    border: 2px groove @border-dark;
     /* groove & ridge work with 2px border; seems to work best with lighter colors */
     /* inset works with 1px borders */
     /*border-style: groove;*/
-    font-size: 8pt;
+    font-size: @font-size-ui;
     border-radius: 5px;
     margin-top: 0.5em;  
     font-weight: bold;
@@ -444,14 +455,15 @@ TableView {
 }
 
 QPlainTextEdit.Console {
-    font-family: Consolas, Courier, Monospace;
+    font-family: @font-family-mono;
+    font-size: @font-size-mono;
     background-color: @hover-dark;
 }
 
 QPlainTextEdit.attr_text_edit {
     border: 1px inset @border-dark;
     border-radius: 3px;
-    background-color: @widget-bg-color ;
+    background-color: @widget-bg-color;
 }
 
 QGraphicsView {
@@ -463,7 +475,7 @@ SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
 */
 
 QSlider::groove:horizontal {
-    border: 1px inset #1C1C1C;
+    border: 1px inset @groove-border;
     height: 6px;
     border-radius: 3px;
 }
@@ -473,21 +485,21 @@ SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
 */
 
 QSlider::groove:horizontal {
-    border: 1px inset #1C1C1C;
+    border: 1px inset @groove-border;
     height: 6px;
     border-radius: 3px;
 }
 
 QSlider::sub-page:horizontal {
     background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #373737, stop: 1 #4A4A4A);
-    border: 1px inset #1C1C1C;
+    border: 1px inset @groove-border;
     border-radius: 3px;
 }
 
 /* groove background on right of slider */
 QSlider::add-page:horizontal {
     background: #7D7D7D;
-    border: 1px outset #1C1C1C;
+    border: 1px outset @groove-border;
     border-radius: 3px;
 }
 

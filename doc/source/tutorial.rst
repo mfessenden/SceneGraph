@@ -78,8 +78,13 @@ Note
 Dot
 ---
 
+Working with the Graph
+======================
+
+You can delete nodes with the delete key, split nodes by clicking on the midpoint arrow in an edge. Additionally, if you select nodes(s) and drag with the option key pressed, upstream nodes will also be selected and moved.
+
 Creating Nodes
-==============
+--------------
 
 There are several ways to create a node in the graph:
 
@@ -91,17 +96,26 @@ Choose a node type and it will be placed near where your mouse is positioned.
 
 .. image:: ../images/add_node_menu.png
 
+
 Connecting Nodes
-================
+----------------
 
 To connect two nodes, click on a green output terminal of one node, and drag the mouse to the yellow input terminal of another node.
 
 .. image:: ../images/drag_edge01.png
 
-Working with the Graph
-======================
 
-You can delete nodes with the delete key, split nodes by clicking on the midpoint arrow in an edge.
+Expanding & Folding Nodes
+-------------------------
+
+If you select a node in the :ref:`attr_editor`, you'll see an **Expand Node** checkbox:
+
+.. image:: ../images/expand_node_check.png
+
+Expanding a node shows all of its connections in the graph, un-expanding it makes it as small as possible:
+
+.. image:: ../images/node_expand_animated.gif
+
 
 Viewing Dependencies
 --------------------
@@ -118,10 +132,12 @@ Autosaving
 ----------
 **SceneGraph** autosaves after a predetermined amount of time. If the user attempts to open a scene that has a newer autosave, they will be prompted to choose opening either the original, or the autosave file (useful in the event of a crash).
 
+.. _attr_editor:
+
 Attribute Editor
 ================
 
-The **AttributeEditor** is a powerful tool to interface with nodes in the graph.
+The :ref:`attr_editor` is a powerful tool to interface with nodes in the graph.
 
 Adding Attributes
 -----------------
@@ -152,6 +168,8 @@ Keyboard Commands
 +------------+------------+-----------+-------------------------------+
 | Option     |            |           | split edge with a dot node*   |
 +------------+------------+-----------+-------------------------------+
+| Option     |            |           | select upstream nodes**       |
++------------+------------+-----------+-------------------------------+
 | O          | Ctrl       |           | open a scene from disk        |
 +------------+------------+-----------+-------------------------------+
 | S          | Ctrl       |           | save the current scene        |
@@ -163,11 +181,13 @@ Keyboard Commands
 
 \* mouse must be hovering over the middle of an edge.
 
+\*\* if pressed while dragging a node, upstream nodes will be selected as well.
+
 
 Plugins
 =======
 
-Node types are loaded as plugins. New plugins can be added via the SCENEGRAPH_PLUGIN_PATH_. variable.
+Node types are loaded as plugins. New plugins can be added via the :ref:`SCENEGRAPH_PLUGIN_PATH`. variable.
 
 
 Enabling/disabling plugins

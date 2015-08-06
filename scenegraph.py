@@ -305,6 +305,8 @@ class SceneGraphUI(form_class, base_class):
         self.stylesheet_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
         self.ui_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
         self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
+        self.button_reset_fonts.clicked.connect(self.resetFontsAction)
+
 
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
@@ -533,6 +535,9 @@ class SceneGraphUI(form_class, base_class):
         self.ui_font_menu.addItems(self.stylesheet.buildUIFontList())
         self.mono_font_menu.addItems(self.stylesheet.buildMonospaceFontList())
         self.stylesheet_menu.addItems(self.stylesheet.qss_names)
+        
+        self.ui_font_menu.setCurrentIndex(self.ui_font_menu.findText(self.font_family_ui))
+        self.mono_font_menu.setCurrentIndex(self.mono_font_menu.findText(self.font_family_mono))
         self.stylesheet_menu.setCurrentIndex(self.stylesheet_menu.findText(self.stylesheet_name))
 
         ui_font_size = float(re.sub('pt$', '', self.font_size_ui))
@@ -951,6 +956,43 @@ class SceneGraphUI(form_class, base_class):
 
         self.initializeStylesheet(**overrides)  
 
+    def resetFontsAction(self):
+        """
+        Reset fonts to their defaults.
+        """
+        self.font_family_ui = options.SCENEGRAPH_PREFERENCES.get("font_family_ui").get("default")
+        self.font_family_mono = options.SCENEGRAPH_PREFERENCES.get("font_family_mono").get("default")
+
+        self.font_size_ui = options.SCENEGRAPH_PREFERENCES.get("font_size_ui").get("default")
+        self.font_size_mono = options.SCENEGRAPH_PREFERENCES.get("font_size_mono").get("default")
+
+        overrides = dict(
+            font_family_ui = self.font_family_ui,
+            font_family_mono = self.font_family_mono,
+            font_size_ui = self.font_size_ui,
+            font_size_mono = self.font_size_mono,
+            )
+
+        self.initializeStylesheet(**overrides)
+
+        self.ui_font_menu.blockSignals(True)
+        self.mono_font_menu.blockSignals(True)
+        self.ui_fontsize_spinbox.blockSignals(True)
+        self.mono_fontsize_spinbox.blockSignals(True)
+
+        self.ui_font_menu.setCurrentIndex(self.ui_font_menu.findText(self.font_family_ui))
+        self.mono_font_menu.setCurrentIndex(self.mono_font_menu.findText(self.font_family_mono))
+        
+        ui_font_size = float(re.sub('pt$', '', self.font_size_ui))
+        mono_font_size = float(re.sub('pt$', '', self.font_size_mono))
+
+        self.ui_fontsize_spinbox.setValue(ui_font_size)
+        self.mono_fontsize_spinbox.setValue(mono_font_size)
+        self.ui_font_menu.blockSignals(False)
+        self.mono_font_menu.blockSignals(False)
+        self.ui_fontsize_spinbox.blockSignals(False)
+        self.mono_fontsize_spinbox.blockSignals(False)
+
     def resetDotsAction(self):
         """
         * Debug
@@ -1236,12 +1278,12 @@ class SceneGraphUI(form_class, base_class):
         #logging level (global)
         logging_level = self.qtsettings.value("logging_level")
         if logging_level is None:
-            logging_level = 30 # warning
+            logging_level = options.SCENEGRAPH_PREFERENCES.get('logging_level').get('default')
 
         #autosave delay (global)
         autosave_inc = self.qtsettings.value("autosave_inc")
         if autosave_inc is None:
-            autosave_inc = 30000
+            autosave_inc = options.SCENEGRAPH_PREFERENCES.get('autosave_inc').get('default')
 
         # update valid plugin types
         plugins = self.qtsettings.value("plugins")

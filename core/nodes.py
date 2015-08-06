@@ -4,7 +4,6 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from collections import MutableMapping
 from SceneGraph.core import log, Attribute, Observable
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
@@ -406,9 +405,12 @@ class DagNode(Observable):
                     "value": "file"
                 }
 
-        params:
-            name       (str)  - attribute name.
-            properties (dict) - attribute dictionary.
+        :param str name: attribute name.
+        :param dict properties: attribute dictionary.
+        :param str connection_type: connection type (input or output).
+
+        :returns: Attribute object.
+        :rtype: :py:class:`SceneGraph.core.Attribute`
         """
         # connection properties
         max_connections = properties.pop('max_connections', 1) 

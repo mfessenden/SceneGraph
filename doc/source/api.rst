@@ -64,6 +64,16 @@ The DagNode class is the base class for all nodes.
     :members:
 
 
+.. _Metadata:
+
+Metadata
+--------
+The Metadata parses node metadata on disk.
+
+.. autoclass:: Metadata
+    :members:
+
+
 UI Modules
 ==========
 
@@ -92,7 +102,25 @@ The NodeWidget is the base class for node widgets. NodeWidgets are custom QtGui.
 
 The NodeWidget reads its base attributes from the DagNode, and conversely, updates are passed back to the DagNode.
 
+.. automodule:: ui.node_widgets
 .. autoclass:: NodeWidget
+    :members:
+
+
+NodeLabel
+^^^^^^^^^
+The NodeLabel draws the node name.
+
+.. autoclass:: NodeLabel
+    :members:
+
+.. _NodeBackground:
+
+NodeBackground
+^^^^^^^^^^^^^^
+The :ref:`NodeBackground` draws the node background.
+
+.. autoclass:: NodeBackground
     :members:
 
 

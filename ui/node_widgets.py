@@ -1498,10 +1498,11 @@ class NodeLabel(QtGui.QGraphicsObject):
 
         #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         qfont = QtGui.QFont(self.node._font)
+        print '# DEBUG: font: ', self.node._font
         qfont.setPointSize(self.node._font_size)
         qfont.setBold(self.node._font_bold)
         qfont.setItalic(label_italic)
-        qfont.setFamily("Menlo")
+        #qfont.setFamily("Menlo")
         self.label.setFont(qfont)
 
         # debug

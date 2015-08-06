@@ -6,6 +6,7 @@
         label               STRING    "Position"
         label.0             STRING    "x"
         label.1             STRING    "y"
+        tooltip             STRING    "node x,y coordinates"
 
     [attr width]
         default             FLOAT     100.0

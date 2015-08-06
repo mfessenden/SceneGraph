@@ -15,13 +15,19 @@ reload(options)
 
 regex = dict(
     style_name = re.compile(r"@STYLENAME\s?=\s?(?P<style>\w+)"),
-    property = re.compile(r"\@(?P<attr>[\.\w\-]+):?\s?(?P<class>[\.\w\-]+)?:?\s?(?P<subclass>[\.\w\-]+)?\s?=\s?(?P<value>[\.\w\-\s\#]+)"),
-    value = re.compile(r"@(?P<value>[\.\w\-]+)"),
+    property = re.compile(r"\@(?P<attr>[\.\w\-]+)[\:|\s]?((?P<platform>[\.\w\-]+)?[\:|\s]?(?P<subclass>[\.\w\-]+)?)[^\=]+[\=][\s]?(?P<value>[\.\w\-\s\#\+]+)"),
+    #value = re.compile(r"@(?P<value>[\.\w\-]+)"),
+    value = re.compile(r"@(?P<value>[\.\w\-\:]+)"),
+    numeric = re.compile(r"(?P<num>^\d+(\.\d{0,2})?)"),
+    derived = re.compile(r"@(?P<value>[^\:]+\:[^\:]+)?\:"),
     )
 
 
 class StylesheetManager(object):
-
+    """
+    The StylesheetManager reads and parses stylesheet data, plus does some basic sass 
+    substitution via external config files.
+    """
     def __init__(self, parent=None, style='default', paths=[]):
 
         self._ui            = parent                    # parent UI
@@ -35,6 +41,9 @@ class StylesheetManager(object):
         self._qss_paths     = ()                        # qss file paths
         self._qss_files     = dict()                    # qss files
         self._initialized   = False
+
+        # debugging data
+        self._data          = dict()
 
         if not self._initialized:
             self.run(paths=paths)
@@ -69,9 +78,12 @@ class StylesheetManager(object):
         """
         if style is None:
             style = self._style
+        
+        self._data = dict()
         parser = StyleParser(self, style=style)
         parser.run()
         data = parser.data(**kwargs)
+        self._data = parser._data
         return data
 
     @property
@@ -146,11 +158,10 @@ class StylesheetManager(object):
         """
         Read stylesheets from config paths.
 
-        params:
-            paths (list) - list of paths to add to the scan.
+        :param list paths: list of paths to add to the scan.
 
-        returns:
-            (tuple) - array of search paths.
+        :returns: array of search paths.
+        :rtype: tuple
         """
         if paths and type(paths) in [str, unicode]:
             paths = [paths,]
@@ -375,23 +386,44 @@ class StyleParser(object):
                     smatch = re.search(regex.get('property'), rline)
                     if smatch:
                         match_data = smatch.groupdict()
+
+                        platform = None
+                        subclass = None
                         class_name = 'defaults'
-                        if 'class' in match_data:
-                            cname = match_data.pop('class')
-                            if cname:
-                                class_name = cname
+
+                        match_groups = [k for k, v in match_data.iteritems() if v]
+                        
+                        if 'platform' in match_groups:
+                            if match_data.get('platform'):
+                                platform = match_data.get('platform')
+
+                        if 'subclass' in match_groups:
+                            if match_data.get('subclass'):
+                                subclass = match_data.get('subclass')
+
+                        # haxx
+                        if platform is not None:
+                            if subclass is not None:
+                                tmp = platform
+                                platform = subclass
+                                subclass = tmp
+
+                            class_name = platform
 
                         if class_name not in data:
                             data[class_name] = dict()
 
+                        #print '# match groups: ', [k for k, v in match_data.iteritems() if v]
                         attr_name = match_data.get('attr')
                         attr_val = match_data.get('value')
-                        subclass = match_data.get('subclass')
+
+                        attribute = attr_name
+                        if subclass:
+                            attribute = '%s:%s' % (attr_name, subclass)
 
                         if attr_val:
-                            data[class_name][attr_name] = attr_val
-                            if subclass:
-                                data[class_name][attr_name]['subclass'] = subclass
+                            data[class_name][attribute] = attr_val
+                            #print '# DEBUG: parsing attribute: "%s" - "%s"' % (attribute, attr_val)
 
         return data
 
@@ -416,18 +448,55 @@ class StyleParser(object):
         # print data
         #print json.dumps(data, indent=5)
 
+        # do overrides
         if kwargs:
             for kattr, kval in kwargs.iteritems():
                 attr_name = re.sub('_', '-', kattr)
-                #print '# override: "%s": %s' % (attr_name, kval)
                 data[attr_name] = kval
+
+        #  derive subclasses
+        for attr, val in data.iteritems():
+
+            if ':' in attr:
+                transform = eval(val)
+                ttype = type(transform)
+                parent_attr, subclass = attr.split(':')
+                parent_value = data.get(parent_attr)
+
+
+                if ttype in [int, float]:
+                    nmatch = re.search(regex.get('numeric'), parent_value)
+                    if nmatch:
+                        parent_value = float(nmatch.group('num'))
+                        if ttype == int:
+                            parent_value = int(parent_value)
+
+                        derived_val = (parent_value + transform)
+
+                        # this is kinda hacky, need to think of a better way to 
+                        # translate the value back.
+                        if 'font' in attr:
+                            derived_val = '%dpt' % derived_val
+                            data[attr] = derived_val
 
         ff = open(self._stylesheet, 'r')
         ss_lines = ""
         for line in ff.readlines():
             if line:
+                # fix some unicode errors
+                line = str(line)
                 if '@' in line:
                     if not '@STYLENAME' in line:
+                        if line.count('@') > 1:
+                            new_value = line
+                            values = re.findall(regex.get('value'), line)
+                            if values:                                
+                                for value in values:
+                                    new_value = re.sub('@%s' % str(value), str(data.get(value)), new_value)
+                            
+                            ss_lines += new_value
+                            continue
+
                         smatch = re.search(regex.get('value'), line)
                         if smatch:
                             value = str(smatch.group('value'))

@@ -760,9 +760,9 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>0</y>
-              <width>370</width>
-              <height>377</height>
+              <y>-25</y>
+              <width>357</width>
+              <height>402</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -835,52 +835,12 @@
              <item row="6" column="0">
               <widget class="QLabel" name="autosave_time_label">
                <property name="text">
-                <string>Autosave Time:</string>
+                <string>Autosave time:</string>
                </property>
               </widget>
              </item>
              <item row="6" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
-             </item>
-             <item row="8" column="0">
-              <widget class="QLabel" name="ui_font_label">
-               <property name="text">
-                <string>UI font:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="8" column="1">
-              <widget class="QComboBox" name="ui_font_menu"/>
-             </item>
-             <item row="9" column="0">
-              <widget class="QLabel" name="ui_fontsize_label">
-               <property name="text">
-                <string>UI font size:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="9" column="1">
-              <widget class="QDoubleSpinBox" name="ui_fontsize_spinbox"/>
-             </item>
-             <item row="10" column="0">
-              <widget class="QLabel" name="mono_font_label">
-               <property name="text">
-                <string>Monospace font:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="10" column="1">
-              <widget class="QComboBox" name="mono_font_menu"/>
-             </item>
-             <item row="11" column="0">
-              <widget class="QLabel" name="mono_fontsize_label">
-               <property name="text">
-                <string>Monospace size:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="11" column="1">
-              <widget class="QDoubleSpinBox" name="mono_fontsize_spinbox"/>
              </item>
              <item row="7" column="0">
               <widget class="QLabel" name="stylesheet_label">
@@ -891,6 +851,53 @@
              </item>
              <item row="7" column="1">
               <widget class="QComboBox" name="stylesheet_menu"/>
+             </item>
+             <item row="8" column="0">
+              <widget class="QLabel" name="ui_font_label">
+               <property name="text">
+                <string>UI Font:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="8" column="1">
+              <widget class="QComboBox" name="ui_font_menu"/>
+             </item>
+             <item row="9" column="0">
+              <widget class="QLabel" name="mono_font_label">
+               <property name="text">
+                <string>Monospace Font:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="1">
+              <widget class="QComboBox" name="mono_font_menu"/>
+             </item>
+             <item row="10" column="0">
+              <widget class="QLabel" name="ui_fontsize_label">
+               <property name="text">
+                <string>UI Font Size:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="1">
+              <widget class="QDoubleSpinBox" name="ui_fontsize_spinbox"/>
+             </item>
+             <item row="12" column="0">
+              <widget class="QLabel" name="mono_fontsize_label">
+               <property name="text">
+                <string>Mono Font Size:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="12" column="1">
+              <widget class="QDoubleSpinBox" name="mono_fontsize_spinbox"/>
+             </item>
+             <item row="13" column="1">
+              <widget class="QToolButton" name="button_reset_fonts">
+               <property name="text">
+                <string>Reset Fonts</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>

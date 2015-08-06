@@ -514,8 +514,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Add dag nodes to the current scene.
 
-        params:
-            dagnodes (list) - list of dag node/edge objects.
+        :param list dagnodes: list of dag node/edge objects.
         """
         if type(dagids) not in [list, tuple]:
             dagids = [dagids,]
@@ -528,7 +527,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                 dag = self.graph.dagnodes.get(dag_id)
 
                 if issubclass(type(dag), core.DagNode):
-                    if dag_id not in self.scenenodes:                        
+                    if dag_id not in self.scenenodes:               
                         widget = self.plug_mgr.get_widget(dag)
 
                         if not widget:
@@ -536,7 +535,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
                             continue
                             
                         widget._render_effects = self.ui.render_fx
-
+                        widget._font = self.ui.font_family_nodes
+                        
                         # set the debug mode
                         widget.setDebug(self.debug)
                         self.scenenodes[dag.id]=widget

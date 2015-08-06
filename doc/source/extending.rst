@@ -125,18 +125,21 @@ Environment Setup
 
 To extend SceneGraph, there are a few environment variables we'll need to set:
 
-.. _SCENEGRAPH_PLUGIN_PATH_:
+.. _SCENEGRAPH_PLUGIN_PATH:
 
-- SCENEGRAPH_PLUGIN_PATH
+SCENEGRAPH_PLUGIN_PATH
+----------------------
 
   - Use this variable to extend where SceneGraph goes to look for node plugins.
 
 
-- SCENEGRAPH_CONFIG_PATH
+SCENEGRAPH_CONFIG_PATH
+----------------------
 
   - Use this variable to add different font and color schemes for the UI.
 
 
-- SCENEGRAPH_STYLESHEET_PATH
+SCENEGRAPH_STYLESHEET_PATH
+--------------------------
 
   - Use this variable to add different Qt stylesheets for skinning the UI.
