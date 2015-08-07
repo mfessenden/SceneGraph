@@ -28,8 +28,8 @@ def setup_platform_defaults():
 
 
 PACKAGE                         = 'SceneGraph'
-API_MAJOR_VERSION               = 0.66
-API_REVISION                    = 9
+API_MAJOR_VERSION               = 0.67
+API_REVISION                    = 0
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
@@ -121,11 +121,6 @@ SCENEGRAPH_PREFERENCES = {
     'render_fx' : {'default': True, 'desc':'Render node drop shadows and effects.', 'label':'render FX'},
     'antialiasing' : {'default': 2, 'desc':'Antialiasing level.', 'label':'Antialiasing'},
     'logging_level' : {'default':30, 'desc':'Verbosity level.', 'label':'Logging level'},
-    'font_family_ui' : {'default':'DejaVu Sans', 'desc':'Default UI font.', 'label':'Font - ui'},
-    'font_family_mono' : {'default':'Consolas', 'desc':'Monospace font for UI.', 'label':'Font - mono'},
-    'font_size_ui' : {'default':'8pt', 'desc':'Default UI font size.', 'label':'Font size - ui'},
-    'font_size_mono' : {'default':'9pt', 'desc':'Default fixed size.', 'label':'Font size - mono'},
-    'font_family_nodes' : {'default':'Consolas', 'desc':'Font for node labels.', 'label':'Node font'},
     'autosave_inc' : {'default':90000, 'desc':'Autosave delay (seconds x 1000).', 'label':'Autosave time'},
     'stylesheet_name' : {'default':'default', 'desc':'Stylesheet to use.', 'label':'Stylesheet'},
     }
@@ -133,8 +128,10 @@ SCENEGRAPH_PREFERENCES = {
 
 
 SCENEGRAPH_VALID_FONTS = dict(
-    ui=['Cantarell', 'DejaVu Sans', 'DejaVu Serif', 'FreeSans', 'Liberation Sans', 'Open Sans', 'PT Sans', 'Verdana'], 
-    mono=['Consolas', 'Courier', 'Courier 10 Pitch', 'DejaVu Sans Mono', 'Fixed', 'FreeMono', 'Liberation Mono', 'Menlo', 'Monaco']
+    ui=['Arial', 'Cantarell', 'Corbel', 'DejaVu Sans', 'DejaVu Serif', 'FreeSans', 'Liberation Sans', 
+        'Lucida Sans Unicode', 'MS Sans Serif', 'Open Sans', 'PT Sans', 'Tahoma', 'Verdana'], 
+    mono=['Consolas', 'Courier', 'Courier 10 Pitch', 'Courier New', 'DejaVu Sans Mono', 'Fixed', 
+        'FreeMono', 'Liberation Mono', 'Lucida Console', 'Menlo', 'Monaco']
     )
 
 
@@ -145,6 +142,5 @@ VIEWPORT_MODES = dict(
     full = 'QtGui.QGraphicsView.FullViewportUpdate',
     smart = 'QtGui.QGraphicsView.SmartViewportUpdate',
     minimal = 'QtGui.QGraphicsView.MinimalViewportUpdate',
-    bounding = 'QtGui.QGraphicsView.BoundingRectViewportUpdate'
     )
 

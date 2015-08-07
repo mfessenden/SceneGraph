@@ -9,16 +9,17 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, DagNode, PluginManager, Attribute
+from SceneGraph.core import log, Observer, DagNode, PluginManager, Attribute
 from SceneGraph import util
 
 
-class Graph(object):
+class Graph(Observer):
     """
     Wrapper for NetworkX MultiDiGraph. Adds methods to query nodes,
     read & write graph files, etc.
     """
     def __init__(self, *args, **kwargs):
+        super(Graph, self).__init__(*args, **kwargs)
 
         #self.network        = nx.DiGraph()
         self.network        = nx.MultiDiGraph() # mutliple edges between nodes
@@ -81,6 +82,8 @@ class Graph(object):
     def scanNodeTypes(self, path):
         """
         Scan the given directory for node types.
+
+        :param str path: path to scan.
         """
         nodes = dict()
         if not os.path.exists(path):
@@ -127,6 +130,24 @@ class Graph(object):
         for attr in attributes:
             if attr in self.network.graph:
                 self.network.graph.pop(attr)
+
+    def update_observer(self, obs, event, *args, **kwargs):
+        """
+        Called when the observed object has changed.
+
+        :param Observable obs: Observable object.
+        :param Event event: Event object.
+        """
+        if event.type == 'nameChanged':
+            old_name = obs.name
+            new_name = event.data.get("new_name")
+            if old_name == new_name:
+                return
+
+            # update the event to reflect a better name choice
+            if not self.is_valid_name(new_name):
+                valid_name = self.get_valid_name(new_name)
+                event.data.update(valid_name=valid_name)
 
     def updateDagNodes(self, dagnodes):
         """
@@ -359,6 +380,7 @@ class Graph(object):
                 
         # get the dag node from the PluginManager
         dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, attributes=attributes, **kwargs)
+        dag.add_observer(self)
 
         # advance the grid to the next value.
         self.grid.next()

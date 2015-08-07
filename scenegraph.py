@@ -6,6 +6,7 @@ import re
 import pysideuic
 import xml.etree.ElementTree as xml
 from cStringIO import StringIO
+import simplejson as json
 
 from SceneGraph import options
 from SceneGraph import core
@@ -60,6 +61,7 @@ class SceneGraphUI(form_class, base_class):
         self.icons                = None  
         self.view                 = None                                    # GraphicsView
         self.pmanager             = None                                    # Plugin manager UI
+        self.attr_manager         = None                                    # Attribute manager dialog  
 
         # preferences
         self.debug                = kwargs.get('debug', False)
@@ -124,7 +126,6 @@ class SceneGraphUI(form_class, base_class):
         # setup
         self.initializeWorkPath(self._work_path)
         self.readSettings(**kwargs)
-
         self.initializeStylesheet()
         self.initializeUI()           
         self.connectSignals()       
@@ -176,8 +177,12 @@ class SceneGraphUI(form_class, base_class):
         self.buildWindowTitle()
         self.resetStatus()
 
-        # remove the Draw tab
+        ### UNUSED FEATUERS ###
+        # draw tab
         self.tabWidget.removeTab(3)
+        # Qt application style menu
+        self.app_style_label.setHidden(True)
+        self.app_style_menu.setHidden(True)
 
         # setup undo/redo
         undo_action = self.view.scene().undo_stack.createUndoAction(self, "&Undo")
@@ -196,16 +201,8 @@ class SceneGraphUI(form_class, base_class):
         self.view_posy.setValidator(QtGui.QDoubleValidator(-5000, 10000, 2, self.view_posy))
 
         self.autosave_time_edit.setValidator(QtGui.QDoubleValidator(0, 1000, 2, self.autosave_time_edit))
-
         self.consoleTextEdit.textChanged.connect(self.outputTextChangedAction)
         self.toggleDebug()
-
-    def initializeFonts(self):
-        """
-        Setup the fonts attribute.
-        """
-        reload(options)
-        self.fonts = options.SCENEGRAPH_FONTS
 
     def initializeStylesheet(self, paths=[], style='default', **kwargs):
         """
@@ -307,13 +304,12 @@ class SceneGraphUI(form_class, base_class):
         self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
         self.button_reset_fonts.clicked.connect(self.resetFontsAction)
 
-
         current_pos = QtGui.QCursor().pos()
         pos_x = current_pos.x()
         pos_y = current_pos.y()
 
         # nodes menu
-        self.menu_nodes.aboutToShow.connect(partial(self.initializeNodesMenu, self.menu_nodes, current_pos))
+        self.menu_nodes.aboutToShow.connect(partial(self.createNodesMenu, self.menu_nodes, pos=current_pos))
 
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -395,49 +391,6 @@ class SceneGraphUI(form_class, base_class):
                 has_dots = True
 
         self.action_reset_dots.setEnabled(has_dots)
-
-    def initializeNodesMenu(self, parent, pos, color=True, **kwargs):
-        """
-        Build a context menu at the current pointer pos.
-        """
-        parent.clear()
-        qcurs = QtGui.QCursor()
-
-        menu_add_node   = QtGui.QMenu('Add node:   ', parent)
-        menu_node_color = QtGui.QMenu('Node color: ', parent)
-
-        overrides = dict(
-            font_family_ui = kwargs.get('font_family_ui', self.font_family_ui),
-            font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
-            font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
-            font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
-            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
-            )
-
-        for node in self.graph.node_types():
-            node_action = menu_add_node.addAction(node)
-            # add the node at the scene pos
-            node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=[pos.x(), pos.y()]))
-
-        # build the color menu
-        if color:
-            for color_name in options.SCENEGRAPH_COLORS:
-                color_val = options.SCENEGRAPH_COLORS.get(color_name)
-                color = QtGui.QColor(*color_val)
-                pixmap = QtGui.QPixmap(24, 24)
-                pixmap.fill(color)
-
-                icon = QtGui.QIcon(pixmap)
-                color_action = menu_node_color.addAction(icon, color_name)
-                color_action.setIconVisibleInMenu(True)
-                color_action.triggered.connect(partial(self.view.scene().colorChangedAction, color=color_val))
-
-        parent.addMenu(menu_add_node)
-        if color:
-            parent.addMenu(menu_node_color)
-
-        style_data = self.stylesheet.style_data(**overrides)
-        parent.setStyleSheet(style_data)
 
     def initializeRecentFilesMenu(self):
         """
@@ -956,15 +909,19 @@ class SceneGraphUI(form_class, base_class):
 
         self.initializeStylesheet(**overrides)  
 
-    def resetFontsAction(self):
+    def resetFontsAction(self, platform=None, style='default'):
         """
         Reset fonts to their defaults.
         """
-        self.font_family_ui = options.SCENEGRAPH_PREFERENCES.get("font_family_ui").get("default")
-        self.font_family_mono = options.SCENEGRAPH_PREFERENCES.get("font_family_mono").get("default")
+        if platform is None:
+            platform = options.PLATFORM
 
-        self.font_size_ui = options.SCENEGRAPH_PREFERENCES.get("font_size_ui").get("default")
-        self.font_size_mono = options.SCENEGRAPH_PREFERENCES.get("font_size_mono").get("default")
+        defaults = self.stylesheet.font_defaults(platform=platform, style=style)
+        
+        self.font_family_ui = defaults.get("font_family_ui")
+        self.font_family_mono = defaults.get("font_family_mono")
+        self.font_size_ui = defaults.get("font_size_ui")
+        self.font_size_mono = defaults.get("font_size_mono")
 
         overrides = dict(
             font_family_ui = self.font_family_ui,
@@ -1006,7 +963,6 @@ class SceneGraphUI(form_class, base_class):
                     conn_widget = node.connections.get(conn_name)
                     conn_widget.setRotation(0)
                     conn_widget.setTransformOriginPoint(conn_widget.mapFromParent(QtCore.QPointF(0,0)))
-
 
     def nodesSelectedAction(self):
         """
@@ -1187,27 +1143,76 @@ class SceneGraphUI(form_class, base_class):
         return super(SceneGraphUI, self).closeEvent(event)
 
     #- Menus -----
-    def createTabMenu(self, parent, **kwargs):
+    def createNodesMenu(self, parent, pos, add=True, color=True, attribute=True):
         """
         Build a context menu at the current pointer pos.
 
-        params:
-            parent (QWidget) - parent widget.
+        :param QtGui.QWidget parent: parent ui (window, GraphicsView, etc.)
+        :param QtCore.QPointF pos: position to build the menu.
+
+        :param bool add: build the **add node** sub-menu.
+        :param bool color: build the **node color** sub-menu.
+        :param bool attribute: build the **node attribute** sub-menu.
+        """
+        parent.clear()
+        qcurs = QtGui.QCursor()
+
+        menu_add_node   = QtGui.QMenu('Add node:   ', parent)
+        menu_node_color = QtGui.QMenu('Node color: ', parent)
+        menu_node_attributes = QtGui.QMenu('Attributes: ', parent)
+
+        # build the add node menu
+        if add:
+            for node in self.graph.node_types():
+                node_action = menu_add_node.addAction(node)
+                # add the node at the scene pos
+                node_action.triggered.connect(partial(self.graph.add_node, node_type=node, pos=[pos.x(), pos.y()]))
+
+        # build the color menu
+        if color:
+            for color_name in options.SCENEGRAPH_COLORS:
+                color_val = options.SCENEGRAPH_COLORS.get(color_name)
+                color = QtGui.QColor(*color_val)
+                pixmap = QtGui.QPixmap(24, 24)
+                pixmap.fill(color)
+
+                icon = QtGui.QIcon(pixmap)
+                color_action = menu_node_color.addAction(icon, color_name)
+                color_action.setIconVisibleInMenu(True)
+                color_action.triggered.connect(partial(self.view.scene().colorChangedAction, color=color_val))
+
+        if attribute:
+            for action_name in ['add', 'remove']:
+                attr_action = menu_node_attributes.addAction('%s attribute' % action_name)
+                attr_action.triggered.connect(partial(self.attributeManagerAction, action=action_name))
+
+        # add the add node menu
+        if add:
+            parent.addMenu(menu_add_node)
+
+        # if a node is selected, add the color menu.
+        if color:
+            parent.addMenu(menu_node_color)
+
+        if attribute:
+            parent.addMenu(menu_node_attributes)
+
+        # parent isn't getting stylesheet
+        parent.setStyleSheet(self.styleSheet())
+
+    def createTabMenu(self, parent):
+        """
+        Build a context menu at the current pointer pos.
+
+        :param  QtGui.QWidget parent: parent widget.
         """
         tab_menu = QtGui.QMenu(parent)
         tab_menu.clear()
         add_menu = QtGui.QMenu('Add node:')
 
-        overrides = dict(
-            font_family_ui = kwargs.get('font_family_ui', self.font_family_ui),
-            font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
-            font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
-            font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
-            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
-            )
+        style_data = self.styleSheet()
 
         # apply the stylesheet
-        style_data = self.stylesheet.style_data(**overrides)
         add_menu.setStyleSheet(style_data)
         tab_menu.setStyleSheet(style_data)
 
@@ -1400,6 +1405,15 @@ class SceneGraphUI(form_class, base_class):
             reload(PluginManager)
             self.pmanager=PluginManager.PluginManager(self)
             self.pmanager.show()
+
+    def attributeManagerAction(self, action):
+        """
+        Launches the Attribute Manager.
+        """
+        try:
+            self.attr_manager.close()
+        except:
+            print '# %sing attribute...' % action.title()
 
     def updateOutput(self):
         """
@@ -1604,12 +1618,21 @@ class SceneGraphUI(form_class, base_class):
             return
         return filename
 
-    def inputDialog(self, msg, label):
+    def inputDialog(self, msg, label, clean=True):
         """
-        Prompts the user for an input.
+        Prompts the user for an input. Arguments are message (dialog title) and
+        label (input widget title) ie:
+
+            "Save current file", "file name"
+
+        :param str msg: message string to pass to the dialog title.
+        :param str label: message string to pass to the input widget.
+        :param bool clean: clean resulting string of illegal characters.
         """
         text, ok = QtGui.QInputDialog.getText(self, msg, label)
         if text:
+            if clean:
+                text = util.clean_name(text)
             return text
         return
 
@@ -1631,8 +1654,7 @@ class Settings(QtCore.QSettings):
         if 'MainWindow' not in self.childGroups():
             if self._parent is not None:
                 self.setValue('MainWindow/geometry/default', self._parent.saveGeometry())
-                self.setValue('MainWindow/windowState/default', self._parent.saveState())
-                
+                self.setValue('MainWindow/windowState/default', self._parent.saveState())                
 
         if 'RecentFiles' not in self.childGroups():
             self.beginWriteArray('RecentFiles', 0)

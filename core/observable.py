@@ -2,6 +2,18 @@
 from SceneGraph.core import log
 
 
+class Observer(object):
+
+    def update_observer(self, obs, event, *args, **kwargs):
+        """
+        Called when the observed object has changed.
+
+        :param Observable obs: Observable object.
+        :param Event event: Event object.
+        """
+        pass
+
+
 class Observable(object):
     """
     Simple Observable example.
@@ -15,30 +27,26 @@ class Observable(object):
         """
         Add an observer.
 
-        params:
-            obs (obj) - Observer object.
+        :param Observer obs: Observer object.
         """
         if obs not in self._observers:
             self._observers.append(obs)
     
     def get_observers(self):
         """
-        Add an observer.
+        Return the current observers.
 
-        params:
-            obs (obj) - Observer object.
-
-        returns:
-            (list) - list of observers.
+        :returns: list of observers.
+        :rtype: list
         """
         return self._observers
     
     def observer_count(self):
         """
-        Returns the number of observers.
+        Returns the number of current observers.
 
-        returns:
-            (int) - number of observers.
+        :returns: number of observers.
+        :rtype: list
         """
         return len(self._observers)
     
@@ -46,28 +54,33 @@ class Observable(object):
         """
         Remove an observer.
 
-        params:
-            obs (obj) - Observer object.
+        :param Observer obs: Observer object.
 
-        returns:
-            (bool) - observer was removed.
+        :returns: observer was successfully removed.
+        :rtype: bool
         """
         if obs in self._observers:
             self._observers.remove(obs)
             return True
         return False
 
-    def notify(self, *args, **kwargs):
+    def notify(self, event, *args, **kwargs):
         """
         Callback to update all observers.
+
+        :param Event event: Event object.
         """
-        if not self._changed:
+        if not self.has_changed:
             return
 
+        if event is None:
+            return
+            
         log.debug('updating observers...')
         self.clear_changed()
         for obs in self._observers:
-            obs.dagnodeUpdated(*args, **kwargs)
+            if hasattr(obs, 'update_observer'):
+                obs.update_observer(self, event, *args, **kwargs)
     
     def clear_changed(self):
         """
@@ -84,6 +97,9 @@ class Observable(object):
     def has_changed(self):
         """
         Indicates the observer changed status.
+
+        :returns: Observable has been changed.
+        :rtype: bool
         """
         return self._changed
  

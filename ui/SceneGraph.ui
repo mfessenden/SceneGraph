@@ -144,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>25</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -273,7 +273,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>620</height>
+          <height>638</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -321,8 +321,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>376</width>
-          <height>169</height>
+          <width>323</width>
+          <height>170</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -426,8 +426,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>360</width>
-                  <height>336</height>
+                  <width>307</width>
+                  <height>382</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -669,8 +669,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>370</width>
-              <height>377</height>
+              <width>317</width>
+              <height>411</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -760,9 +760,9 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>-25</y>
-              <width>357</width>
-              <height>402</height>
+              <y>0</y>
+              <width>317</width>
+              <height>411</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -915,7 +915,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../icn/scenegraph.qrc">
+    <iconset>
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">
@@ -1078,6 +1078,11 @@
   <action name="action_reload_style">
    <property name="text">
     <string>Reload Style...</string>
+   </property>
+  </action>
+  <action name="action_disconnect_handler">
+   <property name="text">
+    <string>Disconnect handler..</string>
    </property>
   </action>
  </widget>

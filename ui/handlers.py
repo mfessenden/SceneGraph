@@ -28,9 +28,7 @@ class SceneHandler(QtCore.QObject):
     """
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self, parent)
-        from SceneGraph.icn import icons
-        
-
+        from SceneGraph.icn import icons      
 
         self.icons          = icons.ICONS
         self.ui             = parent.ui 
@@ -58,11 +56,9 @@ class SceneHandler(QtCore.QObject):
         """
         Connect the parent scenes' Graph object.
 
-        params:
-            scene (GraphicsScene) - current QGraphicsScene scene.
-
-        returns:
-            (bool) - connection was successful.
+        :param GraphicsScene scene: current QGraphicsScene scene.
+        :returns: connection was successful.
+        :rtype: bool
         """
         if hasattr(scene, 'graph'):            
             graph = scene.graph
@@ -83,6 +79,25 @@ class SceneHandler(QtCore.QObject):
                     return True
         return False
 
+    def disconnectGraph(self):
+        """
+        Disconnect the parent scenes' Graph object.
+
+        :returns: disconnection was successful.
+        :rtype: bool
+        """
+        if self.scene:
+            if hasattr(self.scene, 'graph'):
+                if getattr(self.scene, 'graph'):
+                    self.disconnectSignals()
+
+                    #self.scene.graph = None
+                    #self.scene.handler = None
+                    #self.graph.handler = None
+                    #self.graph = None
+                    return True
+        return False
+
     def connectSignals(self):
         """
         Setup widget signals.
@@ -95,6 +110,16 @@ class SceneHandler(QtCore.QObject):
 
         # connect graph functions
         self.dagNodesUpdated.connect(self.graph.updateDagNodes)
+
+    def disconnectSignals(self):
+        """
+        Disconnect widget signals.
+        """
+        log.info('SceneHandler: disconnecting signals.') 
+        self.nodesAdded.disconnect(self.scene.addNodes)
+        self.edgesAdded.disconnect(self.scene.addEdges)
+        self.nodesUpdated.disconnect(self.scene.updateNodesAction)
+        self.dagNodesUpdated.disconnect(self.graph.updateDagNodes)
 
     def graphReadAction(self):
         """
@@ -208,6 +233,8 @@ class SceneHandler(QtCore.QObject):
     def updateNodes(self, dagnodes):
         """
         Signal Graph -> GraphicsScene.
+
+        :param list dagnodes: list of dag nodes.
         """
         self.updateConsole('updating %d nodes...' % len(dagnodes))
         log.info('SceneHandler: updating %d nodes...' % len(dagnodes))
@@ -225,8 +252,7 @@ class SceneHandler(QtCore.QObject):
         """
         Signal GraphicsScene -> Graph.
 
-        params:
-            nodes (list) - list of node/edge widgets.
+        :param list nodes: list of node/edge widgets.
         """
         # connect to Graph
         old_snapshot = self.graph.snapshot()      
@@ -254,6 +280,8 @@ class SceneHandler(QtCore.QObject):
     def sceneNodesUpdatedAction(self, nodes):
         """
         Signal GraphicsScene -> Graph.
+
+        :param list nodes: list of node/edge widgets.
         """
         # Signal GraphicsScene -> SceneGraphUI.
         self.sceneNodesUpdated.emit(nodes)
@@ -270,29 +298,4 @@ class SceneHandler(QtCore.QObject):
         self.dagNodesUpdated.emit(dagnodes)
         self.scene.update()
         # push to undo here
-
-"""
-def dagNodesRemoved(self, dagids):
-    ntype = 'node'
-    if type(dagids) is tuple:
-        ntype = 'edge'
-    
-    if ntype == 'node':
-        for id in dagids:
-            if id in self.scene.scenenodes:
-                widget = self.scene.scenenodes.pop(id)
-                log.info('removing %s: "%s"' % (ntype, widget.name))
-                self.updateConsole('removing %s: "%s"' % (ntype, widget.name))
-                if widget and widget not in nodes_to_remove:
-                    nodes_to_remove.append(widget)
-
-    elif ntype == 'edge':
-        for id in self.scene.scenenodes:
-            widget = self.scene.scenenodes.get(id)
-            if self.scene.is_edge(widget):
-                if widget.ids == dagids:
-                    self.updateConsole('removing %s: "%s"' % (ntype, widget.name))
-                    if widget and widget not in nodes_to_remove:
-                        nodes_to_remove.append(widget)
-"""
 

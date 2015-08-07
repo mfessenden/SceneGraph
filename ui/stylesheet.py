@@ -83,6 +83,8 @@ class StylesheetManager(object):
         parser = StyleParser(self, style=style)
         parser.run()
         data = parser.data(**kwargs)
+
+        # grab data here for debugging
         self._data = parser._data
         return data
 
@@ -330,9 +332,42 @@ class StylesheetManager(object):
                 families.append(font_name)
         return families
 
+    def font_defaults(self, platform=None, style='default'):
+        """
+        Builds a dictionary of font & size defaults by platform.
+
+        :param str platform: os type
+
+        :returns: font and font size defaults dictionary.
+        :rtype: dict
+        """
+        if platform is None:
+            platform = options.PLATFORM
+
+        defaults = dict()
+
+        def_font_config = self.config_files(style).get('fonts', None)
+        if not os.path.exists(def_font_config):
+            log.error('config "%s" does not exist.' % def_font_config)
+            return defaults
+
+        parser = StyleParser(self)
+        data = parser._parse_configs(def_font_config)
+        data = parser._parse_platform_data(data)
+
+        # substitute attribute names
+        for attr, val in data.iteritems():
+            attr = re.sub('-', '_', attr)
+            defaults[attr] = val
+        return defaults
+
 
 class StyleParser(object):
 
+    """
+    The StyleParse class reads stylesheets, parses config files and does sass-style
+    replacements for properties.
+    """
     def __init__(self, parent, style=None):
 
         self.manager            = parent
@@ -346,7 +381,8 @@ class StyleParser(object):
 
     def run(self, style='default'):
         """
-        Parse the stylesheet data and substitute values from config file data.
+        Parse stylesheet data for a given style and substitute values 
+        from config file data. 
 
         :param str style: style name to parse.
         :param dict kwargs: overrides.
@@ -367,14 +403,20 @@ class StyleParser(object):
         if self._stylesheet is not None:
             self._data = self._parse_configs()
 
-    def _parse_configs(self):
+    def _parse_configs(self, configs=[]):
         """
         Parse config data into a dictionary.
         """
         data = dict()
         data.update(defaults=dict())
 
-        for config in [self._config_fonts, self._config_palette]:
+        if not configs:
+            configs = [self._config_fonts, self._config_palette]
+
+        if type(configs) in [str, unicode]:
+            configs = [configs,]
+
+        for config in configs:
             if not config or not os.path.exists(config):
                 continue
 
@@ -413,7 +455,6 @@ class StyleParser(object):
                         if class_name not in data:
                             data[class_name] = dict()
 
-                        #print '# match groups: ', [k for k, v in match_data.iteritems() if v]
                         attr_name = match_data.get('attr')
                         attr_val = match_data.get('value')
 
@@ -423,46 +464,50 @@ class StyleParser(object):
 
                         if attr_val:
                             data[class_name][attribute] = attr_val
-                            #print '# DEBUG: parsing attribute: "%s" - "%s"' % (attribute, attr_val)
-
         return data
 
-    def data(self, **kwargs):
+    def _parse_platform_data(self, data, platform=None, verbose=False, **kwargs):
         """
-        Returns the raw stylesheet data with config values substituted.
+        Parse config data into platform defaults, etc.
 
-        :returns: stylesheet data.
-        :rtype: str
+        :param dict data: parsed config data.
+        :returns: dictionary of parsed config data.
         """
         import copy
-        data = dict()
-        style_data = copy.deepcopy(self._data)
+        result = dict()        
+
+        if platform is None:
+            platform = options.PLATFORM
+
+        # copy the input data
+        style_data = copy.deepcopy(data)
+
         for k, v in style_data.pop('defaults', {}).iteritems():
-            data['%s' % k] = v
+            result['%s' % k] = v
 
         if options.PLATFORM in style_data:
             platform_defaults = style_data.get(options.PLATFORM)
+
             for attr, val in platform_defaults.iteritems():
-                data[attr] = val
+                result[attr] = val
 
-        # print data
-        #print json.dumps(data, indent=5)
-
-        # do overrides
+        # kwarg overrides
         if kwargs:
             for kattr, kval in kwargs.iteritems():
-                attr_name = re.sub('_', '-', kattr)
-                data[attr_name] = kval
+                if kval:
+                    attr_name = re.sub('_', '-', kattr)
+                    if verbose:
+                        print '# DEBUG: override "%s": ' % attr_name, kval
+                    result[attr_name] = kval
 
         #  derive subclasses
-        for attr, val in data.iteritems():
+        for attr, val in result.iteritems():
 
             if ':' in attr:
                 transform = eval(val)
                 ttype = type(transform)
                 parent_attr, subclass = attr.split(':')
-                parent_value = data.get(parent_attr)
-
+                parent_value = result.get(parent_attr)
 
                 if ttype in [int, float]:
                     nmatch = re.search(regex.get('numeric'), parent_value)
@@ -477,8 +522,18 @@ class StyleParser(object):
                         # translate the value back.
                         if 'font' in attr:
                             derived_val = '%dpt' % derived_val
-                            data[attr] = derived_val
+                            result[attr] = derived_val
+        return result
 
+    def data(self, verbose=False, **kwargs):
+        """
+        Returns the raw stylesheet data with config values substituted.
+
+        :returns: stylesheet data.
+        :rtype: str
+        """
+        data = self._parse_platform_data(self._data, **kwargs)
+       
         ff = open(self._stylesheet, 'r')
         ss_lines = ""
         for line in ff.readlines():

@@ -225,18 +225,16 @@ class AttributeEditor(QtGui.QWidget):
         """
         Runs when a child editor updates a node value.
 
-        params:
-            editor (QWidget) - node editor widget.
+        :param QtGui.QWidget editor: node editor widget.
 
-        returns:
-            (list) - list of dag node objects that have been updated.
+        :returns: list of dag node objects that have been updated.
+        :rtype: list
         """
         updated_nodes = []
         for node in self.nodes:
             if hasattr(node, editor.attribute):
                 cur_val = getattr(node, editor.attribute)
                 if cur_val != editor.value:
-                    #print '# DEBUG: setting "%s": "%s": ' % (node.name, editor.attribute), editor.value
                     setattr(node, editor.attribute, editor.value)
                     updated_nodes.append(node)
         
@@ -262,8 +260,9 @@ class AttributeEditor(QtGui.QWidget):
         """
         Returns a list of values for the given attribute.
 
-        params:
-            attr (str) - attribute to query for each node.
+        :param str attr:  attribute to query for each node.
+        :returns: list of values from nodes.
+        :rtype: list
         """
         # set the nodes
         node_values = []
@@ -1463,7 +1462,6 @@ class StringEditor(QtGui.QWidget):
         self.val1_edit = QtGui.QLineEdit(self)
         regexp = QtCore.QRegExp('^([a-zA-Z0-9_]+)')
 
-
         self.val1_edit.setObjectName("val1_edit")        
         self.mainLayout.addWidget(self.val1_edit)
 
@@ -1473,6 +1471,11 @@ class StringEditor(QtGui.QWidget):
         #self.val1_edit.setFont(self._ui.fonts.get("attr_editor"))
 
     def validate_text(self, text):
+        """
+        Validate the given value and update the current text.
+
+        :param str text: text to validate.
+        """
         current_text = self.value
         if self._clean_value:
             cpos = self.val1_edit.cursorPosition()
@@ -1481,7 +1484,6 @@ class StringEditor(QtGui.QWidget):
             self.val1_edit.setText(cleaned)
             self.val1_edit.blockSignals(False)
             self.val1_edit.setCursorPosition(cpos)            
-        #self._current_value = self.value
 
     @property
     def attribute(self):

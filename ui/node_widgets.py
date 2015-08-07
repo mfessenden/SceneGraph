@@ -3,12 +3,12 @@ import sys
 import math
 import weakref
 from PySide import QtCore, QtGui
-from SceneGraph.core import log
+from SceneGraph.core import log, Observer
 from SceneGraph import options
 from . import commands
 
 
-class NodeWidget(QtGui.QGraphicsObject):
+class NodeWidget(Observer, QtGui.QGraphicsObject):
 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
@@ -184,11 +184,15 @@ class NodeWidget(QtGui.QGraphicsObject):
         val = self.label.is_editable
 
     #- Events ----
-    def dagnodeUpdated(self, *args, **kwargs):
+    def update_observer(self, obs, event, *args, **kwargs):
         """
-        Callback from the dag node.
+        Called when the observed object has changed.
+
+        :param Observable obs: Observable object.
+        :param Event event: Event object.
         """
-        pass
+        if event.type == 'positionChanged':
+            self.setPos(obs.pos[0], obs.pos[1])
 
     def itemChange(self, change, value):
         """
@@ -1498,7 +1502,6 @@ class NodeLabel(QtGui.QGraphicsObject):
 
         #painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
         qfont = QtGui.QFont(self.node._font)
-        print '# DEBUG: font: ', self.node._font
         qfont.setPointSize(self.node._font_size)
         qfont.setBold(self.node._font_bold)
         qfont.setItalic(label_italic)

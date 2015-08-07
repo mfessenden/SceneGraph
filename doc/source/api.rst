@@ -74,11 +74,79 @@ The Metadata parses node metadata on disk.
     :members:
 
 
+Events & Observables
+====================
+.. automodule:: core.observable
+.. autoclass:: Observable
+    :members:
+
+.. _Observable:
+
+Observable
+----------
+
+The Observable class is the basis of all of our core node types, providing simple callbacks.
+
+.. automodule:: core.events
+.. autoclass:: Event
+    :members:
+.. autoclass:: NodePositionChanged
+    :members:
+.. autoclass:: NodeNameChanged
+    :members:
+.. autoclass:: AttributeUpdatedEvent
+    :members:
+.. autoclass:: MouseHoverEvent
+    :members:
+.. autoclass:: MouseMoveEvent
+    :members:
+.. autoclass:: MousePressEvent
+    :members:
+
+.. _Event:
+
+Event
+-----
+Event base class.
+
+NodePositionChanged
+-------------------
+Called when a DagNode's position is updated.
+
+NodeNameChanged
+---------------
+Called when a DagNode's name changes.
+
+AttributeUpdatedEvent
+---------------------
+Generic DagNode attribute changed event.
+
+MouseHoverEvent
+---------------
+**Qt**: Mouse hover event.
+
+MouseMoveEvent
+--------------
+**Qt**: Mouse move event.
+
+MousePressEvent
+---------------
+**Qt**: Mouse button press event.
+
+
 UI Modules
 ==========
 
 .. automodule:: ui
 
+.. _SceneHandler:
+
+SceneHandler
+------------
+The SceneHandler connects the Graph to the UI
+
+.. autoclass:: SceneHandler
+    :members:
 
 StylesheetManager
 -----------------
@@ -138,3 +206,11 @@ The Connection defines connections between nodes.
 
 .. autoclass:: Connection
     :members:
+
+
+Utilities
+=========
+
+.. _utils:
+
+.. automodule:: util

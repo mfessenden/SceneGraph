@@ -3,83 +3,99 @@ import re
 
 
 #- Naming ----
-def clean_name(s):
+def clean_name(text):
     """
     Return a cleaned version of a string - removes everything 
     but alphanumeric characters and dots.
 
-    params:
-        s (str) - string to clean up.
-
-    returns:
-        (str) - cleaned string.
+    :param str text: string to clean.
+    :returns: cleaned string.
+    :rtype: str
     """
-    return re.sub(r'[^a-zA-Z0-9\n\.]', '_', s) 
+    return re.sub(r'[^a-zA-Z0-9\n\.]', '_', text) 
 
 
-def camel_case_to_lower_case_underscore(s):
+def camel_case_to_lower_case_underscore(text):
     """
     Split string by upper case letters.
     F.e. useful to convert camel case strings to underscore separated ones.
-    @return words (list)
+
+    :param str text: string to convert.
+    :returns: formatted string.
+    :rtype: str
     """
     words = []
     from_char_position = 0
-    for current_char_position, char in enumerate(string):
-        if char.isupper() and from_char_position < s:
+    for current_char_position, char in enumerate(text):
+        if char.isupper() and from_char_position < text:
             words.append(s[from_char_position:current_char_position].lower())
             from_char_position = current_char_position
-    words.append(s[from_char_position:].lower())
+    words.append(text[from_char_position:].lower())
     return '_'.join(words)
 
 
-def camel_case_to_title(s):
+def camel_case_to_title(text):
     """
     Split string by upper case letters and return a nice name.
-    @return words (list)
+
+    :param str text: string to convert.
+    :returns: formatted string.
+    :rtype: str
     """
     words = []
     from_char_position = 0
-    for current_char_position, char in enumerate(s):
+    for current_char_position, char in enumerate(text):
         if char.isupper() and from_char_position < current_char_position:
-            words.append(s[from_char_position:current_char_position].title())
+            words.append(text[from_char_position:current_char_position].title())
             from_char_position = current_char_position
-    words.append(s[from_char_position:].title())
+    words.append(text[from_char_position:].title())
     return ' '.join(words)
 
 
-def lower_case_underscore_to_camel_case(s):
+def lower_case_underscore_to_camel_case(text):
     """
-    Convert string or unicode from lower-case underscore to camel-case
+    Convert string or unicode from lower-case underscore to camel-case.
+
+    :param str text: string to convert.
+    :returns: formatted string.
+    :rtype: str
     """
-    splitted_string = s.split('_')
+    split_string = text.split('_')
     # use string's class to work on the string to keep its type
-    class_ = s.__class__
-    return splitted_string[0] + class_.join('', map(class_.capitalize, splitted_string[1:]))
+    class_ = text.__class__
+    return split_string[0] + class_.join('', map(class_.capitalize, split_string[1:]))
 
 
-# attribute functions
-def attr_type(s):
+#- Attribute Functions ----
+def attr_type(value):
     """
-    Return the attr type of a value as a string.
+    Determine the attribute type based on a value. Returns a string.
+    For example:
+    
+        value = [2.1, 0.5]
+        type = 'float2'
+
+    :param value: attribute value.
+    :returns: attribute type.
+    :rtype: str
     """
-    if is_none(s):
+    if is_none(value):
         return 'null'
 
-    if is_list(s):
-        return list_attr_types(s)
+    if is_list(value):
+        return list_attr_types(value)
 
     else:
-        if is_bool(s):
+        if is_bool(value):
             return 'bool'
 
-        if is_string(s):
+        if is_string(value):
             return 'str'
 
-        if is_number(s):
-            if type(s) is float:
+        if is_number(value):
+            if type(value) is float:
                 return 'float'
-            if type(s) is int:
+            if type(value) is int:
                 return 'int'
     return 'unknown'
 

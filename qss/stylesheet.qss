@@ -113,6 +113,7 @@ QPushButton{
 
 QPushButton:!enabled{
     background-color: #595959;
+    font-style: italic;
 }
 
 QPushButton::hover{
@@ -385,7 +386,7 @@ QTabBar::tab::top{
 
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
-    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 @tab-bar-bg1, stop: 1.0 @tab-bar-bg2);
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 @tab-top-bg1, stop: 1.0 @tab-top-bg2);
     padding-bottom: 3px;
     padding-top: 3px;
     border-bottom-left-radius: 6px;

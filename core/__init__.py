@@ -6,23 +6,25 @@ from . import attributes
 # attributes
 Attribute               = attributes.Attribute
 
-from . import observable
-Observable              = observable.Observable
-
-
-from . import nodes
 from . import events
-
-from . import manager
-from . import metadata
-
-
 # events
 Event                   = events.Event
+NodePositionChanged     = events.NodePositionChanged
+NodeNameChanged         = events.NodeNameChanged
 AttributeUpdatedEvent   = events.AttributeUpdatedEvent
 MouseHoverEvent         = events.MouseHoverEvent
 MouseMoveEvent          = events.MouseMoveEvent
 MousePressEvent         = events.MousePressEvent
+
+
+from . import observable
+Observable              = observable.Observable
+Observer                = observable.Observer
+
+
+from . import nodes
+from . import manager
+from . import metadata
 
 
 # nodes

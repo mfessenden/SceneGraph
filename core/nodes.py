@@ -4,7 +4,7 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from SceneGraph.core import log, Attribute, Observable
+from SceneGraph.core import log, Attribute, Observable, Event, NodePositionChanged, NodeNameChanged, AttributeUpdatedEvent, MouseHoverEvent, MouseMoveEvent, MousePressEvent 
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
 
@@ -132,26 +132,36 @@ class DagNode(Observable):
         raise AttributeError('no attribute exists "%s"' % name)
 
     def __setattr__(self, name, value):
+        event = None
         if name in ['_attributes', '_changed', '_observers']:
             super(DagNode, self).__setattr__(name, value)
+
         elif name in self._attributes:
+            event = AttributeUpdatedEvent(self)
             attribute = self._attributes.get(name)
             if value != attribute.value:
                 attribute.value = value
                 # callbacks
                 Observable.set_changed(self)
-                Observable.notify(self)
-        else:
-            super(DagNode, self).__setattr__(name, value)
+                Observable.notify(self, event)
+        else:            
 
             # set the position of any connected widgets
             if name == 'pos':
-                if hasattr(self, '_widget'):
-                    if self._widget is not None:
-                        self._widget.setPos(*value)
+                event = NodePositionChanged(self)
+
+            if name == 'name':                        
+                event = NodeNameChanged(self, new_name=value)
+
             # callbacks
             Observable.set_changed(self)
-            Observable.notify(self)        
+            Observable.notify(self, event)
+
+            if event is not None:
+                if 'valid_name' in event.data:
+                    value = event.data.get('valid_name')
+
+            super(DagNode, self).__setattr__(name, value)
 
     @property
     def data(self):

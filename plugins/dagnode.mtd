@@ -19,7 +19,8 @@
         required            BOOL      true
         label               STRING    "Base Height"
         desc                STRING    "node base height (multiplied by the number of connections)."
-
+        private             BOOL      true
+        
     [attr id]
         default             STRING    ""
         required            BOOL      true

@@ -64,10 +64,9 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Setup the GraphicsScene.
 
-        params:
-            graph (Graph)       - graph instance.
-            ui    (QMainWindow) - parent window.
-        """
+        :param core.Graph graph: graph instance.
+        :param QtGui.QMainWindow graph: parent window.
+         """
         use_gl = kwargs.get('use_gl', ui.use_gl)
         if use_gl:
             from PySide import QtOpenGL
@@ -282,9 +281,13 @@ class GraphicsView(QtGui.QGraphicsView):
         if event.button() == QtCore.Qt.RightButton:
             item = self.itemAt(event.pos())
             color = False
+            attribute = False
+            add = True
             if item is not None:
                 color = True
-            self.showContextMenu(event.pos(), color=color)
+                attribute = True
+                add = False
+            self.showContextMenu(event.pos(), add=add, color=color, attribute=attribute)
             
         QtGui.QGraphicsView.mousePressEvent(self, event)
 
@@ -388,13 +391,17 @@ class GraphicsView(QtGui.QGraphicsView):
         sceneHeightPercent = centerHeight / sceneHeight if sceneHeight != 0 else 0
         return sceneWidthPercent, sceneHeightPercent
 
-    def showContextMenu(self, pos, color=True):
+    def showContextMenu(self, pos, add=True, color=True, attribute=True):
         """
         Pop up a node creation context menu at a given location.
+
+        :param QtCore.QPointF pos: position to launch menu at.
+        :param bool add: create **add node** menu.
+        :param bool color: create **node color** menu.
+        :param bool attribute: create **node attribute** manager menu.
         """
         menu = QtGui.QMenu()
-
-        self._parent.initializeNodesMenu(menu, self.mapToScene(pos), color=color)
+        self._parent.createNodesMenu(menu, self.mapToScene(pos), add=add, color=color, attribute=attribute)
         menu.exec_(self.mapToGlobal(pos))
     
     #- Actions -----
@@ -1030,8 +1037,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         Update dag node when widget attributes change. 
         Signal the graph that the data has changed as well.
 
-        params:
-            node (Node) - node widget.
+        :param ui.NodeWidget node: node widget.
         """
         if hasattr(node, 'dagnode'):
             # update the position
