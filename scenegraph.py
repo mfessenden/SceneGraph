@@ -285,7 +285,6 @@ class SceneGraphUI(form_class, base_class):
         # debug menu
         self.action_reset_dots.triggered.connect(self.resetDotsAction)
         self.action_evaluate.triggered.connect(self.evaluateScene)
-        self.action_reload_style.triggered.connect(self.initializeStylesheet)
 
         # preferences
         self.action_debug_mode.triggered.connect(self.toggleDebug)
@@ -661,8 +660,8 @@ class SceneGraphUI(form_class, base_class):
             filename (str) - scene file to read.
         """
         if filename is None:
-            filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open graph file", self._work_path, "JSON files (*.json)")
-            if filename == "":
+            filename = self.openDialog("Open graph file", path=self._work_path)
+            if not filename:
                 return
 
         if not os.path.exists(filename):
@@ -1342,6 +1341,13 @@ class SceneGraphUI(form_class, base_class):
                 log.warning('SceneGraphUI has no attribute "%s", skipping...' % attr)
                 continue
             self.qtsettings.setValue(attr, getattr(self, attr))
+
+        # font/stylesheet preferences
+        for fattr in ['font_family_ui', 'font_family_mono', 'font_family_nodes', 'font_size_ui', 'font_size_mono', 'stylesheet_name']:
+            if not hasattr(self, fattr):
+                continue
+            self.qtsettings.setValue(fattr, getattr(self, fattr))
+
         self.qtsettings.endGroup()
 
         # write the dock settings
@@ -1403,7 +1409,7 @@ class SceneGraphUI(form_class, base_class):
         except:
             from SceneGraph.ui import PluginManager
             reload(PluginManager)
-            self.pmanager=PluginManager.PluginManager(self)
+            self.pmanager = PluginManager.PluginManager(self)
             self.pmanager.show()
 
     def attributeManagerAction(self, action):
@@ -1413,7 +1419,10 @@ class SceneGraphUI(form_class, base_class):
         try:
             self.attr_manager.close()
         except:
-            print '# %sing attribute...' % action.title()
+            from SceneGraph.ui import AttributeManager
+            reload(AttributeManager)
+            self.attr_manager = AttributeManager.AttributeManager(self)
+            self.attr_manager.show()
 
     def updateOutput(self):
         """
@@ -1428,7 +1437,7 @@ class SceneGraphUI(form_class, base_class):
         # update graph attributes
         self.graph.updateGraphAttributes()
         graph_data = self.graph.snapshot()
-        html_data = self.formatOutputHtml(graph_data)
+        html_data = self.formatOutputHtml(graph_data, highlight=['name'])
         self.outputTextBrowser.setHtml(html_data)
         #self.outputTextBrowser.setFont(self.fonts.get('output'))
 
@@ -1473,9 +1482,15 @@ class SceneGraphUI(form_class, base_class):
         pxmap = QtGui.QPixmap(draw_file)
         self.draw_scene.addPixmap(pxmap)
 
-    def formatOutputHtml(self, data):
+    def formatOutputHtml(self, data, highlight=[]):
         """
         Fast and dirty html formatting.
+
+        :param str data: data string.
+        :param list highlight: list of words to highlight.
+
+        :returns: formatted html data.
+        :rtype: str
         """
         import simplejson as json
         html_result = ""
@@ -1484,8 +1499,9 @@ class SceneGraphUI(form_class, base_class):
             if line:
                 ind = "&nbsp;"*line.count(" ")
                 fline = "<br>%s%s</br>" % (ind, line)
-                if '"name":' in line:
-                    fline = '<br><b><font color="#628fab">%s%s</font></b></br>' % (ind, line)
+                for hname in highlight:
+                    if '"%s":' % hname in line:
+                        fline = '<br><b><font color="#628fab">%s%s</font></b></br>' % (ind, line)
                 html_result += fline
         return html_result
 
@@ -1493,9 +1509,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Update the console data.
 
-        params:
-            status - (dict) data from GraphicsView mouseMoveEvent
-
+        :param dict status: data from GraphicsView mouseMoveEvent
         """        
         self.sceneRectLineEdit.clear()
         self.viewRectLineEdit.clear()
@@ -1598,11 +1612,10 @@ class SceneGraphUI(form_class, base_class):
         """
         Simple Qt file dialog.
 
-        params:
-            force (bool) - force file extension.
+        :param bool force: force file extension.
 
-        returns:
-            (str) - save file name.
+        :returns: save file name.
+        :rtype: str
         """
         filename, filters = QtGui.QFileDialog.getSaveFileName(self, caption='Save Current Scene', directory=os.getcwd(), filter="json files (*.json)")
         if not filename:
@@ -1612,8 +1625,20 @@ class SceneGraphUI(form_class, base_class):
             filename = '%s.json' % bn
         return filename
 
-    def openDialog(self):
-        filename, ok = QtGui.QFileDialog.getOpenFileName(self, "Open scene", self._work_path, "JSON files (*.json)")
+    def openDialog(self, msg, path=None):
+        """
+        Opens a file input dialog. Arguments are message (dialog title) and
+        label (input widget title) ie:
+
+            "Open file", "file"
+
+        :param str msg: message string to pass to the dialog title.
+        :param str path: start path.
+        """
+        if path is None:
+            path = self._work_path
+
+        filename, ok = QtGui.QFileDialog.getOpenFileName(self, msg, path, "JSON files (*.json)")
         if filename == "":
             return
         return filename
@@ -1680,7 +1705,11 @@ class Settings(QtCore.QSettings):
 
     def window_keys(self):
         """
-        Get all of the Parent UI keys.
+        Resturns a list of all window keys to save for layouts, or rebuilding last
+        layout on launch.
+
+        :returns: list of keys to query/save.
+        :rtype: list
         """
         if self._parent is None:
             return []
@@ -1693,6 +1722,9 @@ class Settings(QtCore.QSettings):
     def get_layouts(self):
         """
         Returns a list of window layout names.
+
+        :returns: list of window layout names.
+        :rtype: list
         """
         layout_names = []
         layout_keys = ['%s/geometry' % x for x in self.window_keys()]
@@ -1710,8 +1742,7 @@ class Settings(QtCore.QSettings):
         """
         Save a named layout.
 
-        params:
-            layout (str) - layout to save.
+        :param str layout: layout name to save.
         """
         log.info('saving layout: "%s"' % layout)
         self.setValue("MainWindow/geometry/%s" % layout, self._parent.saveGeometry())
@@ -1724,8 +1755,7 @@ class Settings(QtCore.QSettings):
         """
         Restore a named layout.
 
-        params:
-            layout (str) - layout to restore.
+        :param str layout: layout name to restore.
         """
         log.info('restoring layout: "%s"' % layout)
         window_keys = self.window_keys()
@@ -1749,8 +1779,8 @@ class Settings(QtCore.QSettings):
         """
         Return the default values for a group.
 
-        params:
-            key (str)    - key to look for.
+        :param str key: key to search for.
+        :returns: default value of key (None if not found)
         """
         if self.group():
             try:

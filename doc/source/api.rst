@@ -88,20 +88,6 @@ Observable
 The Observable class is the basis of all of our core node types, providing simple callbacks.
 
 .. automodule:: core.events
-.. autoclass:: Event
-    :members:
-.. autoclass:: NodePositionChanged
-    :members:
-.. autoclass:: NodeNameChanged
-    :members:
-.. autoclass:: AttributeUpdatedEvent
-    :members:
-.. autoclass:: MouseHoverEvent
-    :members:
-.. autoclass:: MouseMoveEvent
-    :members:
-.. autoclass:: MousePressEvent
-    :members:
 
 .. _Event:
 
@@ -109,30 +95,51 @@ Event
 -----
 Event base class.
 
+.. autoclass:: Event
+    :members:
+
 NodePositionChanged
 -------------------
 Called when a DagNode's position is updated.
+
+.. autoclass:: NodePositionChanged
+    :members:
 
 NodeNameChanged
 ---------------
 Called when a DagNode's name changes.
 
+.. autoclass:: NodeNameChanged
+    :members:
+
 AttributeUpdatedEvent
 ---------------------
 Generic DagNode attribute changed event.
+
+.. autoclass:: AttributeUpdatedEvent
+    :members:
 
 MouseHoverEvent
 ---------------
 **Qt**: Mouse hover event.
 
+.. autoclass:: MouseHoverEvent
+    :members:
+
 MouseMoveEvent
 --------------
 **Qt**: Mouse move event.
+
+.. autoclass:: MouseMoveEvent
+    :members:
 
 MousePressEvent
 ---------------
 **Qt**: Mouse button press event.
 
+
+.. autoclass:: MousePressEvent
+    :members:
 
 UI Modules
 ==========

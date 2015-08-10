@@ -9,17 +9,6 @@
 @STYLENAME = default
 */
 
-
-QMainWindow::separator{
-    /*turns off that dashed buttons image*/
-    image: none;
-    width: 4px;
-}
-
-QMainWindow::separator:hover {
-    background: #3d3d3d;
-}
-
 QWidget{
     color: #b1b1b1;
     background-color: @background-color;
@@ -39,67 +28,82 @@ QWidget:item:selected{
     color: @hover-dark;
 }
 
+QMainWindow::separator{
+    /*turns off that dashed buttons image*/
+    image: none;
+    width: 4px;
+}
+
+QMainWindow::separator:hover {
+    background: #3d3d3d;
+}
+
 QDockWidget{
-    /* affects dock widget title bar */
+    /* dock widget title bar text */
     font-weight: bold;
+    font-size: @font-size-ui:header;
 }
 
 QDockWidget::title{
+    /* dock title bar */
     text-align: left;
-    border: 1px outset #232323;
+    /*border: 1px outset #232323;*/
     spacing: 3px; /* spacing between items in the tool bar */
-    background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 @background-color);
+    /*background-color: QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #616161, stop:1 @background-color);*/
+    background-color: @combo-bg-mid;
     padding-left: 12px;
+    padding-top: 3px;
+    padding-bottom: 3px;
     margin-left: 3px;
     border-radius: 2px;
 }
 
+/* margins seem to shrink button size */
 QDockWidget::float-button {
     /*border: 1px inset @background-color;*/
-    margin: 3px, 3px, 3px, 3px;
+    border: transparent;
+    padding: 0px;
+    icon-size: 16px;
     background: transparent;
     image: url(:/icons/icons/ui-dock-float-off.png);
 }
 
+QDockWidget::float-button:hover{
+    background: transparent;
+    image: url(:/icons/icons/ui-dock-float-on.png);
+}
+
+QDockWidget::float-button:pressed{
+    image: url(:/icons/icons/ui-dock-float-on.png);
+}
+
 QDockWidget::close-button {
     /*border: 1px inset @background-color;*/  
-    margin: 3px, 3px, 3px, 3px;
+    border: transparent;
+    padding: 0px;
+    icon-size: 16px;
     background: transparent;
     image: url(:/icons/icons/ui-dock-close-off.png);
 }
 
 QDockWidget::close-button:hover{
-    border: none;
-    margin: 3px, 3px, 3px, 3px;
-    background: transparent;
     image: url(:/icons/icons/ui-dock-close-on.png);
-}
-
-QDockWidget::float-button:hover{
-    border: none;
-    margin: 3px, 3px, 3px, 3px;
-    background: transparent;
-    image: url(:/icons/icons/ui-dock-float-on.png);
 }
 
 QDockWidget::close-button:pressed{
-    border: none;
-    margin: 3px, 3px, 3px, 3px;
-    background: transparent;
     image: url(:/icons/icons/ui-dock-close-on.png);
 }
 
-QDockWidget::float-button:pressed{
-    border: none;
-    margin: 3px, 3px, 3px, 3px;
-    background: transparent;
-    image: url(:/icons/icons/ui-dock-float-on.png);
-}
 
 QTabBar{
     /*font-weight: bold;*/
     /*font-size: 11;*/
 }
+
+/*
+##### BUTTONS #####
+*/
+
 
 QPushButton{
     border-color: @button-border-dark;
@@ -126,8 +130,37 @@ QPushButton::selected{
     background-color: @button-bg-dark-selected;
 }
 
+QToolButton.Prefs{
+    border-color: @button-border-dark;
+    border-style: outset;
+    border-width: 1px;
+    border-radius: 5px;
+    background-color: @button-bg-dark;
+    min-width: 88px;
+    min-height: 20px;
+}
+
+QToolButton.Prefs::hover{
+    border-color: @button-border-hover;
+    background-color: @button-bg-dark-hover;
+}
+
+QToolButton.Prefs::selected{
+    border-color: @button-border-selected;
+    background-color: @button-bg-dark-selected;
+}
+
+
+/*
+##### END BUTTONS #####
+*/
+
 QLineEdit{
-    background-color: @widget-bg-color;
+    /*background-color: @widget-bg-color;*/
+    background-color: @line-bg-dark;
+    border: 1px solid @line-border-light;
+    padding: 1px 4px;
+    border-radius: 2px;
 }
 
 QLineEdit.Connected{
@@ -203,6 +236,11 @@ QStatusBar {
     color: #c4c4c4;
 }
 
+
+/*
+##### SCROLL/ARROWS #####
+*/
+
 QScrollBar:horizontal {
   border-color: @mid-color;
   background-color: @mid-darkest;
@@ -216,13 +254,11 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:horizontal {
-    border: 1px outset @mid-darker;
     background: @mid-color;
     min-height: 20px;
     border-radius: 2px;
 }
 QScrollBar::handle:vertical {
-    border: 1px outset @mid-darker;
     background: @mid-color;
     min-height: 20px;
     border-radius: 2px;
@@ -237,9 +273,6 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: none;
 }
-/*
-##### ARROWS #####
-*/
 
 /* arrow & background */
 QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal{     
@@ -248,51 +281,64 @@ QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal{
     color: none;
 }
 
-QScrollBar::up-arrow, QScrollBar::down-arrow{
+QScrollBar::up-arrow{
     /* arrow box border */
     background: none;
     color: none;
+    image: url(:/icons/icons/arrow-flat-up.png);
 }
-/*
-##### END ARROWS #####
-*/
 
+QScrollBar::down-arrow{
+    /* arrow box border */
+    background: none;
+    color: none;
+    image: url(:/icons/icons/arrow-flat-down.png); 
+}
 
-/*
-##### ARROW BOXES #####
-*/
+QScrollBar::right-arrow{
+    /* arrow box border */
+    background: none;
+    color: none;
+    image: url(:/icons/icons/arrow-flat-right.png);
+}
+
+QScrollBar::left-arrow{
+    /* arrow box border */
+    background: none;
+    color: none;
+    image: url(:/icons/icons/arrow-flat-left.png); 
+}
 
 /* arrow button outer */
 QScrollBar::add-line:horizontal {
-    /* pink */
-    border: 1px outset @mid-darker; 
+    border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
 }
 
 /* arrow button outer */
 QScrollBar::sub-line:horizontal {
-    border: 1px outset @mid-darker; 
+    border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
 }
+
 /* arrow button outer */
 QScrollBar::add-line:vertical {
-    border: 1px outset @mid-darker; 
+    border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
 }
 
 /* arrow button outer */
 QScrollBar::sub-line:vertical {
-    /* pink ff31cc */
-    border: 1px outset @mid-darker; 
+    border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
 }
 
 /*
-##### END ARROW BOXES #####
+##### END SCROLL/ARROWsS #####
 */
 
 QTableView {
@@ -342,13 +388,11 @@ QLabel.attr_label {
 QTextBrowser.Output{
     font-family: @font-family-mono;
     font-size: @font-size-mono;
-    background-color: @hover-dark;
+    background-color: @output-bg-dark;
 }
 
 /*
-##################
-TABS
-##################
+##### TABS #####
 */
 
 /* The tab widget frame */
@@ -417,6 +461,15 @@ QTabBar::tab::top:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
 }
 
+/*
+##### END TABS #####
+*/
+
+
+/*
+##### GROUP BOX #####
+*/
+
 QGroupBox { 
     border: 2px groove @border-dark;
     /* groove & ridge work with 2px border; seems to work best with lighter colors */
@@ -442,8 +495,13 @@ QGroupBox::flat {
     border-bottom-style: none;
 }
 
+/*
+##### END GROUP BOX #####
+*/
+
 QListView {
     alternate-background-color: yellow;
+    background-color: @output-bg-dark;
 }
 
 QHeaderView {
@@ -457,33 +515,38 @@ TableView {
 
 QPlainTextEdit.Console {
     font-family: @font-family-mono;
-    font-size: @font-size-mono;
-    background-color: @hover-dark;
+    font-size: @font-size-mono:console;
+    background-color: @output-bg-dark;
 }
 
 QPlainTextEdit.attr_text_edit {
-    border: 1px inset @border-dark;
-    border-radius: 3px;
-    background-color: @widget-bg-color;
+    background-color: @line-bg-dark;
+    border: 1px solid @line-border-light;
+    padding: 1px 4px;
+    border-radius: 2px;
 }
 
-QGraphicsView {
-    background-color: @hover-dark;    
+
+QGraphicsView, QUndoView {
+    /* use padding to control inner border */
+    background-color: @output-bg-dark;
+    border-width: 1px;
+    border-radius: 1px;
+    border-style: inset;
+    border-color: @view-border-dark;
 }
 
 /*
-SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
+##### SLIDERS #####
+see: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
 */
+
 
 QSlider::groove:horizontal {
     border: 1px inset @groove-border;
     height: 6px;
     border-radius: 3px;
 }
-
-/*
-SLIDERS: http://thesmithfam.org/blog/2010/03/10/fancy-qslider-stylesheet/;
-*/
 
 QSlider::groove:horizontal {
     border: 1px inset @groove-border;
@@ -513,3 +576,82 @@ QSlider::handle:horizontal {
     margin-bottom: -4px;
     border-radius: 2px;
 }
+
+/*
+#### END SLIDERS ####
+*/
+
+
+/*
+##### COMBO BOXES #####
+*/
+
+QComboBox {
+    background: @combo-bg-mid;
+    padding: 1px 0px 1px 4px;
+    border: none;
+    border-radius: 2px;
+}
+
+/* this defines when a user has clicked the widget to generate the popup */
+QComboBox:on {
+}
+
+/* widget containing the arrow */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    border-left-width: 2px;
+    border-left-color: @combo-border-left;
+    border-left-style: inset; 
+}
+
+QComboBox::separator {
+    border: 1px @combo-border-left;
+    width: 1px;
+}
+
+QComboBox::down-arrow {
+    padding: 2px;
+    image: url(:/icons/icons/arrow-flat-down.png);
+}
+ 
+QComboBox::up-arrow {
+    padding: 2px;
+    image: url(:/icons/icons/arrow-flat-up.png);
+}
+
+QComboBox::down-arrow:on {
+}
+
+/* dropdown menu list */
+QComboBox QAbstractItemView {
+    /*selection-background-color: @selected-color; selection background color*/
+    /*selection-color: @selected-color;*/
+    background: @combo-bg-mid;
+    border: 2px solid @combo-bg-mid;
+}
+
+/*
+##### TESTING #####
+*/
+
+QCheckBox {
+    border: 1px yellow;
+}
+
+
+/*
+QFrame QGraphicsView{
+    border: 2px solid green;
+    border-radius: 4px;
+    padding: 2px;
+    background-clip: padding;
+    background-origin: content;
+    background-position: top left;
+}
+
+
+QAbstractButton#qt_dockwidget_closebutton{qproperty-toolTip: "Close";}
+QAbstractButton#qt_dockwidget_floatbutton{qproperty-toolTip: "Restore";}
+*/

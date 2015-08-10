@@ -144,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>18</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -227,7 +227,6 @@
     </property>
     <addaction name="action_reset_dots"/>
     <addaction name="action_evaluate"/>
-    <addaction name="action_reload_style"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_edit"/>
@@ -273,7 +272,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>638</height>
+          <height>620</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -321,8 +320,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>323</width>
-          <height>170</height>
+          <width>377</width>
+          <height>125</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -426,8 +425,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>307</width>
-                  <height>382</height>
+                  <width>361</width>
+                  <height>380</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -592,6 +591,9 @@
                <property name="text">
                 <string>Clear</string>
                </property>
+               <property name="class" stdset="0">
+                <string>Prefs</string>
+               </property>
               </widget>
              </item>
             </layout>
@@ -636,6 +638,9 @@
              <property name="text">
               <string>Clean</string>
              </property>
+             <property name="class" stdset="0">
+              <string>Prefs</string>
+             </property>
             </widget>
            </item>
           </layout>
@@ -669,8 +674,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>411</height>
+              <width>371</width>
+              <height>421</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -761,8 +766,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>411</height>
+              <width>371</width>
+              <height>421</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -897,6 +902,9 @@
                <property name="text">
                 <string>Reset Fonts</string>
                </property>
+               <property name="class" stdset="0">
+                <string>Prefs</string>
+               </property>
               </widget>
              </item>
             </layout>
@@ -915,7 +923,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../icn/scenegraph.qrc">
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">

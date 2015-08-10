@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="icons">
+    <file>icons/arrow-flat-down.png</file>
+    <file>icons/arrow-flat-left.png</file>
+    <file>icons/arrow-flat-up.png</file>
+    <file>icons/arrow-flat-right.png</file>
     <file>icons/ui-dock-close-off.png</file>
     <file>icons/ui-dock-close-on.png</file>
     <file>icons/ui-dock-float-on.png</file>
