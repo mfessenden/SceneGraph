@@ -49,15 +49,21 @@ class PluginManager(QtGui.QDialog):
         self.button_disable = QtGui.QToolButton(self.pluginsGroup)
         self.button_disable.setMinimumSize(QtCore.QSize(75, 0))
         self.button_disable.setObjectName("button_disable")
+        self.button_disable.setProperty("class", "Prefs")
         self.pluginButtonsLayout.addWidget(self.button_disable)
+
         self.button_reload = QtGui.QToolButton(self.pluginsGroup)
         self.button_reload.setMinimumSize(QtCore.QSize(75, 0))
         self.button_reload.setObjectName("button_reload")
+        self.button_reload.setProperty("class", "Prefs")
         self.pluginButtonsLayout.addWidget(self.button_reload)
+
         self.button_load = QtGui.QToolButton(self.pluginsGroup)
         self.button_load.setMinimumSize(QtCore.QSize(75, 0))
-        self.button_load.setObjectName("button_load")
+        self.button_load.setObjectName("button_load")        
+        self.button_load.setProperty("class", "Prefs")
         self.pluginButtonsLayout.addWidget(self.button_load)
+
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.pluginButtonsLayout.addItem(spacerItem)
         self.pluginsGroupLayout.addLayout(self.pluginButtonsLayout)
