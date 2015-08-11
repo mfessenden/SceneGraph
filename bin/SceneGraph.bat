@@ -6,4 +6,4 @@ echo %parent%
 SET myScript=%parent%/SceneGraph
 python %myScript% %*
 :: pause for debugging
-::pause
+:: pause
