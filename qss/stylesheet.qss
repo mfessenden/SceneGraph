@@ -17,6 +17,7 @@ QWidget{
     font-size: @font-size-ui;
     /*font-family: Verdana, Arial, SansSerif;*/
     font-family: @font-family-ui;
+    selection-background-color: @widget-bg-selected;
 }
 
 /* attributes that are connected */
@@ -155,7 +156,7 @@ QLineEdit{
     background-color: @line-bg-dark;
     border: 1px solid @line-border-light;
     padding: 1px 4px;
-    border-radius: 2px;
+    border-radius: 2px;    
 }
 
 /*
@@ -656,8 +657,6 @@ QComboBox QAbstractItemView {
     background: @combo-dropdown-bg-color;
     border: 1px solid @combo-dropdown-bg-border;
 }
-
-
 /*
 ##### SPIN #####
 */
