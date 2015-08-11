@@ -360,7 +360,7 @@ QTableView {
 }
 
 QTableView.Plugins {
-    background-color: @mid-darkest;
+    background-color: @output-bg-dark;
 }
 
 TableView {
@@ -375,11 +375,6 @@ QTableView::item:hover, TableView::item:hover {
 /*
 ##### HEADER VIEW #####
 */
-
-QHeaderView {
-    border: none;
-    border-radius: 10px;
-}
 
 QHeaderView::section {
     background-color: @header-bg-color;
@@ -455,15 +450,10 @@ QTabWidget::tab-bar {
 /* Style the tab using the tab sub-control */
 QTabBar::tab {    
     border-bottom-color: @background-color; /* same as the pane color */
-    min-width: 8ex;
+    min-width: 6ex;
     margin: 0 1px 0 1px; /* margin adds a pixel left/right of each tab */
     padding: 0 10px 0 10px; /* padding adds 10px left/right of each tab title */
     color: @tab-title-color; /* tab title text color */
-}
-
-/* decrease subtab padding on either side of the title text to reduce scoll-buttons */
-QTabBar::tab.subtab{
-    padding: 0 2px 0 2px;
 }
 
 QTabBar::tab:hover{
@@ -495,6 +485,10 @@ QTabBar::tab::bottom{
     padding-top: 3px;
 }
 
+/* decrease subtab padding on either side of the title text to reduce scoll-buttons */
+QTabWidget.subtab QTabBar::tab{
+    padding: 3px 3px 1px 2px;
+}
 
 /*
 ##### END TABS #####
@@ -506,7 +500,7 @@ QTabBar::tab::bottom{
 */
 
 QGroupBox {
-    /*border: 2px groove @border-dark;*/
+    border: 1px solid @group-border-color;
     font-size: @font-size-ui;
     border-radius: 5px;
     margin-top: 0.5em;  
@@ -522,11 +516,15 @@ QGroupBox::title {
 }
 
 QGroupBox::flat {
-    border: 2px groove @group-border-color;
+    border: 2px groove @group-flat-border-color;
     border-radius: 0px; 
     border-left-style: none;
     border-right-style: none;
     border-bottom-style: none;
+}
+
+QGroupBox::title:flat {
+    left: 4px; 
 }
 
 /*
