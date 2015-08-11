@@ -120,11 +120,9 @@ Usage
 * simplejson
 * NetworkX 1.9.1
 
-**Branch: stylesheet:**
+**Branch: core-node-dev:**
 
-* stylesheet development
+- development of the core dag node types
+- and strengthing of the plugin and attributes API
+- development of callbacks and events
 
-**To Do:**
-
-* Node defaults, private attributes not yet re-implemented in new API
-* Node.__setstate__, __getstate__ not yet re-implemented

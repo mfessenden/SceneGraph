@@ -1,9 +1,15 @@
 <RCC>
   <qresource prefix="icons">
+    <file>icons/spin-arrow-flat-down.png</file>
+    <file>icons/spin-arrow-flat-up.png</file>
     <file>icons/arrow-flat-down.png</file>
     <file>icons/arrow-flat-left.png</file>
     <file>icons/arrow-flat-up.png</file>
     <file>icons/arrow-flat-right.png</file>
+    <file>icons/spin-arrow-flat-down-hover.png</file>
+    <file>icons/spin-arrow-flat-down-pressed.png</file>
+    <file>icons/spin-arrow-flat-up-pressed.png</file>
+    <file>icons/spin-arrow-flat-up-hover.png</file>
     <file>icons/ui-dock-close-off.png</file>
     <file>icons/ui-dock-close-on.png</file>
     <file>icons/ui-dock-float-on.png</file>

@@ -2,11 +2,11 @@
 from collections import OrderedDict as dict
 from PySide import QtCore, QtGui
 from SceneGraph import util
-from SceneGraph.core import log, MetadataParser
+from SceneGraph.core import log, MetadataParser, Observer
 from SceneGraph.options import SCENEGRAPH_STYLESHEET_PATH, PLATFORM
 
 
-class AttributeEditor(QtGui.QWidget):
+class AttributeEditor(Observer, QtGui.QWidget):
 
     def __init__(self, parent=None, **kwargs):
         super(AttributeEditor, self).__init__(parent)
@@ -53,6 +53,20 @@ class AttributeEditor(QtGui.QWidget):
         self.mainGroup.setHidden(True)
         self.clearLayout(self.mainGroupLayout)
         self._nodes = []       
+
+    def update_observer(self, obs, event, *args, **kwargs):
+        """
+        Called when the observed object has changed.
+
+        :param Observable obs: Observable object.
+        :param Event event: Event object.
+        """
+        print '# DEBUG: AttributeEditor: node "%s" changed ("%s")' % (obs.name, event.type)
+        if event.type == 'nameChanged':
+            pass
+
+        elif event.type == 'attributeUpdated':
+            pass
 
     @property
     def use_stylesheet(self):
@@ -294,6 +308,9 @@ class AttributeEditor(QtGui.QWidget):
                     self._sections.append(section)
 
         self._nodes = dagnodes
+        for node in self._nodes:
+            node.add_observer(self)
+
         self.clearLayout(self.mainGroupLayout)
         self.buildLayout()
 

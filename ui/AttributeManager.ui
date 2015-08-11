@@ -30,15 +30,33 @@
           <layout class="QVBoxLayout" name="actionButtonsLayout">
            <item>
             <widget class="QToolButton" name="tb_new">
+             <property name="minimumSize">
+              <size>
+               <width>60</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
               <string>New...</string>
+             </property>
+             <property name="class" stdset="0">
+              <string>Prefs</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QToolButton" name="tb_delete">
+             <property name="minimumSize">
+              <size>
+               <width>60</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="text">
               <string>Delete</string>
+             </property>
+             <property name="class" stdset="0">
+              <string>Prefs</string>
              </property>
             </widget>
            </item>
