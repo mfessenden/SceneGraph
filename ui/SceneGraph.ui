@@ -144,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>25</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -272,7 +272,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>620</height>
+          <height>638</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -320,8 +320,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>377</width>
-          <height>125</height>
+          <width>323</width>
+          <height>166</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -425,8 +425,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>361</width>
-                  <height>380</height>
+                  <width>307</width>
+                  <height>386</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -674,8 +674,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>421</height>
+              <width>317</width>
+              <height>415</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -766,8 +766,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>421</height>
+              <width>317</width>
+              <height>415</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -847,57 +847,74 @@
              <item row="6" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
              </item>
-             <item row="7" column="0">
+             <item row="8" column="0">
               <widget class="QLabel" name="stylesheet_label">
                <property name="text">
                 <string>Stylesheet:</string>
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="8" column="1">
               <widget class="QComboBox" name="stylesheet_menu"/>
              </item>
-             <item row="8" column="0">
+             <item row="11" column="0" colspan="2">
+              <widget class="Line" name="hline1">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="12" column="0">
               <widget class="QLabel" name="ui_font_label">
                <property name="text">
                 <string>UI Font:</string>
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="12" column="1">
               <widget class="QComboBox" name="ui_font_menu"/>
              </item>
-             <item row="9" column="0">
+             <item row="13" column="0">
               <widget class="QLabel" name="mono_font_label">
                <property name="text">
                 <string>Monospace Font:</string>
                </property>
               </widget>
              </item>
-             <item row="9" column="1">
+             <item row="13" column="1">
               <widget class="QComboBox" name="mono_font_menu"/>
              </item>
-             <item row="10" column="0">
+             <item row="14" column="0">
+              <widget class="QLabel" name="node_font_label">
+               <property name="text">
+                <string>Node Font:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="14" column="1">
+              <widget class="QComboBox" name="node_font_menu"/>
+             </item>
+             <item row="15" column="0">
               <widget class="QLabel" name="ui_fontsize_label">
                <property name="text">
                 <string>UI Font Size:</string>
                </property>
               </widget>
              </item>
-             <item row="10" column="1">
+             <item row="15" column="1">
               <widget class="QDoubleSpinBox" name="ui_fontsize_spinbox"/>
              </item>
-             <item row="12" column="0">
+             <item row="17" column="0">
               <widget class="QLabel" name="mono_fontsize_label">
                <property name="text">
                 <string>Mono Font Size:</string>
                </property>
               </widget>
              </item>
-             <item row="12" column="1">
+             <item row="17" column="1">
               <widget class="QDoubleSpinBox" name="mono_fontsize_spinbox"/>
              </item>
-             <item row="13" column="1">
+             <item row="18" column="1">
               <widget class="QToolButton" name="button_reset_fonts">
                <property name="text">
                 <string>Reset Fonts</string>
@@ -906,6 +923,33 @@
                 <string>Prefs</string>
                </property>
               </widget>
+             </item>
+             <item row="7" column="0" colspan="2">
+              <widget class="Line" name="hline2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="0">
+              <widget class="QLabel" name="font_style_label">
+               <property name="text">
+                <string>Font style:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="1">
+              <widget class="QComboBox" name="font_style_menu"/>
+             </item>
+             <item row="10" column="0">
+              <widget class="QLabel" name="palette_style_label">
+               <property name="text">
+                <string>Palette</string>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="1">
+              <widget class="QComboBox" name="palette_style_menu"/>
              </item>
             </layout>
            </widget>
@@ -923,7 +967,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../icn/scenegraph.qrc">
+    <iconset>
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">
