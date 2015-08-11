@@ -144,7 +144,7 @@
      <x>0</x>
      <y>0</y>
      <width>1000</width>
-     <height>18</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_file">
@@ -272,7 +272,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>638</height>
+          <height>620</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -320,8 +320,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>323</width>
-          <height>166</height>
+          <width>377</width>
+          <height>119</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -425,7 +425,7 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>307</width>
+                  <width>361</width>
                   <height>386</height>
                  </rect>
                 </property>
@@ -674,8 +674,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>415</height>
+              <width>371</width>
+              <height>427</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -766,8 +766,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>317</width>
-              <height>415</height>
+              <width>358</width>
+              <height>504</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -967,7 +967,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset>
+    <iconset resource="../icn/scenegraph.qrc">
      <normaloff>:/icons/icons/ui-check-box-uncheck.png</normaloff>:/icons/icons/ui-check-box-uncheck.png</iconset>
    </property>
    <property name="text">

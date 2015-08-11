@@ -741,6 +741,7 @@ QCheckBox::indicator:unchecked {
 QCheckBox::indicator:checked {
     image: url(:/icons/icons/checkbox-on.png);
 }
+
 /*
 QFrame QGraphicsView{
     border: 2px solid green;
