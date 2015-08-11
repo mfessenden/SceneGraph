@@ -40,6 +40,9 @@ class AttributeUpdatedEvent(Event):
     def __init__(self, parent, *args, **kwargs):
         super(AttributeUpdatedEvent, self).__init__(parent, *args,**kwargs)
 
+        self.value = kwargs.get('value', None)
+        #print '# AttributeUpdatedEvent: "%s": %s' % (self.name, str(self.value))
+
 
 class MouseHoverEvent(Event):
     event_type = 'mouseHover'

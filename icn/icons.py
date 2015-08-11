@@ -4,10 +4,16 @@ import scenegraph_rc
 
 
 ICONS = dict(    
+    spin_arrow_flat_down            = QtGui.QIcon(":/icons/icons/spin-arrow-flat-down.png"),
+    spin_arrow_flat_up              = QtGui.QIcon(":/icons/icons/spin-arrow-flat-up.png"),
     arrow_flat_down                 = QtGui.QIcon(":/icons/icons/arrow-flat-down.png"),
     arrow_flat_left                 = QtGui.QIcon(":/icons/icons/arrow-flat-left.png"),
     arrow_flat_up                   = QtGui.QIcon(":/icons/icons/arrow-flat-up.png"),
     arrow_flat_right                = QtGui.QIcon(":/icons/icons/arrow-flat-right.png"),
+    spin_arrow_flat_down_hover      = QtGui.QIcon(":/icons/icons/spin-arrow-flat-down-hover.png"),
+    spin_arrow_flat_down_pressed    = QtGui.QIcon(":/icons/icons/spin-arrow-flat-down-pressed.png"),
+    spin_arrow_flat_up_pressed      = QtGui.QIcon(":/icons/icons/spin-arrow-flat-up-pressed.png"),
+    spin_arrow_flat_up_hover        = QtGui.QIcon(":/icons/icons/spin-arrow-flat-up-hover.png"),
     ui_dock_close_off               = QtGui.QIcon(":/icons/icons/ui-dock-close-off.png"),
     ui_dock_close_on                = QtGui.QIcon(":/icons/icons/ui-dock-close-on.png"),
     ui_dock_float_on                = QtGui.QIcon(":/icons/icons/ui-dock-float-on.png"),

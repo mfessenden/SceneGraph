@@ -98,6 +98,7 @@ class DagNode(Observable):
         # read it from disk
         if not metadata:
             metadata = self.read_metadata()
+
         # ui
         self._widget            = None  
 
@@ -133,14 +134,16 @@ class DagNode(Observable):
 
     def __setattr__(self, name, value):
         event = None
-        if name in ['_attributes', '_changed', '_observers']:
+        if name in ['_attributes', '_changed', '_observers', '_widget', '_metadata']:
             super(DagNode, self).__setattr__(name, value)
 
-        elif name in self._attributes:
-            event = AttributeUpdatedEvent(self)
+        elif name in self._attributes:            
             attribute = self._attributes.get(name)
+
             if value != attribute.value:
+                event = AttributeUpdatedEvent(self, name=name, value=value)
                 attribute.value = value
+
                 # callbacks
                 Observable.set_changed(self)
                 Observable.notify(self, event)
@@ -150,8 +153,15 @@ class DagNode(Observable):
             if name == 'pos':
                 event = NodePositionChanged(self)
 
-            if name == 'name':                        
+            elif name == 'name':                        
                 event = NodeNameChanged(self, new_name=value)
+
+            else:
+                if hasattr(self, name):
+                    if value == getattr(self, name):
+                        return
+
+                event = AttributeUpdatedEvent(self, name=name, value=value)
 
             # callbacks
             Observable.set_changed(self)

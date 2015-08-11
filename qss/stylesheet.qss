@@ -632,6 +632,69 @@ QComboBox QAbstractItemView {
     border: 2px solid @combo-bg-mid;
 }
 
+
+/*
+##### SPIN #####
+*/
+QSpinBox, QDoubleSpinBox {
+    background-color: @line-bg-dark;
+    border: 1px solid @line-border-light;
+    padding: 1px 4px;
+    border-radius: 2px;
+    padding-right: 15px; /* make room for the arrows */
+ }
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right; /* position at the top right corner */
+    border-width: 1px;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right; /* position at bottom right corner */
+    border-width: 1px;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(:/icons/icons/spin-arrow-flat-up.png);
+    width: 11px;
+    height: 11px;
+}
+
+QSpinBox::up-arrow:hover, QDoubleSpinBox::up-arrow:hover {
+    image: url(:/icons/icons/spin-arrow-flat-up-hover.png);
+    width: 11px;
+    height: 11px;
+}
+
+QSpinBox::up-arrow:pressed, QDoubleSpinBox::up-arrow:pressed {
+    image: url(:/icons/icons/spin-arrow-flat-up-pressed.png);
+    width: 11px;
+    height: 11px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(:/icons/icons/spin-arrow-flat-down.png);
+    width: 11px;
+    height: 11px;
+}
+
+QSpinBox::down-arrow:hover, QDoubleSpinBox::down-arrow:hover {
+    image: url(:/icons/icons/spin-arrow-flat-down-hover.png);
+    width: 11px;
+    height: 11px;
+}
+
+QSpinBox::down-arrow:pressed, QDoubleSpinBox::down-arrow:pressed {
+    image: url(:/icons/icons/spin-arrow-flat-down-pressed.png);
+    width: 11px;
+    height: 11px;
+}
+/*
+##### END SPIN #####
+*/
+
 /*
 ##### TESTING #####
 */
