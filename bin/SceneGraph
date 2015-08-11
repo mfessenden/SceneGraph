@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # Designer previews in GTK+
     # Maya style is close to plastique
     if PLATFORM == 'Linux':
-        parser.set_default('app_style', 'oxygen')
+        parser.set_default('app_style', 'plastique')
 
     if PLATFORM == 'MacOSX':
         parser.set_default('app_style', 'cleanlooks')
