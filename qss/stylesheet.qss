@@ -461,7 +461,11 @@ QTabWidget::pane {
 
 QTabWidget::tab-bar {
     /* move the tab right 5px */
-    left: 5px; 
+    left: 5px;
+}
+
+/* the area containing the tabs */
+QTabBar {
 }
 
 /* Style the tab using the tab sub-control */
@@ -471,17 +475,10 @@ QTabBar::tab {
     margin: 0 1px 0 1px; /* margin adds a pixel left/right of each tab */
     padding: 0 10px 0 10px; /* padding adds 10px left/right of each tab title */
     color: @tab-title-color; /* tab title text color */
-    
 }
 
 QTabBar::tab:hover{
     background: @tab-top-hover;
-}
-
-QTabBar::tab:active{
-    background: @pink;
-    border: none;
-    outline: none;
 }
 
 QTabBar::tab:selected {
@@ -509,7 +506,8 @@ QTabBar::tab::bottom{
     border-bottom-right-radius: 3px;
     padding-bottom: 3px;
     padding-top: 3px;
-    margin-bottom: 3px
+    margin-bottom: 3px;
+    border-top: 1px solid @border-dark;
 }
 
 QTabBar::tab::bottom:!selected {

@@ -443,9 +443,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.plug_mgr       = graph.plug_mgr
 
         # temp line for drawing edges
-        self.line           = None        
-
-        self.handler        = handlers.SceneHandler(self)
+        self.line           = None  
         self.scenenodes     = dict()
 
         # temp attributes
@@ -1045,7 +1043,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             node.dagnode.pos = pos
 
             # SIGNAL MANAGER (Scene -> Graph)
-            self.handler.sceneNodesUpdatedAction([node,])           
+            #self.handler.sceneNodesUpdatedAction([node,])           
 
     def nodeDeletedEvent(self, node):
         """

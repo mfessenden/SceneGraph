@@ -11,7 +11,7 @@ import simplejson as json
 from SceneGraph import options
 from SceneGraph import core
 from SceneGraph import ui
-from SceneGraph import util
+from SceneGraph import util      
 
 
 log = core.log
@@ -51,14 +51,15 @@ form_class, base_class = loadUiType(SCENEGRAPH_UI)
 class SceneGraphUI(form_class, base_class):
     def __init__(self, parent=None, **kwargs):
         super(SceneGraphUI, self).__init__(parent)
+        from SceneGraph.icn import icons 
 
         self.setupUi(self)        
         self.setDockNestingEnabled(True)
         #self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+        self.icons                = icons.ICONS
         self.fonts                = dict()  
-        self.icons                = None  
         self.view                 = None                                    # GraphicsView
         self.pmanager             = None                                    # Plugin manager UI
         self.attr_manager         = None                                    # Attribute manager dialog  
@@ -260,7 +261,7 @@ class SceneGraphUI(form_class, base_class):
         self.view.statusEvent.connect(self.updateConsole)
 
         # Scene handler
-        self.view.scene().handler.sceneNodesUpdated.connect(self.nodesChangedAction)
+        #self.view.scene().handler.sceneNodesUpdated.connect(self.nodesChangedAction)
         self.view.selectionChanged.connect(self.nodesSelectedAction)
 
         # file & ui menu
