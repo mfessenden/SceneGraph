@@ -6,7 +6,7 @@ from . import handlers
 from . import attributes
 from . import commands
 from . import stylesheet
-
+from . import settings
 
 reload(node_widgets)
 reload(stylesheet)
@@ -34,3 +34,4 @@ SceneChangedCommand     = commands.SceneChangedCommand
 
 
 StylesheetManager       = stylesheet.StylesheetManager
+Settings                = settings.Settings

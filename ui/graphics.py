@@ -208,8 +208,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Update the parent console widget with the view status.
 
-        params:
-            event - (QEvent) event object
+        :param QtCore.QEvent event: event object.
         """
         #action.setData((action.data()[0], self.mapToScene(menuLocation)))
         # provide debug feedback

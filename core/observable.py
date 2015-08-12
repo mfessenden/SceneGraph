@@ -2,21 +2,9 @@
 from SceneGraph.core import log
 
 
-class Observer(object):
-
-    def update_observer(self, obs, event, *args, **kwargs):
-        """
-        Called when the observed object has changed.
-
-        :param Observable obs: Observable object.
-        :param Event event: Event object.
-        """
-        pass
-
-
 class Observable(object):
     """
-    Simple Observable example.
+    Simple Observable object.
     """
     def __init__(self):
         
@@ -64,9 +52,17 @@ class Observable(object):
             return True
         return False
 
+    def delete_observers(self):
+        """
+        Remove all observers.
+        """
+        self._observers = []
+
     def notify(self, event, *args, **kwargs):
         """
-        Callback to update all observers.
+        Callback to update all observers. If `changed`
+        indicates that the object has changed, notify all
+        of its observers.
 
         :param Event event: Event object.
         """
@@ -78,7 +74,11 @@ class Observable(object):
             
         log.debug('updating observers...')
         self.clear_changed()
-        for obs in self._observers:
+
+        # create a local copy of observers in the event
+        # more are added synchronously
+        localArray = self._observers[:]
+        for obs in localArray:
             if hasattr(obs, 'update_observer'):
                 obs.update_observer(self, event, *args, **kwargs)
     

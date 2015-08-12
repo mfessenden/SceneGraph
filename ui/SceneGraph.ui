@@ -199,10 +199,16 @@
       <string>Restore layout:</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menu_delete_layout">
+     <property name="title">
+      <string>Delete layout:</string>
+     </property>
+    </widget>
     <addaction name="menu_view"/>
     <addaction name="separator"/>
     <addaction name="action_save_layout"/>
     <addaction name="menu_restore_layout"/>
+    <addaction name="menu_delete_layout"/>
     <addaction name="separator"/>
     <addaction name="action_plugins"/>
    </widget>
@@ -276,8 +282,11 @@
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
+         <property name="spacing">
+          <number>4</number>
+         </property>
          <property name="margin">
-          <number>3</number>
+          <number>6</number>
          </property>
         </layout>
        </widget>
@@ -320,25 +329,16 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>377</width>
+          <width>387</width>
           <height>119</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
          <property name="spacing">
-          <number>2</number>
+          <number>4</number>
          </property>
-         <property name="leftMargin">
-          <number>1</number>
-         </property>
-         <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
-          <number>1</number>
-         </property>
-         <property name="bottomMargin">
-          <number>1</number>
+         <property name="margin">
+          <number>6</number>
          </property>
         </layout>
        </widget>
@@ -363,10 +363,10 @@
    <widget class="QWidget" name="consoleWidgetContents">
     <layout class="QVBoxLayout" name="consoleWidgetLayout">
      <property name="spacing">
-      <number>3</number>
+      <number>4</number>
      </property>
      <property name="margin">
-      <number>1</number>
+      <number>6</number>
      </property>
      <item>
       <widget class="QTabWidget" name="consoleTabWidget">
@@ -426,7 +426,7 @@
                   <x>0</x>
                   <y>0</y>
                   <width>361</width>
-                  <height>386</height>
+                  <height>376</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -675,7 +675,7 @@
               <x>0</x>
               <y>0</y>
               <width>371</width>
-              <height>427</height>
+              <height>417</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -1135,6 +1135,11 @@
   <action name="action_disconnect_handler">
    <property name="text">
     <string>Disconnect handler..</string>
+   </property>
+  </action>
+  <action name="actionDELETE">
+   <property name="text">
+    <string>DELETE</string>
    </property>
   </action>
  </widget>

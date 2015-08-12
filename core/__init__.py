@@ -18,8 +18,9 @@ MousePressEvent         = events.MousePressEvent
 
 
 from . import observable
+from . import observer
 Observable              = observable.Observable
-Observer                = observable.Observer
+Observer                = observer.Observer
 
 
 from . import nodes

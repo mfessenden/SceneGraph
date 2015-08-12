@@ -100,7 +100,7 @@ class SceneGraphUI(form_class, base_class):
 
         # preferences
         self.settings_file        = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
-        self.qtsettings           = Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
+        self.qtsettings           = ui.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
         self.qtsettings.setFallbacksEnabled(False)
 
         # icon
@@ -268,6 +268,7 @@ class SceneGraphUI(form_class, base_class):
         self.menu_graph.aboutToShow.connect(self.initializeGraphMenu)
         self.menu_window.aboutToShow.connect(self.initializeWindowMenu)
         self.menu_debug.aboutToShow.connect(self.initializeDebugMenu) 
+        self.menu_nodes.aboutToShow.connect(self.initializeNodesMenu)
 
         self.action_save_graph_as.triggered.connect(self.saveGraphAs)
         self.action_save_graph.triggered.connect(self.saveCurrentGraph)
@@ -303,13 +304,14 @@ class SceneGraphUI(form_class, base_class):
         self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
         self.button_reset_fonts.clicked.connect(self.resetFontsAction)
 
-        current_pos = QtGui.QCursor().pos()
-        pos_x = current_pos.x()
-        pos_y = current_pos.y()
 
-        # nodes menu
-        self.menu_nodes.aboutToShow.connect(partial(self.createNodesMenu, self.menu_nodes, pos=current_pos))
-
+        # menu hover events
+        self.menu_file.hovered.connect(partial(self.menuHoverAction, menu=self.menu_file))
+        self.menu_edit.hovered.connect(partial(self.menuHoverAction, menu=self.menu_edit))
+        self.menu_graph.hovered.connect(partial(self.menuHoverAction, menu=self.menu_graph))
+        self.menu_nodes.hovered.connect(partial(self.menuHoverAction, menu=self.menu_nodes))
+        self.menu_window.hovered.connect(partial(self.menuHoverAction, menu=self.menu_window))
+        
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
         self.tabWidget.currentChanged.connect(self.updateMetadata)
@@ -372,13 +374,21 @@ class SceneGraphUI(form_class, base_class):
         """
         Set up the Window menu.
         """
-        menu = self.menu_restore_layout
-        menu.clear()
+        restore_menu = self.menu_restore_layout
+        delete_menu = self.menu_delete_layout
+
+        restore_menu.clear()
+        delete_menu.clear()
+        
         layout_names = self.qtsettings.get_layouts()
 
         for layout in layout_names:
-            restore_action = menu.addAction(layout)
+            restore_action = restore_menu.addAction(layout)
             restore_action.triggered.connect(partial(self.qtsettings.restoreLayout, layout))
+
+            if layout != 'default':
+                delete_action = delete_menu.addAction(layout)
+                delete_action.triggered.connect(partial(self.qtsettings.deleteLayout, layout))
 
     def initializeDebugMenu(self):
         """
@@ -390,6 +400,22 @@ class SceneGraphUI(form_class, base_class):
                 has_dots = True
 
         self.action_reset_dots.setEnabled(has_dots)
+
+    def initializeNodesMenu(self):
+        """
+        Set up the nodes menu.
+        """
+        current_pos = QtGui.QCursor().pos()
+        color = False
+        attribute = False
+        scene = self.view.scene()
+        nodes = scene.selectedNodes()
+
+        if nodes:
+            color = True
+            attribute = True
+
+        self.createNodesMenu(self.menu_nodes, pos=current_pos, color=color, attribute=attribute)
 
     def initializeRecentFilesMenu(self):
         """
@@ -530,9 +556,7 @@ class SceneGraphUI(form_class, base_class):
         return QtCore.QSize(800, 675)
 
     #- Status & Messaging ------
-    def consoleOutput(self, msg):
-        print 'message: ', msg
-
+    
     def updateStatus(self, msg, level='info'):
         """
         Send output to logger/statusbar
@@ -540,14 +564,16 @@ class SceneGraphUI(form_class, base_class):
         if level == 'info':
             self.statusBar().showMessage(self._getInfoStatus(msg))
             log.info(msg)
+
         if level == 'error':
             self.statusBar().showMessage(self._getErrorStatus(msg))
             log.error(msg)
+
         if level == 'warning':
             self.statusBar().showMessage(self._getWarningStatus(msg))
             log.warning(msg)
+
         self.status_timer.start(4000)
-        #self.statusBar().setFont(self.fonts.get("output"))     
 
     def resetStatus(self):
         """
@@ -555,14 +581,14 @@ class SceneGraphUI(form_class, base_class):
         """
         self.statusBar().showMessage('[SceneGraph]: ready')
 
-    def _getInfoStatus(self, val):
-        return '[SceneGraph]: Info: %s' % val
+    def _getInfoStatus(self, msg):
+        return '[SceneGraph]: INFO: %s' % msg
 
     def _getErrorStatus(self, val):
-        return '[SceneGraph]: Error: %s' % val
+        return '[SceneGraph]: ERROR: %s' % msg
 
     def _getWarningStatus(self, val):
-        return '[SceneGraph]: Warning: %s' % val
+        return '[SceneGraph]: WARNING: %s' % msg
 
     #- SAVING/LOADING ------
     def saveGraphAs(self, filename=None):
@@ -1125,6 +1151,15 @@ class SceneGraphUI(form_class, base_class):
             print 'text is valid!'
         #self.outputTextBrowser.clear()   
 
+    def menuHoverAction(self, action, menu=None):
+        """
+        :param QtGui.QAction action: current menu item (action).
+        """
+        #msg = action.data()
+        msg = 'selection: %s' % action.text()
+        #self.statusBar().showMessage('[SceneGraph]: %s' % msg)
+        self.updateStatus(msg, level='info')
+
     #- Events ----
     def closeEvent(self, event):
         """
@@ -1661,206 +1696,3 @@ class SceneGraphUI(form_class, base_class):
             return text
         return
 
-
-class Settings(QtCore.QSettings):
-
-    def __init__(self, filename, frmt=QtCore.QSettings.IniFormat, parent=None, max_files=10):
-        QtCore.QSettings.__init__(self, filename, frmt, parent)
-
-        self._max_files     = max_files
-        self._parent        = parent
-        self._groups        = ['MainWindow', 'RecentFiles', 'Preferences']
-        self.initialize()
-
-    def initialize(self):
-        """
-        Setup the file for the first time.
-        """
-        if 'MainWindow' not in self.childGroups():
-            if self._parent is not None:
-                self.setValue('MainWindow/geometry/default', self._parent.saveGeometry())
-                self.setValue('MainWindow/windowState/default', self._parent.saveState())                
-
-        if 'RecentFiles' not in self.childGroups():
-            self.beginWriteArray('RecentFiles', 0)
-            self.endArray()
-
-        while self.group():
-            self.endGroup()
-        self.initializePreferences()
-
-    def initializePreferences(self):
-        """
-        Set up the default preferences from global options.
-        """
-        if 'Preferences' not in self.childGroups():
-            self.beginGroup("Preferences")
-            # query the defauls from options.
-            for option in options.SCENEGRAPH_PREFERENCES:
-                if 'default' in options.SCENEGRAPH_PREFERENCES.get(option):
-                    self.setValue('default/%s' % option, options.SCENEGRAPH_PREFERENCES.get(option).get('default'))
-
-            while self.group():
-                self.endGroup()
-
-    def window_keys(self):
-        """
-        Resturns a list of all window keys to save for layouts, or rebuilding last
-        layout on launch.
-
-        :returns: list of keys to query/save.
-        :rtype: list
-        """
-        if self._parent is None:
-            return []
-        result = ['MainWindow']
-        for dock in self._parent.findChildren(QtGui.QDockWidget):
-            dock_name = dock.objectName()
-            result.append(str(dock_name))
-        return result
-
-    def get_layouts(self):
-        """
-        Returns a list of window layout names.
-
-        :returns: list of window layout names.
-        :rtype: list
-        """
-        layout_names = []
-        layout_keys = ['%s/geometry' % x for x in self.window_keys()]
-        
-
-        for k in self.allKeys():
-            if 'geometry' in k:
-                attrs = k.split('/geometry/')
-                if len(attrs) > 1:
-                    layout_names.append(str(attrs[-1]))
-
-        return sorted(list(set(layout_names)))
-
-    def saveLayout(self, layout):
-        """
-        Save a named layout.
-
-        :param str layout: layout name to save.
-        """
-        log.info('saving layout: "%s"' % layout)
-        self.setValue("MainWindow/geometry/%s" % layout, self._parent.saveGeometry())
-        self.setValue("MainWindow/windowState/%s" % layout, self._parent.saveState())
-        for dock in self._parent.findChildren(QtGui.QDockWidget):
-            dock_name = dock.objectName()
-            self.setValue("%s/geometry/%s" % (dock_name, layout), dock.saveGeometry())
-
-    def restoreLayout(self, layout):
-        """
-        Restore a named layout.
-
-        :param str layout: layout name to restore.
-        """
-        log.info('restoring layout: "%s"' % layout)
-        window_keys = self.window_keys()
-
-        for widget_name in window_keys:
-            
-            key_name = '%s/geometry/%s' % (widget_name, layout)
-            if widget_name != 'MainWindow':
-                if key_name in self.allKeys():                    
-                        value = self.value(key_name)
-                        dock = self._parent.findChildren(QtGui.QDockWidget, widget_name)
-                        if dock:
-                            dock[0].restoreGeometry(value)
-            else:
-                window_state = '%s/windowState/%s' % (widget_name, layout)
-                if window_state in self.allKeys():
-                    self._parent.restoreGeometry(self.value(key_name))
-                    self._parent.restoreState(self.value(window_state))
-
-    def getDefaultValue(self, key, *groups):
-        """
-        Return the default values for a group.
-
-        :param str key: key to search for.
-        :returns: default value of key (None if not found)
-        """
-        if self.group():
-            try:
-                self.endGroup()
-            except:
-                pass
-
-        result = None
-        group_name = groups[0]
-        for group in groups[1:]:
-            group_name += "/%s" % group
-
-        group_name += "/%s" % "default"
-        group_name += "/%s" % key
-
-        if group_name in self.allKeys():
-            result = self.value(group_name)
-        return result
-
-    def save(self, key='default'):
-        """
-        Save, with optional category.
-
-         * unused
-        """
-        self.beginGroup("Mainwindow/%s" % key)
-        self.setValue("size", QtCore.QSize(self._parent.width(), self._parent.height()))
-        self.setValue("pos", self._parent.pos())
-        self.setValue("windowState", self._parent.saveState())
-        self.endGroup()
-
-    def deleteFile(self):
-        """
-        Delete the preferences file on disk.
-        """
-        log.info('deleting settings: "%s"' % self.fileName())
-        return os.remove(self.fileName())
-
-    #- Recent Files ----
-    @property
-    def recent_files(self):
-        """
-        Returns a tuple of recent files, no larger than the max 
-        and reversed (for usage in menus).
-
-         * unused
-        """
-        files = self.getRecentFiles()
-        tmp = []
-        for f in reversed(files):
-            tmp.append(f)
-        return tuple(tmp[:self._max_files])
-
-    def getRecentFiles(self):
-        """
-        Get a tuple of the most recent files.
-        """
-        recent_files = []
-        cnt = self.beginReadArray('RecentFiles')
-        for i in range(cnt):
-            self.setArrayIndex(i)
-            fn = self.value('file')
-            recent_files.append(fn)
-        self.endArray()
-        return tuple(recent_files)
-
-    def addRecentFile(self, filename):
-        """
-        Adds a recent file to the stack.
-        """
-        recent_files = self.getRecentFiles()
-        if filename in recent_files:
-            recent_files = tuple(x for x in recent_files if x != filename)
-
-        recent_files = recent_files + (filename,)
-        self.beginWriteArray('RecentFiles')
-        for i in range(len(recent_files)):
-            self.setArrayIndex(i)
-            self.setValue('file', recent_files[i])
-        self.endArray()
-
-    def clearRecentFiles(self):
-        self.remove('RecentFiles')

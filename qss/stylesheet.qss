@@ -20,6 +20,12 @@ QWidget{
     selection-background-color: @widget-bg-selected;
 }
 
+/* get rid of those damn focus outlines*/
+QWidget:focus{
+    border: none;
+    outline: none;
+}
+
 /* attributes that are connected */
 QWidget.Connected{
     color: @line-color-connected;
@@ -43,10 +49,11 @@ QMainWindow::separator{
     /*turns off that dashed buttons image*/
     image: none;
     width: 4px;
+    border-left: 1px solid @header-border;
 }
 
 QMainWindow::separator:hover {
-    background: #3d3d3d;
+    background: @group-border-color;
 }
 
 /*
@@ -70,9 +77,10 @@ QDockWidget::title{
     padding-left: 12px;
     padding-top: 3px;
     padding-bottom: 3px;
-    /* padding title bar */
-    margin-left: 3px;    
+    /* padding title bar 
+    margin-left: 3px; */  
     border-radius: 2px;
+    border: 1px solid @dock-title-border-color;
 }
 
 /* margins seem to shrink button size */
@@ -244,11 +252,12 @@ QMenu::separator {
 */
 
 QStatusBar {
+    padding: 8px;
     font-family: @font-family-mono;
     font-size: @font-size-mono:status;
-    color: #c4c4c4;
+    color: @status-color;
+    border-top: 1px solid @status-border;
 }
-
 
 /*
 ##### SCROLL/ARROWS #####
@@ -258,6 +267,7 @@ QScrollBar:horizontal {
   border-color: @mid-color;
   background-color: @mid-darkest;
   height: 15px;  
+  margin: 0px -15px 0 15px;
 }
 
 QScrollBar:vertical {
@@ -268,7 +278,7 @@ QScrollBar:vertical {
 
 QScrollBar::handle:horizontal {
     background: @mid-color;
-    min-height: 20px;
+    min-width: 20px;
     border-radius: 2px;
 }
 QScrollBar::handle:vertical {
@@ -327,6 +337,9 @@ QScrollBar::add-line:horizontal {
     border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
+    /*width: 20px;
+    subcontrol-position: right;
+    subcontrol-origin: margin;*/
 }
 
 /* arrow button outer */
@@ -334,6 +347,9 @@ QScrollBar::sub-line:horizontal {
     border: 1px @mid-darker; 
     background: @mid-darker;
     border-radius: 2px;
+    /*width: 20px;
+    subcontrol-position: left;
+    subcontrol-origin: margin;*/
 }
 
 /* arrow button outer */
@@ -370,6 +386,7 @@ TableView {
 }
 
 QTableView::item:hover, TableView::item:hover {
+    background-color: #D3F1FC;
 } 
 
 /*
@@ -454,20 +471,25 @@ QTabBar::tab {
     margin: 0 1px 0 1px; /* margin adds a pixel left/right of each tab */
     padding: 0 10px 0 10px; /* padding adds 10px left/right of each tab title */
     color: @tab-title-color; /* tab title text color */
+    
 }
 
 QTabBar::tab:hover{
     background: @tab-top-hover;
 }
 
+QTabBar::tab:active{
+    background: @pink;
+    border: none;
+    outline: none;
+}
+
 QTabBar::tab:selected {
     background: @tab-top-selected;
-    
 }
 
 QTabBar::tab:!selected {
     background: @tab-top-deselected;
-    margin-top: 2px;
 }
 
 QTabBar::tab::top{
@@ -477,12 +499,21 @@ QTabBar::tab::top{
     padding-bottom: 3px;
 }
 
+QTabBar::tab::top:!selected {
+    margin-top: 3px;
+}
+
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     padding-bottom: 3px;
     padding-top: 3px;
+    margin-bottom: 3px
+}
+
+QTabBar::tab::bottom:!selected {
+    margin-bottom: 6px;
 }
 
 /* decrease subtab padding on either side of the title text to reduce scoll-buttons */
@@ -515,6 +546,7 @@ QGroupBox::title {
     left: 10px; 
 }
 
+/* flat group line */
 QGroupBox::flat {
     border: 2px groove @group-flat-border-color;
     border-radius: 0px; 
@@ -613,7 +645,7 @@ QComboBox {
     background: @combo-bg-color;
     padding: 1px 0px 1px 4px;
     border: none;
-    border-radius: 2px;
+    border-radius: 2px;    
 }
 
 /* this defines when a user has clicked the widget to generate the popup */
