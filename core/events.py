@@ -1,85 +1,61 @@
 #!/usr/bin/env python
-'''
-class Event(object):
-
-    def __init__(self):
-        self.handlers = []
-    
-    def add(self, handler):
-        self.handlers.append(handler)
-        return self
-    
-    def remove(self, handler):
-        self.handlers.remove(handler)
-        return self
-    
-    def fire(self, sender, earg=None):
-        for handler in self.handlers:
-            handler(sender, earg)
-    
-    __iadd__ = add
-    __isub__ = remove
-    __call__ = fire
-'''
-
-class Event(object):    
-    def __init__(self, doc=None):
-        self.__doc__ = doc
-
-    def __get__(self, obj, objtype=None):
-        if obj is None:
-            return self
-        return EventHandler(self, obj)
-    
-    def __set__(self, obj, value):
-        pass
 
 
-class EventHandler(object):    
-    def __init__(self, event, obj): 
+class EventHandler(object):
 
-        self.event = event
-        self.obj = obj
-    
-    def _getHandlers(self):        
-        """(internal use) """        
-        try:
-            eventhandler = self.obj.__eventhandler__
-        except AttributeError:
-            eventhandler = self.obj.__eventhandler__ = {}
-        return eventhandler.setdefault(self.event, [])
-    
-    def add(self, func):        
-        """Add new event handler function.
-        
-        Event handler function must be defined like func(sender, earg).
-        You can add handler also by using '+=' operator.
+    def __init__(self, sender):
+
+        self.callbacks = []
+        self.sender = sender
+
+    def __call__(self, *args, **kwargs):
         """
-        self._getHandlers().append(func)
-        return self
-    
-    def remove(self, func):        
-        """Remove existing event handler function.
-        
-        You can remove handler also by using '-=' operator.
+        Runs all callbacks.
         """
-        self._getHandlers().remove(func)
+        return [callback(self.sender, *args, **kwargs) for callback in self.callbacks]
+
+    def __iadd__(self, callback):
+        """
+        Add a callback to the stack.
+        """
+        self.add(callback)
         return self
-    
-    def notify(self, *args, **kwargs):        
-        """Fire event and call all handler functions
-        
-        You can call EventHandler object itself like e(earg) instead of 
-        e.fire(earg).
-        """        
-        for func in self._getHandlers():
-            func(self.obj, *args, **kwargs)
 
-    def handlerCount(self):
-        return len(self._getHandlers())
+    def __isub__(self, callback):
+        """
+        Remove a callback to the stack.
+        """
+        self.remove(callback)
+        return self
 
-    __iadd__ = add
-    __isub__ = remove
-    __call__ = notify
+    def __len__(self):
+        return len(self.callbacks)
 
+    def __getitem__(self, index):
+        return self.callbacks[index]
+
+    def __setitem__(self, index, value):
+        self.callbacks[index] = value
+
+    def __delitem__(self, index):
+        del self.callbacks[index]
+
+    def add(self, callback):
+        """
+        Add a callback. Raises error if callback is not
+        callable.
+
+        :param callable callback: callback function or method.
+        """
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+        self.callbacks.append(callback)
+
+    def remove(self, callback):
+        """
+        Remove a callback.
+
+        :param callable callback: callback function or method.
+        """
+        self.callbacks.remove(callback)
 

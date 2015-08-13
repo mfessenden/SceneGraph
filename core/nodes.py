@@ -4,7 +4,7 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from SceneGraph.core import log, Attribute, Signal, Event
+from SceneGraph.core import log, Attribute, EventHandler
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_METADATA_PATH
 from SceneGraph import util
 
@@ -18,10 +18,6 @@ PROPERTY_TYPES = dict(
 
 class Node(object):
 
-    nodeNameChanged     = Event('nodeNameChanged')
-    nodePositionChanged  = Event('nodePositionChanged')
-    nodeAttributeUpdated = Event('nodeAttributeUpdated')
-
     default_color = [172, 172, 172, 255]
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
@@ -29,26 +25,30 @@ class Node(object):
 
     def __init__(self, name=None, **kwargs):
 
-        self._attributes        = dict()
-        self._metadata          = Metadata(self)
+        self._attributes            = dict()
+        self._metadata              = Metadata(self)
+
+        # event handlers
+        self.nodeNameChanged        = EventHandler(self)
+        self.nodePositionChanged    = EventHandler(self)
+        self.nodeAttributeUpdated   = EventHandler(self)
 
         # basic node attributes        
-        self.name               = name if name else self.default_name
-        self.color              = kwargs.pop('color', self.default_color)
-        self.docstring          = ""
-        self._graph             = kwargs.pop('_graph', None)
+        self.name                   = name if name else self.default_name
+        self.color                  = kwargs.pop('color', self.default_color)
+        self.docstring              = ""
+        self._graph                 = kwargs.pop('_graph', None)
 
-        self.width              = kwargs.pop('width', 100.0)
-        self.base_height        = kwargs.pop('base_height', 15.0)
-        self.force_expand       = kwargs.pop('force_expand', False)
-
-        self.pos                = kwargs.pop('pos', (0.0, 0.0))
-        self.enabled            = kwargs.pop('enabled', True)
-        self.orientation        = kwargs.pop('orientation', 'horizontal')
+        self.width                  = kwargs.pop('width', 100.0)
+        self.base_height            = kwargs.pop('base_height', 15.0)
+        self.force_expand           = kwargs.pop('force_expand', False)
+        self.pos                    = kwargs.pop('pos', (0.0, 0.0))
+        self.enabled                = kwargs.pop('enabled', True)
+        self.orientation            = kwargs.pop('orientation', 'horizontal')
 
         # metadata
-        metadata                = kwargs.pop('metadata', dict())
-        attributes              = kwargs.pop('attributes', dict())
+        metadata                    = kwargs.pop('metadata', dict())
+        attributes                  = kwargs.pop('attributes', dict())
 
         # if the node metadata isn't passed from another class, 
         # read it from disk
@@ -70,7 +70,6 @@ class Node(object):
                 else:
                     self.add_attr(attr_name, **properties)
 
-
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
@@ -88,7 +87,8 @@ class Node(object):
         raise AttributeError('no attribute exists "%s"' % name)
 
     def __setattr__(self, name, value):
-        if name in ['_attributes', '_changed', '_widget', '_metadata']:
+        if name in ['_attributes', '_changed', '_widget', '_metadata', 'nodeNameChanged', 
+                    'nodePositionChanged', 'nodeAttributeUpdated']:
             super(Node, self).__setattr__(name, value)
 
         elif name in self._attributes:            
@@ -96,21 +96,20 @@ class Node(object):
 
             if value != attribute.value:
                 attribute.value = value
-                self.nodeAttributeUpdated(self.name, name, value)
+                self.nodeAttributeUpdated(**{name:value})
         else:
             if name == 'name':
-                self.nodeNameChanged(self, value)
-                if hasattr(self.nodeNameChanged, 'new_name'):
-                    if getattr(self.nodeNameChanged.new_name):
-                        value = self.nodeNameChanged.new_name
-                        del self.nodeNameChanged.new_name
+                # callback to get a valid node name
+                valid_names = self.nodeNameChanged(name=value)
+                if valid_names:
+                    value = valid_names[0]
 
             elif name == 'pos':
-                self.nodePositionChanged(self, value)
+                self.nodePositionChanged(pos=value)
 
             else:
-                self.nodeAttributeUpdated(self, name, value)
-
+                self.nodeAttributeUpdated(**{name:value})
+            
             super(Node, self).__setattr__(name, value)
 
     @property

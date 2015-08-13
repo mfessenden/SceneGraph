@@ -8,17 +8,12 @@ Attribute               = attributes.Attribute
 
 
 from . import events
-from . import signals
-
 # events
-Signal                  = signals.Signal
-Event                   = events.Event
 EventHandler            = events.EventHandler
 
 
 from . import manager
 from . import metadata
-
 
 
 # Parsers/Managers

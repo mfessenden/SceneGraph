@@ -75,71 +75,17 @@ The Metadata parses node metadata on disk.
     :members:
 
 
-Events & Observables
-====================
-.. automodule:: core.observable
-.. autoclass:: Observable
-    :members:
-
-.. _Observable:
-
-Observable
-----------
-
-The Observable class is the basis of all of our core node types, providing simple callbacks.
-
+Events 
+======
 .. automodule:: core.events
 
-.. _Event:
+.. _EventHandler:
 
-Event
------
-Event base class.
+EventHandler
+----------
+The EventHandler class handles callbacks for all of the core node types.
 
-.. autoclass:: Event
-    :members:
-
-NodePositionChanged
--------------------
-Called when a DagNode's position is updated.
-
-.. autoclass:: NodePositionChanged
-    :members:
-
-NodeNameChanged
----------------
-Called when a DagNode's name changes.
-
-.. autoclass:: NodeNameChanged
-    :members:
-
-AttributeUpdatedEvent
----------------------
-Generic DagNode attribute changed event.
-
-.. autoclass:: AttributeUpdatedEvent
-    :members:
-
-MouseHoverEvent
----------------
-**Qt**: Mouse hover event.
-
-.. autoclass:: MouseHoverEvent
-    :members:
-
-MouseMoveEvent
---------------
-**Qt**: Mouse move event.
-
-.. autoclass:: MouseMoveEvent
-    :members:
-
-MousePressEvent
----------------
-**Qt**: Mouse button press event.
-
-
-.. autoclass:: MousePressEvent
+.. autoclass:: EventHandler
     :members:
 
 UI Modules
@@ -147,13 +93,13 @@ UI Modules
 
 .. automodule:: ui
 
-.. _EventHandler:
+.. _SceneEventHandler:
 
-EventHandler
-------------
-The EventHandler connects the Graph to the UI
+SceneEventHandler
+-----------------
+The SceneEventHandler connects the Graph to the UI
 
-.. autoclass:: EventHandler
+.. autoclass:: SceneEventHandler
     :members:
 
 StylesheetManager

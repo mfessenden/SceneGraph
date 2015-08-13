@@ -9,7 +9,7 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, PluginManager, Attribute
+from SceneGraph.core import log, PluginManager, Attribute, EventHandler
 from SceneGraph.core import nodes
 from SceneGraph import util
 
@@ -21,14 +21,18 @@ class Graph(object):
     """
     def __init__(self, *args, **kwargs):
 
+        # events
+        self.dagNodesAdded   = EventHandler(self)
+        self.edgesAdded      = EventHandler(self)
+
         #self.network        = nx.DiGraph()
-        self.network        = nx.MultiDiGraph() # mutliple edges between nodes
+        self.network         = nx.MultiDiGraph() # mutliple edges between nodes
         
-        self.mode           = 'standalone'
-        self.grid           = Grid(5, 5)
-        self.handler        = None
-        self.plug_mgr       = PluginManager()
-        self._initialized   = 0
+        self.mode            = 'standalone'
+        self.grid            = Grid(5, 5)
+        self.handler         = None
+        self.plug_mgr        = PluginManager()
+        self._initialized    = 0
 
         # attributes for current nodes/dynamically loaded nodes
         self._node_types     = dict() 
@@ -132,38 +136,46 @@ class Graph(object):
                 self.network.graph.pop(attr)
 
     #- Events -----
-    def nodeNameChangedEvent(self, *args, **kwargs):
-        node, new_name = args
-        print '# Event: node name changed: "%s" --> "%s"' % (node.name, new_name)
+    def nodeNameChangedEvent(self, node, *args, **kwargs):
+        """
+        Callback method.
 
+        :param SceneGraph.nodes.DagNode node:
+        """
+        old_name = node.name
+        new_name = kwargs.get('name', old_name)
         if not self.is_valid_name(new_name):
-            node.nodeNameChanged.new_name = self.get_valid_name(new_name) 
+            new_name = self.get_valid_name(new_name)
+        #print '# DEBUG: new name: "%s"' % new_name
+        return new_name
 
-    def nodePositionChangedEvent(self, *args, **kwargs):
-        node, pos = args
-        print '# Event: node position changed: "%s" --> "%s"' % (node.name, '%.2f, %.2f' % (pos[0], pos[1]))
-
-    def nodeAttributeUpdatedEvent(self, *args, **kwargs):
-        node, attr_name, attr_value = args
-        print '# Event: node attribute updated: "%s" --> "%s: %s"' % (node.name, attr_name, str(attr_value))
-
-    def update_observer(self, obs, event, *args, **kwargs):
+    def nodePositionChangedEvent(self, node, *args, **kwargs):
         """
-        Called when the observed object has changed.
+        Callback method.
 
-        :param Observable obs: Observable object.
-        :param Event event: Event object.
+        :param SceneGraph.nodes.DagNode node:
         """
-        if event.type == 'nameChanged':
-            old_name = obs.name
-            new_name = event.data.get("new_name")
-            if old_name == new_name:
-                return
+        nid = node.id
+        pos = kwargs.get('pos', [])
+        if pos:
+            if nid in self.network.nodes():
+                nx_data = self.network.node[nid]
+                nx_data['pos']=pos
+                #print '# DEBUG: position: ', pos
 
-            # update the event to reflect a better name choice
-            if not self.is_valid_name(new_name):
-                valid_name = self.get_valid_name(new_name)
-                event.data.update(valid_name=valid_name)
+    def nodeAttributeUpdatedEvent(self, node, *args, **kwargs):
+        """
+        Callback method to update the NetworkX data when the dagnode changes.
+
+        :param SceneGraph.nodes.DagNode node:
+        """
+        nid = node.id
+        if nid in self.network.nodes():
+            nx_data = self.network.node[nid]
+            
+            for k, v in kwargs.iteritems():
+                nx_data.update({k:v})
+                #print '# DEBUG: updating: "%s" :' % k, v
 
     def updateDagNodes(self, dagnodes, debug=False):
         """
