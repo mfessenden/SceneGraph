@@ -3,6 +3,7 @@ import os
 from PySide import QtCore, QtGui
 from functools import partial
 from SceneGraph import core
+from SceneGraph.core import nodes
 
 from . import node_widgets
 from . import handlers
@@ -531,7 +532,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if dag_id in self.graph.dagnodes:
                 dag = self.graph.dagnodes.get(dag_id)
 
-                if issubclass(type(dag), core.DagNode):
+                if issubclass(type(dag), nodes.Node):
                     if dag_id not in self.scenenodes:               
                         widget = self.plug_mgr.get_widget(dag)
 
@@ -698,8 +699,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Returns a list of node widgets.
 
-        returns:
-            (list) - list of DagNode widgets.
+        :returns: list of DagNode widgets.
+        :rtype: list
         """
         widgets = []
         for item in self.items():
@@ -711,11 +712,10 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Get a named node widget from the scene.
 
-        params:
-            name (str) - node name or id.
+        :param str name: node name or id.
 
-        returns:
-            (DagNode) - node widget.
+        :returns: node widget.
+        :rtype: SceneGraph.ui.NodeWidget
         """
         if name in self.scenenodes:
             return self.scenenodes.get(name)
@@ -729,8 +729,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Returns a list of selected item widgets.
 
-        returns:
-            (list) - list of widgets.
+        :returns: list of widgets.
+        :rtype: list
         """
         widgets = []
         selected = self.selectedItems()

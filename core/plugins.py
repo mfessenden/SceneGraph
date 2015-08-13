@@ -223,7 +223,7 @@ class PluginManager(object):
             modfn = module.__file__
             src_file = None
             md_file  = None
-
+            
             fnmatch = re.search(fexpr, modfn)
             if fnmatch:
                 src_file = '%s.py' % fnmatch.group('basename')
@@ -238,6 +238,9 @@ class PluginManager(object):
                     if hasattr(obj, 'node_type'):
                         if getattr(obj, 'node_type') != 'dagnode':
                             #print '# DEBUG: Loading "%s" from plugin "%s"' % (cname, src_file)
+                            if cname in globals():
+                                continue
+
                             globals()[cname] = obj
                             imported.append(cname)                
                             self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
@@ -257,10 +260,8 @@ class PluginManager(object):
 
          *todo: load the external plugins as well.
 
-        params:
-            path        (str) - path to scan.
-            plugin_name (str) - plugin name to filter.
-
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
         """
         log.info('loading plugin widgets...')
 
@@ -279,12 +280,11 @@ class PluginManager(object):
         """
         Dynamically load all node widgets.
 
-        params:
-            path        (str) - path to scan.
-            plugin_name (str) - plugin name to filter.
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
 
-        returns:
-            (dict) - dictionary of node type, widget.
+        :returns: dictionary of node type, widget.
+        :rtype: dict
         """
         imported = dict()
         fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
@@ -311,35 +311,33 @@ class PluginManager(object):
                             imported.update({node_type:{'widget':globals()[cname]}})              
         return imported
 
-    def _get_external_plugin_paths(self, path='scenegraph_plugins'):
+    def _get_external_plugin_paths(self, dirname='scenegraph_plugins'):
         """
-        Returns a list of paths from sys path
+        Returns a list of paths from sys path.
 
-        params:
-            path        (str) - name of an external directory to scan.
+        :param str dirname: name of an external directory to scan.
 
-        returns:
-            (list) - list of external module paths.
+        :returns: list of external module paths.
+        :rtype: list
         """
         result = []
         for p in sys.path:
-            ad = os.path.join(p, path)
-            if os.path.exists(ad):
-                if os.path.exists(os.path.join(ad, '__init__.py')):
-                    if ad not in result:
-                        result.append(ad)
+            ppath = os.path.join(p, dirname)
+            if os.path.exists(ppath):
+                if os.path.exists(os.path.join(ppath, '__init__.py')):
+                    if ppath not in result:
+                        result.append(ppath)
         return result
 
     def get_plugins(self, plugins=[], disabled=False):
         """
         Return filtered plugin data.
 
-        params:
-            plugins (list)  - plugins to filter.
-            disabled (bool) - show disabled plugins.
+        :param list plugins: plugin names to filter.
+        :param bool disabled: show disabled plugins.
 
-        returns:
-            (dict) - dictionary of plugin data.
+        :returns: dictionary of plugin data.
+        :rtype: dict
         """
         result = dict()
         for plugin in sorted(self._node_data.keys()):
@@ -353,31 +351,29 @@ class PluginManager(object):
         """
         Return the appropriate dag node type.
 
-        params:
-            node_type (str) - dag node type to return.
+        :param str node_type: dag node type to return.
 
-        returns:
-            (DagNode) - dag node subclass.
+        :returns: dag node subclass.
+        :rtype: core.DagNode
         """
         if node_type not in self._node_data:
             log.error('plugin type "%s" is not loaded.' % node_type)
             return
 
         dag = self._node_data.get(node_type).get('dagnode')
-
         # assign the node metadata file
-        return dag(_metadata=self._node_data.get(node_type).get('metadata', None), **kwargs)
+        result = dag(_metadata=self._node_data.get(node_type).get('metadata', None), **kwargs)
+        return result
 
     def get_widget(self, dagnode, **kwargs):
         """
         Return the appropriate node type widget. Returns the default widget
         if one is not defined.
 
-        params:
-            dagnode (DagNode) - node type.
+        :param core.nodes.DagNode dagnode: node type.
 
-        returns:
-            (Node) - node widget subclass.
+        :returns: node widget subclass.
+        :rtype: ui.node_widgets.NodeWidget
         """
         if dagnode.node_type not in self._node_data:
             log.error('plugin "%s" is not loaded.' % dagnode.node_type)

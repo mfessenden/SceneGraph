@@ -45,20 +45,21 @@ Core Nodes
 ==========
 .. automodule:: core.nodes
 
-.. _SimpleNode:
+.. _Node:
 
-SimpleNode
-----------
-The SimpleNode class contains basic DAG node attributes.
+Node
+----
+The basic DAG node type. Represents a dag node that has attributes, but no connections. Currently, the only node
+that utilizes this type is the Note.
 
-.. autoclass:: SimpleNode
+.. autoclass:: Node
     :members:
 
 .. _DagNode:
 
 DagNode
 -------
-The DagNode class is the base class for all nodes.
+The DagNode class is the base class for all nodes. Allows for custom attributes to be added, as well as connections.
 
 .. autoclass:: DagNode
     :members:
@@ -146,13 +147,13 @@ UI Modules
 
 .. automodule:: ui
 
-.. _SceneHandler:
+.. _EventHandler:
 
-SceneHandler
+EventHandler
 ------------
-The SceneHandler connects the Graph to the UI
+The EventHandler connects the Graph to the UI
 
-.. autoclass:: SceneHandler
+.. autoclass:: EventHandler
     :members:
 
 StylesheetManager

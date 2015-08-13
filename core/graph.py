@@ -9,7 +9,8 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, DagNode, PluginManager, Attribute
+from SceneGraph.core import log, PluginManager, Attribute
+from SceneGraph.core import nodes
 from SceneGraph import util
 
 
@@ -178,7 +179,7 @@ class Graph(object):
         node_ids = []
         invalid_node_ids = []
         for node in dagnodes:
-            if issubclass(type(node), DagNode):
+            if issubclass(type(node), nodes.Node):
                 if node.id not in node_ids:
                     node_ids.append(node.id)
 
@@ -261,8 +262,8 @@ class Graph(object):
         """
         Returns a dag node names.
 
-        returns:
-            (list)
+        :returns: list of DagNode names.
+        :rtype: list
         """
         return [node.name for node in self.nodes()]
 
@@ -270,8 +271,8 @@ class Graph(object):
         """
         Returns a list of all dag nodes.
 
-        returns:
-            (list) - list of DagNode objects.
+        :returns: list of DagNode objects.
+        :rtype: list
         """
         nodes = []
         for node in  self.network.nodes(data=True):
@@ -475,7 +476,7 @@ class Graph(object):
         
         # edge attributes for nx graph
         edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr, edge_type=edge_type)
-        
+
         src_conn = src.get_connection(src_attr)
         dest_conn = dest.get_connection(dest_attr)
         edge_id_str = '(%s,%s)' % (src.id, dest.id)
@@ -1075,10 +1076,9 @@ class Graph(object):
         """
         Restore current DAG state from data.
 
-        params:
-            data  (dict) - dictionary of scene graph data.
-            nodes (bool) - restore nodes/edges.
-            graph (bool) - restore scene attributes/preferences.
+        :param dict data: dictionary of scene graph data.
+        :param bool nodes: restore nodes/edges.
+        :param bool graph: restore scene attributes/preferences.
         """
         self.reset()
 

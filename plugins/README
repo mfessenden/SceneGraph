@@ -13,7 +13,6 @@ SCENEGRAPH_NODE_TYPE = 'custom'
 class MyNode(DagNode):
 
     def __init__(self, *args, **kwargs):
-
         kwargs.update(node_type=SCENEGRAPH_NODE_TYPE)
         DagNode.__init__(self, *args, **kwargs)
 

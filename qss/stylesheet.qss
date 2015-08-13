@@ -399,7 +399,8 @@ TableView {
 }
 
 QTableView::item:hover, TableView::item:hover {
-    /*background-color: #D3F1FC;*/
+    background-color: none;
+    selection-color: none;
 }
 
 /*

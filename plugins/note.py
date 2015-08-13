@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 from SceneGraph import options
-from SceneGraph.core.nodes import DagNode
+from SceneGraph.core.nodes import Node
 
 
 SCENEGRAPH_NODE_TYPE = 'note'
 
 
-class NoteNode(DagNode):
+class NoteNode(Node):
 
     default_name  = 'note'
     default_color = [255, 239, 62, 255]
     node_type     = 'note'
 
     def __init__(self, name=None, **kwargs):
-        DagNode.__init__(self, name, **kwargs)
+        Node.__init__(self, name, **kwargs)
 
         self.corner_loc     = 'top'   
         self.base_height    = 75

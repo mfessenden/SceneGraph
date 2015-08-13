@@ -45,7 +45,7 @@ class Node(object):
         # metadata
         metadata                = kwargs.pop('metadata', dict())
         attributes              = kwargs.pop('attributes', dict())
-
+        
         # if the node metadata isn't passed from another class, 
         # read it from disk
         if not metadata:
@@ -57,6 +57,14 @@ class Node(object):
         UUID = kwargs.pop('id', None)
         self.id = UUID if UUID else str(uuid.uuid4())
         self._metadata.update(metadata)
+
+        # update attributes (if reading from scene)
+        if attributes:
+            for attr_name, properties in attributes.iteritems():
+                if attr_name in self._attributes:
+                    self._attributes.get(attr_name).update(**properties)
+                else:
+                    self.add_attr(attr_name, **properties)
 
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
@@ -327,7 +335,7 @@ class Node(object):
         return self.__class__.__name__
 
     def dag_types(self):
-        return [c.__name__ for c in DagNode.__subclasses__()]
+        return [c.__name__ for c in Node.__subclasses__()]
 
     def ParentClasses(self, p=None):
         """
@@ -341,7 +349,7 @@ class Node(object):
         base_classes = []
         cl = p if p is not None else self.__class__
         for b in cl.__bases__:
-            if b.__name__ not in ["object", "Observable"]:
+            if b.__name__ not in ["object"]:
                 base_classes.append(b)
                 base_classes.extend(self.ParentClasses(b))
         return base_classes
@@ -358,7 +366,8 @@ class DagNode(Node):
                       'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
 
     def __init__(self, name=None, **kwargs):
-        super(Node, self).__init__(name=name, **kwargs)
+        attributes = kwargs.pop('attributes', {})
+        super(DagNode, self).__init__(name=name, **kwargs)
 
         # attributes
         self.buildAttributes()
@@ -370,6 +379,7 @@ class DagNode(Node):
                     self._attributes.get(attr_name).update(**properties)
                 else:
                     self.add_attr(attr_name, **properties)
+
     #- Transform ----
     @property
     def expanded(self):
@@ -402,6 +412,7 @@ class DagNode(Node):
         return (height * self.base_height) + btm_buffer
 
     #- Connections ----
+
     def buildAttributes(self, verbose=False):
         """
         Parse and build attributes from the Metadata object.
@@ -533,118 +544,205 @@ class DagNode(Node):
         return self.add_attr(name, connectable=True, connection_type=connection_type, max_connections=max_connections, user=False, **pdict)
 
 
-    #- Plugins/Metadata ----
     @property
-    def plugin_file(self):
+    def connections(self):
         """
-        Returns the plugin file associated with this node type.
+        Returns a list of connections (input & output)
 
         returns:
-            (str) - plugin filename.
+            (list) - list of connection names.
         """
-        import inspect
-        src_file = inspect.getfile(self.__class__)
-        if os.path.exists(src_file.rstrip('c')):
-            plugin_file = src_file.rstrip('c')
-        return plugin_file
-    
+        conn_names = []
+        for name in self._attributes:
+            if self._attributes.get(name).connectable:
+                conn_names.append(name)
+        return conn_names
+
     @property
-    def is_builtin(self):
+    def inputs(self):
         """
-        Returns true if the node is a member for the is_builtin 
-        plugins.
+        Returns a list of input connection names.
 
         returns:
-            (bool)  - plugin is a builtin.
+            (list) - list of input connection names.
         """
-        return SCENEGRAPH_PLUGIN_PATH in self.plugin_file
+        connections = []
+        for name in self._attributes:
+            data = self._attributes.get(name)
+            #if data.get('connectable') and data.get('connection_type') == 'output':
+            if data.connectable and data.connection_type == 'input':
+                connections.append(name)
+        return connections
 
-    def read_metadata(self, verbose=True):
+    @property
+    def outputs(self):
         """
-        Initialize node metadata from metadata files on disk.
-        Metadata is parsed by looking at the __bases__ of each node
-        class (ie: all DagNode subclasses will inherit all of the default
-        DagNode attributes).
+        Returns a list of output connection names.
+
+        returns:
+            (list) - list of output connection names.
         """
-        import inspect
-        from . import metadata
-        parser = metadata.MetadataParser()
+        connections = []
+        for name in self._attributes:
+            data = self._attributes.get(name)
+            #if data.get('connectable') and data.get('connection_type') == 'output':
+            if data.connectable and data.connection_type == 'output':
+                connections.append(name)
+        return connections
 
-        node_metadata = dict()
-
-        # query the base classes
-        result = [self.__class__,]
-        for pc in self.ParentClasses():
-            result.append(pc)
-        
-        sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
-
-        for cls in reversed(result):
-            cname = cls.__name__
-            src_file = inspect.getfile(cls)
-            py_src = src_file.rstrip('c')
-
-            dirname = os.path.dirname(src_file)
-            basename = os.path.splitext(os.path.basename(src_file))[0]
-            
-            # return the source .py file if it exists
-            if os.path.exists(py_src):
-                src_file = py_src
-
-            metadata_filename = os.path.join(dirname, '%s.mtd' % basename)
-
-            # default DagNode type is special.
-            if py_src == sg_core_path:
-                metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
-            
-            if not os.path.exists(metadata_filename):
-                log.warning('plugin description file "%s" does not exist.' % metadata_filename)
-                continue
-
-            log.debug('reading plugin metadata file: "%s".' % metadata_filename)
-            # parse the metadata 
-            parsed = parser.parse(metadata_filename)
-
-            for section in parsed:
-                if section not in node_metadata:
-                    node_metadata[section] = dict()
-
-                attributes = parsed.get(section)
-                
-
-                # parse out input/output here?
-                for attr in attributes:
-                    if attr not in node_metadata[section]:
-                        node_metadata.get(section)[attr] = dict()
-
-                    attr_properties = attributes.get(attr)
-                    node_metadata.get(section).get(attr).update(attr_properties)
-
-        return node_metadata
-    
-    def Class(self):
-        return self.__class__.__name__
-
-    def dag_types(self):
-        return [c.__name__ for c in DagNode.__subclasses__()]
-
-    def ParentClasses(self, p=None):
+    def get_input(self, name='input'):
         """
-        Returns all of this objects' parent classes.
+        Return a named node input.
 
-        :param obj p: parent class.
+        :param str name: name of input.
 
-        :returns: list of parent class names.
+        :returns: connection node.
+        :rtype: Connection
+        """
+        if not name in self._attributes:
+            return
+
+        data = self._attributes.get(name)
+        if data.connectable and data.connection_type == 'input':
+            return self._attributes.get(name)
+        return
+
+    def get_output(self, name='output'):
+        """
+        Return a named node output.
+
+        :param str name: name of input.
+
+        :returns: connection node.
+        :rtype: Connection
+        """
+        if not name in self._attributes:
+            return
+
+        data = self._attributes.get(name)
+        if data.connectable and data.connection_type == 'output':
+            return self._attributes.get(name)
+        return
+
+    def is_connected(self, name):
+        """
+        Returns true if the named connection has 
+        a connection.
+
+        :param str name: name of connection to query.
+
+        :returns: connection status.
+        :rtype: bool
+        """
+        conn = self.get_connection(name)
+        if not conn:
+            return False
+        return not conn.connectable
+
+    def input_connections(self):
+        """
+        Returns a list of connected DagNodes.
+
+        :returns: list of DagNode objects.
         :rtype: list
         """
-        base_classes = []
-        cl = p if p is not None else self.__class__
-        for b in cl.__bases__:
-            if b.__name__ not in ["object", "Observable"]:
-                base_classes.append(b)
-                base_classes.extend(self.ParentClasses(b))
-        return base_classes
+        connected_nodes = []
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if destid == self.id:
+                if srcid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(srcid))
+        return connected_nodes
 
+    def output_connections(self):
+        """
+        Returns a list of connected DagNodes.
+
+        :returns: list of DagNode objects.
+        :rtype: list
+        """
+        connected_nodes = []
+        for edge in self.graph.network.edges(data=True):
+            # edge = (id, id, {atttributes})
+            srcid, destid, attrs = edge
+            if srcid == self.id:
+                if destid in self.graph.dagnodes:
+                    connected_nodes.append(self.graph.dagnodes.get(destid))
+        return connected_nodes
+
+    @property
+    def is_input_connection(self):
+        """
+        Returns true if the node is an input connection.
+
+        :returns: node has input connections.
+        :rtype: bool
+        """
+        return bool(self.output_connections())
+ 
+    @property
+    def is_output_connection(self):
+        """
+        Returns true if the node is an output connection.
+
+        :returns: node has output connections.
+        :rtype: bool
+        """
+        return bool(self.input_connections())   
+
+    def get_connection(self, name):
+        """
+        Returns a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (Attribute) - connection object.
+        """
+        conn = None
+        if name not in self._attributes:
+            return 
+
+        data = self._attributes.get(name)
+        if data.connectable:
+            return data
+        return
+
+    def rename_connection(self, old, new):
+        """
+        Rename a connection.
+
+        params:
+            old (str) - old connection name.
+            new (new) - new connection name.
+
+        returns:
+            (bool) - rename was successful.
+        """
+        conn = self.get_connection(old)
+        if conn:
+            conn.name = new
+            return True
+        return False
+
+    def remove_connection(self, name):
+        """
+        Remove a named connection (input or output).
+
+        params:
+            name (str) - name of connection to query.
+
+        returns:
+            (bool) - connection was removed.
+        """
+        conn = self.get_connection(name)
+        if conn:
+            self._attributes.pop(name)
+            del conn 
+            return True 
+        return False
 
 
 #- Metadata -----

@@ -8,6 +8,7 @@ Attribute               = attributes.Attribute
 
 
 from . import events
+
 # events
 Event                   = events.Event
 NodePositionChanged     = events.NodePositionChanged
@@ -18,13 +19,9 @@ MouseMoveEvent          = events.MouseMoveEvent
 MousePressEvent         = events.MousePressEvent
 
 
-from . import nodes
 from . import manager
 from . import metadata
 
-
-# nodes
-DagNode                 = nodes.DagNode
 
 
 # Parsers/Managers
