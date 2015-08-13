@@ -3,7 +3,7 @@ import sys
 import math
 import weakref
 from PySide import QtCore, QtGui
-from SceneGraph.core import log, Observer
+from SceneGraph.core import log
 from SceneGraph import options
 from SceneGraph.ui import SceneNodesCommand
 
@@ -11,7 +11,7 @@ from SceneGraph.ui import SceneNodesCommand
 SCENEGRAPH_WIDGET_TYPE = 'note'
 
 
-class NoteWidget(Observer, QtGui.QGraphicsObject): 
+class NoteWidget(QtGui.QGraphicsObject): 
 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()

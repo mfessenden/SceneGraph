@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>700</height>
+    <width>1200</width>
+    <height>780</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -143,7 +143,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1000</width>
+     <width>1200</width>
      <height>25</height>
     </rect>
    </property>
@@ -156,6 +156,8 @@
       <string>Recent files...</string>
      </property>
     </widget>
+    <addaction name="action_new_graph"/>
+    <addaction name="separator"/>
     <addaction name="action_read_graph"/>
     <addaction name="separator"/>
     <addaction name="action_save_graph"/>
@@ -176,8 +178,6 @@
      </property>
      <addaction name="action_edge_type_polygon"/>
     </widget>
-    <addaction name="action_clear_graph"/>
-    <addaction name="separator"/>
     <addaction name="menu_edge_type"/>
     <addaction name="separator"/>
     <addaction name="action_debug_mode"/>
@@ -278,7 +278,7 @@
           <x>0</x>
           <y>0</y>
           <width>244</width>
-          <height>620</height>
+          <height>700</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="attributeScrollAreaLayout">
@@ -329,8 +329,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>387</width>
-          <height>119</height>
+          <width>386</width>
+          <height>128</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="sceneScrollAreaLayout">
@@ -425,8 +425,8 @@
                  <rect>
                   <x>0</x>
                   <y>0</y>
-                  <width>361</width>
-                  <height>376</height>
+                  <width>360</width>
+                  <height>447</height>
                  </rect>
                 </property>
                 <layout class="QFormLayout" name="consoleScrollAreaLayout">
@@ -475,7 +475,7 @@
                  <item row="3" column="0">
                   <widget class="QLabel" name="cursorXLabel">
                    <property name="text">
-                    <string>Cursor (view):</string>
+                    <string>View Position:</string>
                    </property>
                   </widget>
                  </item>
@@ -501,7 +501,7 @@
                  <item row="4" column="0">
                   <widget class="QLabel" name="sceneCursorXLabel">
                    <property name="text">
-                    <string>Cursor (scene):</string>
+                    <string>Scene Position:</string>
                    </property>
                   </widget>
                  </item>
@@ -524,29 +524,12 @@
                    </layout>
                   </widget>
                  </item>
-                 <item row="5" column="0">
-                  <widget class="QLabel" name="scenePosLabel">
-                   <property name="text">
-                    <string>Scene Pos:</string>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="5" column="1">
                   <widget class="QWidget" name="widget" native="true">
                    <layout class="QHBoxLayout" name="mainLayout_3">
                     <property name="margin">
                      <number>0</number>
                     </property>
-                    <item>
-                     <widget class="QLineEdit" name="scene_posx1"/>
-                    </item>
-                    <item>
-                     <widget class="QLineEdit" name="scene_posy1">
-                      <property name="inputMask">
-                       <string/>
-                      </property>
-                     </widget>
-                    </item>
                    </layout>
                   </widget>
                  </item>
@@ -674,8 +657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>371</width>
-              <height>417</height>
+              <width>370</width>
+              <height>488</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -766,7 +749,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>358</width>
+              <width>357</width>
               <height>504</height>
              </rect>
             </property>
@@ -1127,19 +1110,12 @@
     <string>polygon</string>
    </property>
   </action>
-  <action name="action_reload_style">
+  <action name="action_new_graph">
    <property name="text">
-    <string>Reload Style...</string>
+    <string>New graph</string>
    </property>
-  </action>
-  <action name="action_disconnect_handler">
-   <property name="text">
-    <string>Disconnect handler..</string>
-   </property>
-  </action>
-  <action name="actionDELETE">
-   <property name="text">
-    <string>DELETE</string>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
    </property>
   </action>
  </widget>

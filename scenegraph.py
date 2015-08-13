@@ -271,11 +271,11 @@ class SceneGraphUI(form_class, base_class):
         self.menu_debug.aboutToShow.connect(self.initializeDebugMenu) 
         self.menu_nodes.aboutToShow.connect(self.initializeNodesMenu)
 
-        self.action_save_graph_as.triggered.connect(self.saveGraphAs)
-        self.action_save_graph.triggered.connect(self.saveCurrentGraph)
+        self.action_new_graph.triggered.connect(self.resetGraph)
         self.action_read_graph.triggered.connect(self.readGraph)
+        self.action_save_graph.triggered.connect(self.saveCurrentGraph) 
+        self.action_save_graph_as.triggered.connect(self.saveGraphAs)               
         self.action_revert.triggered.connect(self.revertGraph)
-        self.action_clear_graph.triggered.connect(self.resetGraph)        
         self.action_show_all.triggered.connect(self.togglePrivate)
         
         self.action_reset_scale.triggered.connect(self.resetScale)
@@ -305,13 +305,6 @@ class SceneGraphUI(form_class, base_class):
         self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
         self.button_reset_fonts.clicked.connect(self.resetFontsAction)
 
-
-        # menu hover events
-        self.menu_file.hovered.connect(partial(self.menuHoverAction, menu=self.menu_file))
-        self.menu_edit.hovered.connect(partial(self.menuHoverAction, menu=self.menu_edit))
-        self.menu_graph.hovered.connect(partial(self.menuHoverAction, menu=self.menu_graph))
-        self.menu_nodes.hovered.connect(partial(self.menuHoverAction, menu=self.menu_nodes))
-        self.menu_window.hovered.connect(partial(self.menuHoverAction, menu=self.menu_window))
         
         # output tab buttons
         self.tabWidget.currentChanged.connect(self.updateOutput)
@@ -330,6 +323,16 @@ class SceneGraphUI(form_class, base_class):
         self.undo_stack.cleanChanged.connect(self.buildWindowTitle)
         self.button_undo_clean.clicked.connect(self.clearUndoStack)
         self.button_console_clear.clicked.connect(self.consoleTextEdit.clear)
+
+        # status tips
+        self.action_new_graph.setStatusTip("Clear the graph")
+        self.action_read_graph.setStatusTip("Open a scene")
+        self.action_save_graph.setStatusTip("Save current graph")
+        self.action_save_graph_as.setStatusTip("Save current graph as")
+        self.action_revert.setStatusTip("Revert graph to last saved version")
+        self.action_show_all.setStatusTip("Show hidden node attributes")
+
+        #self.statusBar().messageChanged.connect(self.status_timer.start(4000))
 
     def initializeFileMenu(self):
         """
@@ -489,7 +492,6 @@ class SceneGraphUI(form_class, base_class):
         self.undoTabLayout.insertWidget(0,self.undoView)
         self.undoView.setStack(self.undo_stack)
         self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
-        #self.consoleTextEdit.setFont(self.fonts.get("console"))
 
         # autosave prefs
         self.autosave_time_edit.setText(str(self.autosave_inc/1000))
@@ -753,7 +755,7 @@ class SceneGraphUI(form_class, base_class):
 
     def resetGraph(self):
         """
-        Reset the current graph
+        Clear the current graph.
         """
         self.view.scene().initialize()
         self.graph.reset()
@@ -1152,15 +1154,6 @@ class SceneGraphUI(form_class, base_class):
             print 'text is valid!'
         #self.outputTextBrowser.clear()   
 
-    def menuHoverAction(self, action, menu=None):
-        """
-        :param QtGui.QAction action: current menu item (action).
-        """
-        #msg = action.data()
-        msg = 'selection: %s' % action.text()
-        #self.statusBar().showMessage('[SceneGraph]: %s' % msg)
-        self.updateStatus(msg, level='info')
-
     #- Events ----
     def closeEvent(self, event):
         """
@@ -1475,7 +1468,6 @@ class SceneGraphUI(form_class, base_class):
         graph_data = self.graph.snapshot()
         html_data = self.formatOutputHtml(graph_data, highlight=['name'])
         self.outputTextBrowser.setHtml(html_data)
-        #self.outputTextBrowser.setFont(self.fonts.get('output'))
 
         self.outputTextBrowser.scrollContentsBy(0, posy)
         #self.outputTextBrowser.setReadOnly(True)
@@ -1503,7 +1495,6 @@ class SceneGraphUI(form_class, base_class):
         metadata = node.dagnode.metadata.data   # was node.dagnode.metadata.data
         html_data = self.formatOutputHtml(metadata)
         self.metdataBrowser.setHtml(html_data)
-        self.metdataBrowser.setFont(self.fonts.get('output'))
 
         self.metdataBrowser.scrollContentsBy(0, posy)
         #self.outputTextBrowser.setReadOnly(True)
@@ -1564,13 +1555,6 @@ class SceneGraphUI(form_class, base_class):
             self.scene_posy.clear()
             self.scene_posx.setText('%.2f' % sx)
             self.scene_posy.setText('%.2f' % sy)
-
-        if status.get('scene_pos'):
-            spx, spy = status.get('scene_pos', (0.0,0.0))
-            self.scene_posx1.clear()
-            self.scene_posy1.clear()
-            self.scene_posx1.setText('%.2f' % spx)
-            self.scene_posy1.setText('%.2f' % spy)
 
         scene_str = '%s, %s' % (status.get('scene_size')[0], status.get('scene_size')[1])
         self.sceneRectLineEdit.setText(scene_str)

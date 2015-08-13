@@ -1,0 +1,58 @@
+{
+  "menu_file": {
+    "label": "File",
+    "shortcut": "F",
+    "tooltip": "",
+    "action_new_graph": {
+      "label": "New graph",
+      "tooltip": "Clear the graph.",
+      "shortcut": {
+        "key": "N",
+        "modifier": "Ctrl"
+      },
+      "action": {
+        "command": "SceneGraph.resetGraph",
+        "args": [],
+        "kwargs": {}
+      }
+    },
+    "separator1": "SEPARATOR",
+    "action_read_graph": {
+      "label": "Open graph...",
+      "tooltip": "Open a scene.",
+      "shortcut": {
+        "key": "O",
+        "modifier": "Ctrl"
+      },
+      "action": {
+        "command": "SceneGraph.readGraph",
+        "args": [],
+        "kwargs": {}
+      }
+    },
+    "separator2": "SEPARATOR",
+    "action_save_graph": {
+      "label": "Save graph...",
+      "shortcut": {
+        "key": "S",
+        "modifier": "Ctrl"
+      },
+      "tooltip": "Save current scene.",
+      "action": {
+        "command": "SceneGraph.saveCurrentGraph",
+        "args": [],
+        "kwargs": {}
+      }
+    },
+    "action_save_graph_as": {
+      "label": "Save graph as...",
+      "shortcut": {},
+      "tooltip": "Save current scene as a new scene.",
+      "action": {
+        "command": "SceneGraph.saveGraphAs",
+        "args": [],
+        "kwargs": {}
+      }
+    }
+  }
+}

@@ -9,17 +9,16 @@ from functools import partial
 import inspect
 from collections import OrderedDict as dict
 from SceneGraph import options
-from SceneGraph.core import log, Observer, DagNode, PluginManager, Attribute
+from SceneGraph.core import log, DagNode, PluginManager, Attribute
 from SceneGraph import util
 
 
-class Graph(Observer):
+class Graph(object):
     """
     Wrapper for NetworkX MultiDiGraph. Adds methods to query nodes,
     read & write graph files, etc.
     """
     def __init__(self, *args, **kwargs):
-        super(Graph, self).__init__(*args, **kwargs)
 
         #self.network        = nx.DiGraph()
         self.network        = nx.MultiDiGraph() # mutliple edges between nodes
@@ -380,7 +379,6 @@ class Graph(Observer):
                 
         # get the dag node from the PluginManager
         dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, attributes=attributes, **kwargs)
-        dag.add_observer(self)
 
         # advance the grid to the next value.
         self.grid.next()

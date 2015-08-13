@@ -224,6 +224,7 @@ class GraphicsView(QtGui.QGraphicsView):
             status['view_cursor'] = (epos.x(), epos.y())            
             status['scene_cursor'] = (spos.x(), spos.y())
             status['scene_pos'] = self.getCenterPoint()
+            
         self.statusEvent.emit(status)
 
     def wheelEvent(self, event):

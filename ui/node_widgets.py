@@ -3,12 +3,12 @@ import sys
 import math
 import weakref
 from PySide import QtCore, QtGui
-from SceneGraph.core import log, Observer
+from SceneGraph.core import log
 from SceneGraph import options
 from . import commands
 
 
-class NodeWidget(Observer, QtGui.QGraphicsObject):
+class NodeWidget(QtGui.QGraphicsObject):
 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()

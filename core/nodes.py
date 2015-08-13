@@ -4,7 +4,7 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from SceneGraph.core import log, Attribute, Observable, Event, NodePositionChanged, NodeNameChanged, AttributeUpdatedEvent, MouseHoverEvent, MouseMoveEvent, MousePressEvent 
+from SceneGraph.core import log, Attribute, Event, NodePositionChanged, NodeNameChanged, AttributeUpdatedEvent, MouseHoverEvent, MouseMoveEvent, MousePressEvent 
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
 from SceneGraph import util
 
@@ -16,64 +16,16 @@ PROPERTY_TYPES = dict(
     )
 
 
-class SimpleNode(Observable):
+class Node(object):
 
-    default_name  = 'node'
     default_color = [172, 172, 172, 255]
-    node_type     = 'dagnode'
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
                       'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
 
     def __init__(self, name=None, **kwargs):
+
         self._attributes        = dict()
-
-        Observable.__init__(self)
-        self._metadata          = Metadata(self)
-
-        # basic node attributes        
-        self.name               = name if name else self.default_name
-        self.color              = kwargs.pop('color', self.default_color)
-        self.docstring          = ""
-        self._graph             = kwargs.pop('_graph', None)
-
-        self.width              = kwargs.pop('width', 100.0)
-        self.base_height        = kwargs.pop('base_height', 15.0)
-        self.force_expand       = kwargs.pop('force_expand', False)
-
-        self.pos                = kwargs.pop('pos', (0.0, 0.0))
-        self.enabled            = kwargs.pop('enabled', True)
-        self.orientation        = kwargs.pop('orientation', 'horizontal')
-
-        # metadata
-        metadata                = kwargs.pop('metadata', dict())
-        attributes              = kwargs.pop('attributes', dict())
-
-        # if the node metadata isn't passed from another class, 
-        # read it from disk
-        if not metadata:
-            metadata = self.read_metadata()
-        # ui
-        self._widget            = None  
-
-        UUID = kwargs.pop('id', None)
-        self.id = UUID if UUID else str(uuid.uuid4())
-        self._metadata.update(metadata)
-
-
-class DagNode(Observable):
-
-    default_name  = 'node'
-    default_color = [172, 172, 172, 255]
-    node_type     = 'dagnode'
-    PRIVATE       = ['node_type']
-    REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
-                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
-
-    def __init__(self, name=None, **kwargs):
-        self._attributes        = dict()
-
-        Observable.__init__(self)
         self._metadata          = Metadata(self)
 
         # basic node attributes        
@@ -105,17 +57,6 @@ class DagNode(Observable):
         UUID = kwargs.pop('id', None)
         self.id = UUID if UUID else str(uuid.uuid4())
         self._metadata.update(metadata)
-
-        # attributes
-        self.buildAttributes()
-
-        # update attributes (if reading from scene)
-        if attributes:
-            for attr_name, properties in attributes.iteritems():
-                if attr_name in self._attributes:
-                    self._attributes.get(attr_name).update(**properties)
-                else:
-                    self.add_attr(attr_name, **properties)
 
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
@@ -126,16 +67,17 @@ class DagNode(Observable):
     def __getattr__(self, name):
         if name in self._attributes:
             attribute = self._attributes.get(name)
-            #print 'querying Attribute: "%s"' % name
             return attribute.value
+
         elif hasattr(self, name):
             return getattr(self, name)
+
         raise AttributeError('no attribute exists "%s"' % name)
 
     def __setattr__(self, name, value):
         event = None
-        if name in ['_attributes', '_changed', '_observers', '_widget', '_metadata']:
-            super(DagNode, self).__setattr__(name, value)
+        if name in ['_attributes', '_changed', '_widget', '_metadata']:
+            super(Node, self).__setattr__(name, value)
 
         elif name in self._attributes:            
             attribute = self._attributes.get(name)
@@ -144,11 +86,7 @@ class DagNode(Observable):
                 event = AttributeUpdatedEvent(self, name=name, value=value)
                 attribute.value = value
 
-                # callbacks
-                Observable.set_changed(self)
-                Observable.notify(self, event)
-        else:            
-
+        else:
             # set the position of any connected widgets
             if name == 'pos':
                 event = NodePositionChanged(self)
@@ -163,15 +101,11 @@ class DagNode(Observable):
 
                 event = AttributeUpdatedEvent(self, name=name, value=value)
 
-            # callbacks
-            Observable.set_changed(self)
-            Observable.notify(self, event)
-
             if event is not None:
                 if 'valid_name' in event.data:
                     value = event.data.get('valid_name')
 
-            super(DagNode, self).__setattr__(name, value)
+            super(Node, self).__setattr__(name, value)
 
     @property
     def data(self):
@@ -189,12 +123,10 @@ class DagNode(Observable):
         """
         Connect a widget to the dag.
 
-        params:
-            widget (obj) - NodeWidget class
+        :param SceneGraph.ui.NodeWidget widget: widget object.
         """
         if not self._widget:
             self._widget = widget
-            self.add_observer(widget)
             return True
         return False
 
@@ -218,45 +150,33 @@ class DagNode(Observable):
         self._graph = value
         return self.graph
 
-    #- Virtual ----
+    @property
+    def expanded(self):
+        return True
+
     def evaluate(self):
         """
         Evalutate the node.
         """
-        return True
+        return True 
 
-    #- Transform ----
-    @property
-    def expanded(self):
-        if self.force_expand:
-            return True
-        height = max(len(self.inputs), len(self.outputs))
-        return height > 1
-
+    #- Virtual ----
     @property
     def height(self):
         """
-        Returns the height of the node (height is determined 
-        as base height * max number of connectable attributes)
+        Returns the base height of the node.
 
-        returns:
-            (float) - total height of the node.
+        :returns: total height of the node.
+        :rtype: float
         """
-        btm_buffer = 0
-        max_conn = max(len(self.inputs), len(self.outputs))
-        height = max_conn if max_conn else 1
-        if height > 1 or self.force_expand:
-            height+=1
-            btm_buffer = self.base_height/2
-        return (height * self.base_height) + btm_buffer
+        return self.base_height
 
     @height.setter
     def height(self, value):
         """
         Set the base height value.
 
-        params:
-            value (float) = base height.
+        :param float value: base height.
         """
         self.base_height=value
 
@@ -301,9 +221,8 @@ class DagNode(Observable):
         """
         Rename an attribute.
 
-        params:
-            name     (str) - name of attribute.
-            new_name (str) - new name.
+        :param str name: name of attribute.
+        :param str new_name: new name.
         """
         if name not in self._attributes:
             raise AttributeError(name)
@@ -314,6 +233,173 @@ class DagNode(Observable):
         attr = self._attributes.pop(name)
         attr.name = new_name
         self._attributes.update({attr.name:attr})
+
+    #- Plugins/Metadata ----
+    @property
+    def plugin_file(self):
+        """
+        Returns the plugin file associated with this node type.
+
+        :returns: plugin filename.
+        :rtype: str
+        """
+        import inspect
+        src_file = inspect.getfile(self.__class__)
+        if os.path.exists(src_file.rstrip('c')):
+            plugin_file = src_file.rstrip('c')
+        return plugin_file
+    
+    @property
+    def is_builtin(self):
+        """
+        Returns true if the node is a member for the is_builtin 
+        plugins.
+
+        :returns: plugin is a builtin.
+        :rtype: bool
+        """
+        return SCENEGRAPH_PLUGIN_PATH in self.plugin_file
+
+    def read_metadata(self, verbose=True):
+        """
+        Initialize node metadata from metadata files on disk.
+        Metadata is parsed by looking at the __bases__ of each node
+        class (ie: all DagNode subclasses will inherit all of the default
+        DagNode attributes).
+        """
+        import inspect
+        from . import metadata
+        parser = metadata.MetadataParser()
+
+        node_metadata = dict()
+
+        # query the base classes
+        result = [self.__class__,]
+        for pc in self.ParentClasses():
+            result.append(pc)
+        
+        sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
+
+        for cls in reversed(result):
+            cname = cls.__name__
+            src_file = inspect.getfile(cls)
+            py_src = src_file.rstrip('c')
+
+            dirname = os.path.dirname(src_file)
+            basename = os.path.splitext(os.path.basename(src_file))[0]
+            
+            # return the source .py file if it exists
+            if os.path.exists(py_src):
+                src_file = py_src
+
+            metadata_filename = os.path.join(dirname, '%s.mtd' % basename)
+
+            # default DagNode type is special.
+            if py_src == sg_core_path:
+                metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
+            
+            if not os.path.exists(metadata_filename):
+                log.warning('plugin description file "%s" does not exist.' % metadata_filename)
+                continue
+
+            log.debug('reading plugin metadata file: "%s".' % metadata_filename)
+            # parse the metadata 
+            parsed = parser.parse(metadata_filename)
+
+            for section in parsed:
+                if section not in node_metadata:
+                    node_metadata[section] = dict()
+
+                attributes = parsed.get(section)
+                
+
+                # parse out input/output here?
+                for attr in attributes:
+                    if attr not in node_metadata[section]:
+                        node_metadata.get(section)[attr] = dict()
+
+                    attr_properties = attributes.get(attr)
+                    node_metadata.get(section).get(attr).update(attr_properties)
+
+        return node_metadata
+    
+    def Class(self):
+        return self.__class__.__name__
+
+    def dag_types(self):
+        return [c.__name__ for c in DagNode.__subclasses__()]
+
+    def ParentClasses(self, p=None):
+        """
+        Returns all of this objects' parent classes.
+
+        :param obj p: parent class.
+
+        :returns: list of parent class names.
+        :rtype: list
+        """
+        base_classes = []
+        cl = p if p is not None else self.__class__
+        for b in cl.__bases__:
+            if b.__name__ not in ["object", "Observable"]:
+                base_classes.append(b)
+                base_classes.extend(self.ParentClasses(b))
+        return base_classes
+
+
+
+class DagNode(Node):
+
+    default_name  = 'node'
+    default_color = [172, 172, 172, 255]
+    node_type     = 'dagnode'
+    PRIVATE       = ['node_type']
+    REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
+                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
+
+    def __init__(self, name=None, **kwargs):
+        super(Node, self).__init__(name=name, **kwargs)
+
+        # attributes
+        self.buildAttributes()
+
+        # update attributes (if reading from scene)
+        if attributes:
+            for attr_name, properties in attributes.iteritems():
+                if attr_name in self._attributes:
+                    self._attributes.get(attr_name).update(**properties)
+                else:
+                    self.add_attr(attr_name, **properties)
+    #- Transform ----
+    @property
+    def expanded(self):
+        if self.force_expand:
+            return True
+        height = max(len(self.inputs), len(self.outputs))
+        return height > 1
+
+    def evaluate(self):
+        """
+        Evalutate the node.
+        """
+        return True 
+
+    @property
+    def height(self):
+        """
+        Returns the height of the node (height is determined 
+        as base height * max number of connectable attributes)
+
+        :returns: total height of the node.
+        :rtype: float
+        """
+        btm_buffer = 0
+        max_conn = max(len(self.inputs), len(self.outputs))
+        height = max_conn if max_conn else 1
+        if height > 1 or self.force_expand:
+            height+=1
+            btm_buffer = self.base_height/2
+        return (height * self.base_height) + btm_buffer
 
     #- Connections ----
     def buildAttributes(self, verbose=False):
@@ -405,25 +491,7 @@ class DagNode(Observable):
 
     def map(self, name, properties, connection_type='input', verbose=False):
         """
-        Maps data dictionary to an Attribute. Example:
-
-            "shader_mapping": {
-                "default": {
-                    "type": "FILE",
-                    "value": ""
-                },
-                "label": {
-                    "type": "STRING",
-                    "value": "Mapping"
-                },
-                "desc": {
-                    "type": "STRING",
-                    "value": "shaders mapping file."
-                },
-                "connection_type": {
-                    "type": "INPUT",
-                    "value": "file"
-                }
+        Maps data dictionary to an Attribute.
 
         :param str name: attribute name.
         :param dict properties: attribute dictionary.
@@ -464,208 +532,6 @@ class DagNode(Observable):
         #print '%s attrs: ' % name, pdict
         return self.add_attr(name, connectable=True, connection_type=connection_type, max_connections=max_connections, user=False, **pdict)
 
-    @property
-    def connections(self):
-        """
-        Returns a list of connections (input & output)
-
-        returns:
-            (list) - list of connection names.
-        """
-        conn_names = []
-        for name in self._attributes:
-            if self._attributes.get(name).connectable:
-                conn_names.append(name)
-        return conn_names
-
-    @property
-    def inputs(self):
-        """
-        Returns a list of input connection names.
-
-        returns:
-            (list) - list of input connection names.
-        """
-        connections = []
-        for name in self._attributes:
-            data = self._attributes.get(name)
-            #if data.get('connectable') and data.get('connection_type') == 'output':
-            if data.connectable and data.connection_type == 'input':
-                connections.append(name)
-        return connections
-
-    @property
-    def outputs(self):
-        """
-        Returns a list of output connection names.
-
-        returns:
-            (list) - list of output connection names.
-        """
-        connections = []
-        for name in self._attributes:
-            data = self._attributes.get(name)
-            #if data.get('connectable') and data.get('connection_type') == 'output':
-            if data.connectable and data.connection_type == 'output':
-                connections.append(name)
-        return connections
-
-    def get_input(self, name='input'):
-        """
-        Return a named node input.
-
-        params:
-            name (str) - name of input.
-
-        returns:
-            (Connection) - connection node.
-        """
-        if not name in self._attributes:
-            return
-
-        data = self._attributes.get(name)
-        if data.connectable and data.connection_type == 'input':
-            return self._attributes.get(name)
-        return
-
-    def get_output(self, name='output'):
-        """
-        Return a named node output.
-
-        params:
-            name (str) - name of output.
-
-        returns:
-            (Connection) - connection node.
-        """
-        if not name in self._attributes:
-            return
-
-        data = self._attributes.get(name)
-        if data.connectable and data.connection_type == 'output':
-            return self._attributes.get(name)
-        return
-
-    def is_connected(self, name):
-        """
-        Returns true if the named connection has 
-        a connection.
-
-        params:
-            name (str) - name of connection to query.
-
-        returns:
-            (bool) - connection status.
-        """
-        conn = self.get_connection(name)
-        if not conn:
-            return False
-        return not conn.connectable
-
-    def input_connections(self):
-        """
-        Returns a list of connected DagNodes.
-
-        returns:
-            (list) - list of DagNode objects.
-        """
-        connected_nodes = []
-        for edge in self.graph.network.edges(data=True):
-            # edge = (id, id, {atttributes})
-            srcid, destid, attrs = edge
-            if destid == self.id:
-                if srcid in self.graph.dagnodes:
-                    connected_nodes.append(self.graph.dagnodes.get(srcid))
-        return connected_nodes
-
-    def output_connections(self):
-        """
-        Returns a list of connected DagNodes.
-
-        returns:
-            (list) - list of DagNode objects.
-        """
-        connected_nodes = []
-        for edge in self.graph.network.edges(data=True):
-            # edge = (id, id, {atttributes})
-            srcid, destid, attrs = edge
-            if srcid == self.id:
-                if destid in self.graph.dagnodes:
-                    connected_nodes.append(self.graph.dagnodes.get(destid))
-        return connected_nodes
-
-    @property
-    def is_input_connection(self):
-        """
-        Returns true if the node is an input connection.
-
-        returns:
-            (bool) - node has input connections.
-        """
-        return bool(self.output_connections())
- 
-    @property
-    def is_output_connection(self):
-        """
-        Returns true if the node is an output connection.
-
-        returns:
-            (bool) - node has output connections.
-        """
-        return bool(self.input_connections())   
-
-    def get_connection(self, name):
-        """
-        Returns a named connection (input or output).
-
-        params:
-            name (str) - name of connection to query.
-
-        returns:
-            (Attribute) - connection object.
-        """
-        conn = None
-        if name not in self._attributes:
-            return 
-
-        data = self._attributes.get(name)
-        if data.connectable:
-            return data
-        return
-
-    def rename_connection(self, old, new):
-        """
-        Rename a connection.
-
-        params:
-            old (str) - old connection name.
-            new (new) - new connection name.
-
-        returns:
-            (bool) - rename was successful.
-        """
-        conn = self.get_connection(old)
-        if conn:
-            conn.name = new
-            return True
-        return False
-
-    def remove_connection(self, name):
-        """
-        Remove a named connection (input or output).
-
-        params:
-            name (str) - name of connection to query.
-
-        returns:
-            (bool) - connection was removed.
-        """
-        conn = self.get_connection(name)
-        if conn:
-            self._attributes.pop(name)
-            del conn 
-            return True 
-        return False
 
     #- Plugins/Metadata ----
     @property

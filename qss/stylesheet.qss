@@ -109,49 +109,33 @@ QDockWidget::close-button:hover{
 ##### BUTTONS #####
 */
 
-QPushButton{
-    background-color: @button-bg-dark;
-    border-color: @button-border-dark;
+QPushButton, QToolButton{
+    background-color: @button-bg-color;
+    border-color: @button-border;
     border-style: solid;
     border-width: 1px;
     border-radius: 1px;    
+}
+
+QPushButton{  
     min-width: 88px;
     min-height: 20px;
 }
 
-QPushButton:!enabled{
-    background-color: @button-bg-dark-disabled;
+QPushButton:!enabled, QToolButton:!enabled{
+    color: @button-color-disabled;
+    background-color: @button-bg-disabled;
     font-style: italic;
 }
 
-QPushButton::hover{
+QPushButton::hover, QToolButton::hover{
     border-color: @button-border-hover;
-    background-color: @button-bg-dark-hover;
+    background-color: @button-bg-hover;
 }
 
-QPushButton::selected{
+QPushButton::selected, QToolButton::selected{
     border-color: @button-border-selected;
-    background-color: @button-bg-dark-selected;
-}
-
-QToolButton.Prefs{
-    background-color: @button-bg-dark;
-    border-color: @button-border-dark;
-    border-style: solid;
-    border-width: 1px;
-    border-radius: 1px;    
-    min-width: 88px;
-    min-height: 20px;
-}
-
-QToolButton.Prefs::hover{
-    border-color: @button-border-hover;
-    background-color: @button-bg-dark-hover;
-}
-
-QToolButton.Prefs::selected{
-    border-color: @button-border-selected;
-    background-color: @button-bg-dark-selected;
+    background-color: @button-bg-color-selected;
 }
 
 
@@ -160,7 +144,6 @@ QToolButton.Prefs::selected{
 */
 
 QLineEdit{
-    /*background-color: @widget-bg-color;*/
     background-color: @line-bg-dark;
     border: 1px solid @line-border-light;
     padding: 1px 4px;
@@ -170,17 +153,21 @@ QLineEdit{
 /*
 ##### MENUBAR #####
 */
+QMenuBar{
+    /* background of the menubar widget */
+    background-color: @background-color-darker;
+    padding: 1px 1px;
+    spacing: 5px; /* spacing between menu bar items */
+    border-color: @status-border;
+    border-bottom-width: 2px;
+    /* inset works with 1px, groove 2px*/
+    border-style: groove;
+}
 
 QMenuBar.AttributeMenu::item{
     border-width: 1px;
     border-bottom-color: #939393;
     font-weight: bold;
-}
-
-QMenuBar{
-    /* background of the menubar widget */
-    padding: 1px 1px;
-    spacing: 5px; /* spacing between menu bar items */
 }
 
 /* menu items (top level) */
@@ -255,8 +242,34 @@ QStatusBar {
     padding: 8px;
     font-family: @font-family-mono;
     font-size: @font-size-mono:status;
+    background: @status-bg-color;
     color: @status-color;
-    border-top: 1px solid @status-border;
+    border-color: @status-border;
+    border-top-width: 2px;
+    /* inset works with 1px, groove 2px*/
+    border-style: groove;   
+}
+
+/* resize box */
+QSizeGrip {
+    image: url(:/icons/icons/sizegrip.png);
+    width: 16px;
+    height: 16px;
+    background: none;
+}
+
+/* items in the statusbar (doesn't work??) 
+QStatusBar::item {
+    border: 1px solid @status-border;
+    border-radius: 1px;
+    font-family: @font-family-mono;
+    font-size: @font-size-mono:status;
+}*/
+
+/* widgets added to the statusbar */
+QStatusBar QLabel {
+    font-size: @font-size-mono:status;
+    color: red;
 }
 
 /*
@@ -376,18 +389,18 @@ QTableView {
 }
 
 QTableView.Plugins {
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
 }
 
 TableView {
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
     border: none;
     outline: none;
 }
 
 QTableView::item:hover, TableView::item:hover {
-    background-color: #D3F1FC;
-} 
+    /*background-color: #D3F1FC;*/
+}
 
 /*
 ##### HEADER VIEW #####
@@ -396,9 +409,8 @@ QTableView::item:hover, TableView::item:hover {
 QHeaderView::section {
     background-color: @header-bg-color;
     color: white;
-    padding-left: 4px;
-    border: none;
-    height: 18px;
+    padding: 3px;
+    subcontrol-origin: margin;
     border-top: 1px solid @header-border;
     border-bottom: 1px solid @header-border;
 }
@@ -447,12 +459,15 @@ QLabel.attr_label {
 QTextBrowser.Output{
     font-family: @font-family-mono;
     font-size: @font-size-mono;
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
 }
 
 /*
 ##### TABS #####
 */
+QTabWidget[tabPosition=South] {
+    background: yellow;
+}
 
 /* The tab widget frame */
 QTabWidget::pane { 
@@ -562,14 +577,14 @@ QGroupBox::title:flat {
 */
 
 QListView {
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
     outline: none;
 }
 
 QPlainTextEdit.Console {
     font-family: @font-family-mono;
     font-size: @font-size-mono:console;
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
 }
 
 QPlainTextEdit.attr_text_edit {
@@ -582,7 +597,7 @@ QPlainTextEdit.attr_text_edit {
 
 QGraphicsView, QUndoView {
     /* use padding to control inner border */
-    background-color: @output-bg-dark;
+    background-color: @output-bg-color;
     border-width: 1px;
     border-radius: 1px;
     border-style: inset;

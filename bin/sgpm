@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+import os
+import sys
+from PySide import QtGui, QtCore
+from optparse import OptionParser
+
+
+if __name__ == "__main__":
+    from SceneGraph.ui import PluginManager
+    app = QtGui.QApplication(sys.argv)
+    pmui = PluginManager.PluginManager()
+    pmui.show()
+    sys.exit(app.exec_())

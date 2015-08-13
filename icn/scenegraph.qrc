@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>icons/sizegrip.png</file>
     <file>icons/checkbox-off.png</file>
     <file>icons/checkbox-on.png</file>
     <file>icons/spin-arrow-flat-down.png</file>

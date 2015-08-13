@@ -10,8 +10,21 @@ class PluginManager(QtGui.QDialog):
     def __init__(self, parent=None, plugins=[]):
         QtGui.QDialog.__init__(self, parent)
 
-        self.fonts          = parent.fonts
-        self.plugin_manager = parent.graph.plug_mgr
+        self.fonts          = dict()
+
+        if parent is not None:
+            self.plugin_manager = parent.graph.plug_mgr
+        else:
+            graph = core.Graph()
+            self.plugin_manager = graph.plug_mgr
+
+            # todo: messy haxx
+            from SceneGraph import ui
+            self.stylesheet = ui.StylesheetManager(self)
+            style_data = self.stylesheet.style_data()
+            self.setStyleSheet(style_data) 
+
+        self.setupFonts()
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -89,7 +102,7 @@ class PluginManager(QtGui.QDialog):
         """
         Setup the main UI
         """
-        self.setWindowTitle("Plugin Manager")
+        self.setWindowTitle("SceneGraph Plugin Manager")
         self.pluginsGroup.setTitle("Loaded Plugins")
         self.button_disable.setText("Disable")
         self.button_reload.setText("Reload")
@@ -106,6 +119,7 @@ class PluginManager(QtGui.QDialog):
         self.buttonBox.rejected.connect(self.close)
 
         self.tableSelectionModel.selectionChanged.connect(self.tableSelectionChanged)
+        #self.pluginView.viewport().mouseMoveEvent()
 
     def checkPlugins(self):
         """
@@ -175,6 +189,21 @@ class PluginManager(QtGui.QDialog):
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)
+
+    def setupFonts(self, font='SansSerif', size=9):
+        """
+        Initializes the fonts attribute
+        """
+        self.fonts = dict()
+        self.fonts["ui"] = QtGui.QFont(font)
+        self.fonts["ui"].setPointSize(size)
+
+        self.fonts["mono"] = QtGui.QFont('Monospace')
+        self.fonts["mono"].setPointSize(size)
+
+        self.fonts["disabled"] = QtGui.QFont(font)
+        self.fonts["disabled"].setPointSize(size)
+        self.fonts["disabled"].setItalic(True)
 
 
 class TableView(QtGui.QTableView):
@@ -303,7 +332,6 @@ class PluginTableModel(QtCore.QAbstractTableModel):
 
         is_enabled = plugin[self.PLUGIN_ENABLED_ROW]
 
-
         if role == QtCore.Qt.DisplayRole:
             if column == self.PLUGIN_NAME_ROW:
                 return plugin[self.PLUGIN_NAME_ROW]
@@ -323,8 +351,7 @@ class PluginTableModel(QtCore.QAbstractTableModel):
                 font = self.fonts.get("disabled")
             return font
 
-        elif role == QtCore.Qt.ForegroundRole:
-            
+        elif role == QtCore.Qt.ForegroundRole:            
             brush = QtGui.QBrush()
             brush.setColor(QtGui.QColor(212, 212, 212))
             
@@ -372,3 +399,4 @@ class PluginTableModel(QtCore.QAbstractTableModel):
         if order == QtCore.Qt.DescendingOrder:
             self.plugins.reverse()
         self.emit(QtCore.SIGNAL("layoutChanged()"))
+

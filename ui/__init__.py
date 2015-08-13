@@ -23,7 +23,7 @@ GraphTableModel         = models.GraphTableModel
 TableView               = models.TableView
 NodesListModel          = models.NodesListModel
 EdgesListModel          = models.EdgesListModel
-SceneHandler            = handlers.SceneHandler
+EventHandler            = handlers.EventHandler
 
 
 AttributeEditor         = attributes.AttributeEditor

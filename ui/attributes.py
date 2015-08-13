@@ -2,11 +2,11 @@
 from collections import OrderedDict as dict
 from PySide import QtCore, QtGui
 from SceneGraph import util
-from SceneGraph.core import log, MetadataParser, Observer
+from SceneGraph.core import log, MetadataParser
 from SceneGraph.options import SCENEGRAPH_STYLESHEET_PATH, PLATFORM
 
 
-class AttributeEditor(Observer, QtGui.QWidget):
+class AttributeEditor(QtGui.QWidget):
 
     def __init__(self, parent=None, **kwargs):
         super(AttributeEditor, self).__init__(parent)
@@ -134,7 +134,6 @@ class AttributeEditor(Observer, QtGui.QWidget):
                         editor = map_widget(attr_type, parent=group, name=attr_name, ui=self, icons=self.icons)
 
                         if editor:
-                            #editor.setFont(self.fonts.get("attr_editor"))
                             if editor:
                                 editor.initializeEditor()                                
 
@@ -143,7 +142,6 @@ class AttributeEditor(Observer, QtGui.QWidget):
 
                                 label = label_widget.widget()
                                 label.setProperty("class", "attr_label")
-                                #label.setFont(self.fonts.get("attr_editor_label"))
                                 formLayout.setAlignment(label, QtCore.Qt.AlignVCenter)
 
                                 # add the description
@@ -225,7 +223,6 @@ class AttributeEditor(Observer, QtGui.QWidget):
             parent (QWidget) - parent widget.
         """
         popup_menu = QtGui.QMenu(self)
-        #popup_menu.setFont(self.fonts.get("ui"))
         popup_menu.clear()
         qcurs = QtGui.QCursor()
         add_action = QtGui.QAction('Add attribute', self) 
@@ -309,8 +306,8 @@ class AttributeEditor(Observer, QtGui.QWidget):
 
         self._nodes = dagnodes
         for node in self._nodes:
-            node.add_observer(self)
-
+            pass
+            
         self.clearLayout(self.mainGroupLayout)
         self.buildLayout()
 

@@ -6,6 +6,7 @@ from . import attributes
 # attributes
 Attribute               = attributes.Attribute
 
+
 from . import events
 # events
 Event                   = events.Event
@@ -15,12 +16,6 @@ AttributeUpdatedEvent   = events.AttributeUpdatedEvent
 MouseHoverEvent         = events.MouseHoverEvent
 MouseMoveEvent          = events.MouseMoveEvent
 MousePressEvent         = events.MousePressEvent
-
-
-from . import observable
-from . import observer
-Observable              = observable.Observable
-Observer                = observer.Observer
 
 
 from . import nodes

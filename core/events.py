@@ -9,9 +9,9 @@ class Event(object):
     def __init__(self, parent, *args, **kwargs):        
 
         self.name    = kwargs.get('name', None)
-        self.dagnode = parent
+        self.source  = parent
 
-        self._data  = dict()
+        self._data   = dict()        
         self._data.update(**kwargs)
 
     @property

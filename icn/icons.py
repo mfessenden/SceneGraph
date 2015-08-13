@@ -4,6 +4,7 @@ import scenegraph_rc
 
 
 ICONS = dict(    
+    sizegrip                        = QtGui.QIcon(":/icons/icons/sizegrip.png"),
     checkbox_off                    = QtGui.QIcon(":/icons/icons/checkbox-off.png"),
     checkbox_on                     = QtGui.QIcon(":/icons/icons/checkbox-on.png"),
     spin_arrow_flat_down            = QtGui.QIcon(":/icons/icons/spin-arrow-flat-down.png"),
