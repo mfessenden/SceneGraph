@@ -45,7 +45,7 @@ class Node(object):
         # metadata
         metadata                = kwargs.pop('metadata', dict())
         attributes              = kwargs.pop('attributes', dict())
-        
+
         # if the node metadata isn't passed from another class, 
         # read it from disk
         if not metadata:
@@ -193,8 +193,8 @@ class Node(object):
         """
         Returns a dictionary of connections attributes.
 
-        returns:
-            (dict) - { connection name: Attribute }
+        :returns: dictionary of {connection name : Attribute } 
+        :rtype: dict
         """
         if not args:
             return self._attributes.values()
@@ -218,8 +218,10 @@ class Node(object):
         """
         Return a named attribute.
 
-        params:
-            name (str) - name of attribute.
+        :param str name: name of attribute.
+        
+        :returns: named attribute
+        :rtype: Attribute
         """
         if name not in self._attributes:
             self.add_attr(name)
@@ -358,9 +360,7 @@ class Node(object):
 
 class DagNode(Node):
 
-    default_name  = 'node'
     default_color = [172, 172, 172, 255]
-    node_type     = 'dagnode'
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
                       'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
@@ -563,8 +563,8 @@ class DagNode(Node):
         """
         Returns a list of input connection names.
 
-        returns:
-            (list) - list of input connection names.
+        :returns: list of input connection names.
+        :rtype: list
         """
         connections = []
         for name in self._attributes:
@@ -579,8 +579,8 @@ class DagNode(Node):
         """
         Returns a list of output connection names.
 
-        returns:
-            (list) - list of output connection names.
+        :returns: list of output connection names.
+        :rtype: list
         """
         connections = []
         for name in self._attributes:
@@ -743,6 +743,105 @@ class DagNode(Node):
             del conn 
             return True 
         return False
+
+
+#- Builtins ----
+
+class DefaultNode(DagNode):
+
+    node_type     = 'default'
+    default_name  = 'default'
+    default_color = [172, 172, 172, 255]    
+
+    def __init__(self, name=None, **kwargs):
+        DagNode.__init__(self, name, **kwargs)
+
+
+class DotNode(DagNode):
+
+    default_name  = 'dot'
+    default_color = [172, 172, 172, 255]
+    node_type     = 'dot'
+
+    def __init__(self, name=None, **kwargs):
+        DagNode.__init__(self, name, **kwargs)
+
+        self.radius             = 8.0
+        self.orientation        = 'dot'
+        self.force_expand       = False
+
+        self.add_attr('input', connectable=True, connection_type='input', attr_type='node')
+
+    @property
+    def base_height(self):
+        return self.radius
+    
+    @base_height.setter
+    def base_height(self, value):
+        """
+        Set the base width value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value
+
+    @property
+    def width(self):
+        return self.radius
+    
+    @width.setter
+    def width(self, value):
+        """
+        Set the base width value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value
+
+    @property
+    def height(self):
+        return self.radius
+    
+    @height.setter
+    def height(self, value):
+        """
+        Set the radius value.
+
+        params:
+            value (float) - radius.
+        """
+        self.radius=value
+
+
+class NoteNode(Node):
+
+    node_type     = 'note'
+    default_name  = 'note'
+    default_color = [255, 239, 62, 255]    
+
+    def __init__(self, name=None, **kwargs):
+        Node.__init__(self, name, **kwargs)
+
+        self.corner_loc     = 'top'   
+        self.base_height    = 75
+        self.font_size      = 6
+        self.show_name      = kwargs.get('show_name', False)
+        self.doc_text       = kwargs.get('doc_text', "Sample note text.")        
+
+    @property
+    def data(self):
+        """
+        Output data for writing.
+        """
+        data = dict()
+        for attr in self.REQUIRED:
+            if hasattr(self, attr):
+                data[attr] = getattr(self, attr)
+        data.update(doc_text=self.doc_text, corner_loc=self.corner_loc, font_size=self.font_size, show_name=self.show_name)
+        return data
+
 
 
 #- Metadata -----

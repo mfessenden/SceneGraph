@@ -46,6 +46,7 @@ SCENEGRAPH_ICON_PATH            = os.path.join(SCENEGRAPH_PATH, 'icn')
 SCENEGRAPH_STYLESHEET_PATH      = os.path.join(SCENEGRAPH_PATH, 'qss')
 SCENEGRAPH_TEST_PATH            = os.path.join(SCENEGRAPH_PATH, 'test')
 SCENEGRAPH_CONFIG_PATH          = os.path.join(SCENEGRAPH_PATH, 'cfg')
+SCENEGRAPH_METADATA_PATH        = os.path.join(SCENEGRAPH_PATH, 'mtd')
 
 SCENEGRAPH_PREFS_PATH           = os.path.join(USER_HOME, '.config', PACKAGE)
 SCENEGRAPH_USER_WORK_PATH       = os.path.join(USER_HOME, 'graphs')

@@ -505,8 +505,8 @@ class Graph(object):
         Pass connection string ie: ('node1.output, node2.input'),
         or source dest (ie: 'node1.output', 'node2.input')
 
-        returns:
-            (list) - list of nx edges (id, id, {attributes})
+        :returns: list of nx edges (id, id, {attributes})
+        :rtype: list
         """
         edges=[]
 
@@ -537,7 +537,6 @@ class Graph(object):
             else:
                 if type(args[0]) is str:
                     if ',' in args[0]:
-                        print 'splitting...'
                         src_conn, dest_conn = cs(args[0])
 
         if not src_conn or not dest_conn:
@@ -588,8 +587,8 @@ class Graph(object):
         """
         Returns a valid nx ids tuple.
 
-        returns:
-            (tuple) - (src_id, dest_id)
+        :returns: (src_id, dest_id)
+        :rtype: tuple 
         """
         edges = self.get_edge(*args)
         if edges:
@@ -599,6 +598,9 @@ class Graph(object):
     def edge_nice_name(self, *args):
         """
         Returns a connection string from ids.
+
+        :returns: connection string.
+        :rtype: str
         """
         edges = self.get_edge(*args)
 

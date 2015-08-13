@@ -9,7 +9,7 @@ import time
 import simplejson as json
 
 from SceneGraph.core import log
-from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH
 
 
 log.level = 20 # 20 = info, 
