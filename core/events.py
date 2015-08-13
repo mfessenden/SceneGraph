@@ -1,62 +1,85 @@
 #!/usr/bin/env python
-
+'''
 class Event(object):
-    """
-    The Event class represents a callback that is passed from observer to
-    observable.
-    """
-    event_type = 'generic'
-    def __init__(self, parent, *args, **kwargs):        
 
-        self.name    = kwargs.get('name', None)
-        self.source  = parent
+    def __init__(self):
+        self.handlers = []
+    
+    def add(self, handler):
+        self.handlers.append(handler)
+        return self
+    
+    def remove(self, handler):
+        self.handlers.remove(handler)
+        return self
+    
+    def fire(self, sender, earg=None):
+        for handler in self.handlers:
+            handler(sender, earg)
+    
+    __iadd__ = add
+    __isub__ = remove
+    __call__ = fire
+'''
 
-        self._data   = dict()        
-        self._data.update(**kwargs)
+class Event(object):    
+    def __init__(self, doc=None):
+        self.__doc__ = doc
 
-    @property
-    def type(self):
-        return self.event_type    
-
-    @property
-    def data(self):
-        return self._data   
-
-
-class NodePositionChanged(Event):
-    event_type = 'positionChanged'
-    def __init__(self, parent, *args, **kwargs):
-        super(NodePositionChanged, self).__init__(parent, *args,**kwargs)
-
-
-class NodeNameChanged(Event):
-    event_type = 'nameChanged'
-    def __init__(self, parent, *args, **kwargs):
-        super(NodeNameChanged, self).__init__(parent, *args,**kwargs)
-
-
-class AttributeUpdatedEvent(Event):
-    event_type = 'attributeUpdated'
-    def __init__(self, parent, *args, **kwargs):
-        super(AttributeUpdatedEvent, self).__init__(parent, *args,**kwargs)
-
-        self.value = kwargs.get('value', None)
-        #print '# AttributeUpdatedEvent: "%s": %s' % (self.name, str(self.value))
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        return EventHandler(self, obj)
+    
+    def __set__(self, obj, value):
+        pass
 
 
-class MouseHoverEvent(Event):
-    event_type = 'mouseHover'
-    def __init__(self, parent, *args, **kwargs):
-        super(MouseHoverEvent, self).__init__(parent, *args,**kwargs)
+class EventHandler(object):    
+    def __init__(self, event, obj): 
+
+        self.event = event
+        self.obj = obj
+    
+    def _getHandlers(self):        
+        """(internal use) """        
+        try:
+            eventhandler = self.obj.__eventhandler__
+        except AttributeError:
+            eventhandler = self.obj.__eventhandler__ = {}
+        return eventhandler.setdefault(self.event, [])
+    
+    def add(self, func):        
+        """Add new event handler function.
+        
+        Event handler function must be defined like func(sender, earg).
+        You can add handler also by using '+=' operator.
+        """
+        self._getHandlers().append(func)
+        return self
+    
+    def remove(self, func):        
+        """Remove existing event handler function.
+        
+        You can remove handler also by using '-=' operator.
+        """
+        self._getHandlers().remove(func)
+        return self
+    
+    def notify(self, *args, **kwargs):        
+        """Fire event and call all handler functions
+        
+        You can call EventHandler object itself like e(earg) instead of 
+        e.fire(earg).
+        """        
+        for func in self._getHandlers():
+            func(self.obj, *args, **kwargs)
+
+    def handlerCount(self):
+        return len(self._getHandlers())
+
+    __iadd__ = add
+    __isub__ = remove
+    __call__ = notify
 
 
-class MouseMoveEvent(Event):
-    event_type = 'mouseMove'
-    def __init__(self, parent, *args, **kwargs):
-        super(MouseMoveEvent, self).__init__(parent, *args,**kwargs)
-
-
-class MousePressEvent(Event):
-    event_type = 'mousePress'
-    def __init__(self, parent, *args, **kwargs):
-        super(MousePressEvent, self).__init__(parent, *args,**kwargs)

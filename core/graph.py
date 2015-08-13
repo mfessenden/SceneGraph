@@ -131,6 +131,22 @@ class Graph(object):
             if attr in self.network.graph:
                 self.network.graph.pop(attr)
 
+    #- Events -----
+    def nodeNameChangedEvent(self, *args, **kwargs):
+        node, new_name = args
+        print '# Event: node name changed: "%s" --> "%s"' % (node.name, new_name)
+
+        if not self.is_valid_name(new_name):
+            node.nodeNameChanged.new_name = self.get_valid_name(new_name) 
+
+    def nodePositionChangedEvent(self, *args, **kwargs):
+        node, pos = args
+        print '# Event: node position changed: "%s" --> "%s"' % (node.name, '%.2f, %.2f' % (pos[0], pos[1]))
+
+    def nodeAttributeUpdatedEvent(self, *args, **kwargs):
+        node, attr_name, attr_value = args
+        print '# Event: node attribute updated: "%s" --> "%s: %s"' % (node.name, attr_name, str(attr_value))
+
     def update_observer(self, obs, event, *args, **kwargs):
         """
         Called when the observed object has changed.
@@ -149,7 +165,7 @@ class Graph(object):
                 valid_name = self.get_valid_name(new_name)
                 event.data.update(valid_name=valid_name)
 
-    def updateDagNodes(self, dagnodes):
+    def updateDagNodes(self, dagnodes, debug=False):
         """
         Update the networkx nodes and links attributes from scene values.
 
@@ -163,7 +179,17 @@ class Graph(object):
             log.debug('Graph: updating dag node "%s"' % dag.name)
             nid = dag.id
             if nid in self.network.nodes():
-                self.network.node[nid].update(json.loads(str(dag)))
+                #self.network.node[nid].update(dag.data)
+                dag_data = json.loads(str(dag), object_pairs_hook=dict)
+                nx_data = self.network.node[nid]
+                nx_data.update(dag_data)
+                
+                if debug:
+                    # write temp file
+                    filename = os.path.join(os.path.dirname(self.autosave_path), '%s.json' % dag.name)
+                    fn = open(filename, 'w')
+                    json.dump(dag_data, fn, indent=4)
+                    fn.close()                
 
     def evaluate(self, dagnodes=[], verbose=False):
         """
@@ -381,12 +407,17 @@ class Graph(object):
         # get the dag node from the PluginManager
         dag = self.plug_mgr.get_dagnode(node_type=node_type, name=name, pos=pos, _graph=self, attributes=attributes, **kwargs)
 
+        # connect signals
+        dag.nodeNameChanged += self.nodeNameChangedEvent
+        dag.nodePositionChanged += self.nodePositionChangedEvent
+        dag.nodeAttributeUpdated += self.nodeAttributeUpdatedEvent
+
         # advance the grid to the next value.
         self.grid.next()
         self.dagnodes[dag.id] = dag
         
-        # todo: figure out why I have to load this
-        node_data = json.loads(str(dag))
+        # todo: figure out why I have to load this (need JSONEncoder)
+        node_data = json.loads(str(dag), object_pairs_hook=dict)
         # add the node to the networkx graph
         self.network.add_node(dag.id, **node_data)
 
@@ -621,14 +652,13 @@ class Graph(object):
 
     def remove_edge(self, *args): 
         """
-        Removes an edge from the graph
+        Removes an edge from the graph.
 
-        params:
-            UUID    - (str) edge UUID
-            conn    - (str) connection string (ie "node1.output,node2.input")
+        :param str UUID: edge UUID
+        :param str conn: connection string (ie "node1.output,node2.input")
 
-        returns:
-            (object)  - removed edge
+        :returns: edge removal was successful.
+        :rtype: bool
         """
         edges = self.get_edge(*args)
         if not edges:
@@ -664,8 +694,10 @@ class Graph(object):
         """
         Return the node given a name.
 
-        params:
-            name - (str) node ID
+        :param str name: node ID
+
+        :returns: DagNode UUID
+        :rtype: str
         """
         result = None
         for node in self.network.nodes(data=True):
@@ -681,12 +713,10 @@ class Graph(object):
 
             connection: "node1.output,node2.input"
 
-        params:
-            name - (str) edge ID
+        :param str conn: edge connection string.
 
-
-        returns:
-            (str) - edge UUID
+        :returns: edge UUID
+        :rtype: str
         """
         result = None
         for data in self.network.edges(data=True):
@@ -719,11 +749,10 @@ class Graph(object):
         """
         Returns a list of all connected edges to the given node(s).
 
-        params:
-            dagnodes - (str) or (list)
+        :param list dagnodes: dagnode(s)
 
-        returns:
-            (list) - list of connected edges.
+        :returns: list of connected edges.
+        :rtype: list
         """
         if type(dagnodes) not in [list, tuple]:
             dagnodes = [dagnodes,]

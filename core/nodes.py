@@ -4,8 +4,8 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from SceneGraph.core import log, Attribute, Event, NodePositionChanged, NodeNameChanged, AttributeUpdatedEvent, MouseHoverEvent, MouseMoveEvent, MousePressEvent 
-from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH
+from SceneGraph.core import log, Attribute, Signal, Event
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_METADATA_PATH
 from SceneGraph import util
 
 
@@ -17,6 +17,10 @@ PROPERTY_TYPES = dict(
 
 
 class Node(object):
+
+    nodeNameChanged     = Event('nodeNameChanged')
+    nodePositionChanged  = Event('nodePositionChanged')
+    nodeAttributeUpdated = Event('nodeAttributeUpdated')
 
     default_color = [172, 172, 172, 255]
     PRIVATE       = ['node_type']
@@ -66,6 +70,7 @@ class Node(object):
                 else:
                     self.add_attr(attr_name, **properties)
 
+
     def __str__(self):
         return json.dumps(self.data, default=lambda obj: obj.data, indent=4)
 
@@ -83,7 +88,6 @@ class Node(object):
         raise AttributeError('no attribute exists "%s"' % name)
 
     def __setattr__(self, name, value):
-        event = None
         if name in ['_attributes', '_changed', '_widget', '_metadata']:
             super(Node, self).__setattr__(name, value)
 
@@ -91,27 +95,21 @@ class Node(object):
             attribute = self._attributes.get(name)
 
             if value != attribute.value:
-                event = AttributeUpdatedEvent(self, name=name, value=value)
                 attribute.value = value
-
+                self.nodeAttributeUpdated(self.name, name, value)
         else:
-            # set the position of any connected widgets
-            if name == 'pos':
-                event = NodePositionChanged(self)
+            if name == 'name':
+                self.nodeNameChanged(self, value)
+                if hasattr(self.nodeNameChanged, 'new_name'):
+                    if getattr(self.nodeNameChanged.new_name):
+                        value = self.nodeNameChanged.new_name
+                        del self.nodeNameChanged.new_name
 
-            elif name == 'name':                        
-                event = NodeNameChanged(self, new_name=value)
+            elif name == 'pos':
+                self.nodePositionChanged(self, value)
 
             else:
-                if hasattr(self, name):
-                    if value == getattr(self, name):
-                        return
-
-                event = AttributeUpdatedEvent(self, name=name, value=value)
-
-            if event is not None:
-                if 'valid_name' in event.data:
-                    value = event.data.get('valid_name')
+                self.nodeAttributeUpdated(self, name, value)
 
             super(Node, self).__setattr__(name, value)
 
@@ -306,7 +304,7 @@ class Node(object):
 
             # default DagNode type is special.
             if py_src == sg_core_path:
-                metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
+                metadata_filename = os.path.join(SCENEGRAPH_METADATA_PATH, 'dagnode.mtd')
             
             if not os.path.exists(metadata_filename):
                 log.warning('plugin description file "%s" does not exist.' % metadata_filename)

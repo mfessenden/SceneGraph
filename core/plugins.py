@@ -390,11 +390,10 @@ class PluginManager(object):
         """
         Return the DagNode's default name.
 
-        params:
-            nodetype (str) - node type to query.
+        :param str nodetype: node type to query.
 
-        returns:
-            (str) - node default name.
+        :returns: node default name.
+        :rtype: str 
         """
         if nodetype in self._node_data:
             cls = self._node_data.get(nodetype).get('dagnode')
@@ -407,12 +406,12 @@ class PluginManager(object):
         """
         Returns the metadata description associated the given plugin.
 
-        returns:
-            (str) - plugin source file.
+        :returns: plugin source file.
+        :rtype: str  
         """
         sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
         if filename == sg_core_path:
-            metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, 'dagnode.mtd')
+            metadata_filename = os.path.join(SCENEGRAPH_METADATA_PATH, 'dagnode.mtd')
         else:
             basename = os.path.splitext(os.path.basename(filename))[0]
             metadata_filename = os.path.join(SCENEGRAPH_PLUGIN_PATH, '%s.mtd' % basename)

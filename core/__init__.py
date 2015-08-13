@@ -8,15 +8,12 @@ Attribute               = attributes.Attribute
 
 
 from . import events
+from . import signals
 
 # events
+Signal                  = signals.Signal
 Event                   = events.Event
-NodePositionChanged     = events.NodePositionChanged
-NodeNameChanged         = events.NodeNameChanged
-AttributeUpdatedEvent   = events.AttributeUpdatedEvent
-MouseHoverEvent         = events.MouseHoverEvent
-MouseMoveEvent          = events.MouseMoveEvent
-MousePressEvent         = events.MousePressEvent
+EventHandler            = events.EventHandler
 
 
 from . import manager
