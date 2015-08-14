@@ -131,17 +131,20 @@ class GraphicsView(QtGui.QGraphicsView):
     # debug
     def getContentsSize(self):
         """
-        Returns the contents size (physical size)
+        Returns the contents size (physical size).
+
+        :returns: content size.
+        :rtype: tuple
         """
         crect = self.contentsRect()
-        return [crect.width(), crect.height()]
+        return (crect.width(), crect.height())
     
     def getCenterPoint(self):
         """
         Returns the correct center point of the current view.
 
-        returns:
-            (QPointF) - current view center point.
+        :returns: current view center point.
+        :rtype: QtCore.QPointF
         """
         # maps center to a QPointF
         center_point = self.mapToScene(self.viewport().rect().center())
@@ -151,8 +154,7 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Sets the current scene center point.
 
-        params:
-            pos - (tuple) x & y coordinates.
+        :param tuple pos: x & y coordinates.
         """
         self.centerOn(pos[0],pos[1])
 
@@ -160,8 +162,8 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Returns the scene size.
 
-        returns:
-            (tuple) - coordinates of current scene. (-x, -y, x, y)
+        :returns: coordinates of current scene. (-x, -y, x, y)
+        :rtype: tuple
         """
         if self.scene():
             return self.scene().sceneRect().getCoords()
@@ -170,9 +172,9 @@ class GraphicsView(QtGui.QGraphicsView):
     def getTranslation(self):
         """
         Returns the current scrollbar positions.
-
-        returns:
-            (tuple) - scroll bar coordinates (h, v)
+ 
+        :returns: scroll bar coordinates (h, v)
+        :rtype: tuple
         """
         return [self.horizontalScrollBar().value(), self.verticalScrollBar().value()]
 
@@ -186,8 +188,8 @@ class GraphicsView(QtGui.QGraphicsView):
         """
         Returns a dictionary of scene attributes.
 
-        returns:
-            (dict) - view position, scale, size.
+        :returns: view position, scale, size.
+        :rtype: dict 
         """
         scene_attributes = dict()
         scene_attributes.update(view_scale=self.getScaleFactor())
@@ -438,6 +440,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
 
         self.ui             = ui
         self.edge_type      = ui.edge_type
+        
 
         # graph
         self.graph          = graph
@@ -445,7 +448,8 @@ class GraphicsScene(QtGui.QGraphicsScene):
         self.plug_mgr       = graph.plug_mgr
 
         # temp line for drawing edges
-        self.line           = None  
+        self.line           = None
+        self.handler        = handlers.SceneEventHandler(self)
         self.scenenodes     = dict()
 
         # temp attributes
@@ -562,8 +566,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Add edges to the current scene.
 
-        params:
-            edges (list) - list of nx edge dictionaries.
+        :param list edges: list of nx edge dictionaries.
         """
         if type(edges) not in [list, tuple]:
             edges = [edges,]

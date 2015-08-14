@@ -22,7 +22,7 @@ class AttributeEditor(QtGui.QWidget):
         self._show_private  = self._ui._show_private
         self._graph         = self._handler.graph    
         self._add_dialog    = None
-        self.icons          = self._handler.icons
+        self.icons          = icons.ICONS
 
         self.setObjectName("AttributeEditor")
         self.mainLayout = QtGui.QVBoxLayout(self)
@@ -250,7 +250,7 @@ class AttributeEditor(QtGui.QWidget):
                     updated_nodes.append(node)
         
         # update graph
-        self.handler.dagNodesUpdatedAction(updated_nodes)
+        self.handler.dagNodesUpdatedEvent(updated_nodes)
         return updated_nodes
 
     def launchAddAttributeDialog(self):
@@ -561,7 +561,7 @@ class AddAttributeDialog(QtGui.QDialog):
         #self.parent().updateChildEditors([attr_name])
         self.parent().clearLayout(self.parent().mainGroupLayout)
         self.parent().buildLayout()
-        self.parent().handler.dagNodesUpdatedAction(self._nodes)
+        self.parent().handler.dagNodesUpdatedEvent(self._nodes)
         self.close()
 
     def sizeHint(self):

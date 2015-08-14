@@ -733,11 +733,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Disconnect the edge widget from the connection.
 
-        params:
-            conn (Connection) - node connection widget.
+        :param Connection conn: node connection widget.
 
-        returns:
-            (bool) - disconnection succeeded.
+        :returns: disconnection succeeded.
+        :rtype: bool 
         """
         if not conn:
             log.warning('invalid connection.')
@@ -751,6 +750,9 @@ class EdgeWidget(QtGui.QGraphicsObject):
     def breakConnections(self):
         """
         Disconnect all connection objects.
+
+        :returns: disconnection succeeded.
+        :rtype: bool 
         """
         result = True
         if not self.disconnect_terminal(self.source_item()):
@@ -1405,7 +1407,7 @@ class Connection(QtGui.QGraphicsObject):
 
 
 class DefaultWidget(NodeWidget):
-    node_class     = 'dagnode' 
+    node_class     = 'default' 
     def __init__(self, dagnode, parent=None):
         super(DefaultWidget, self).__init__(dagnode, parent)
 

@@ -233,6 +233,7 @@
     </property>
     <addaction name="action_reset_dots"/>
     <addaction name="action_evaluate"/>
+    <addaction name="action_update_graph"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_edit"/>
@@ -1116,6 +1117,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="action_update_graph">
+   <property name="text">
+    <string>Update graph...</string>
    </property>
   </action>
  </widget>

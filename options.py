@@ -39,6 +39,7 @@ API_MINIMUM                     = 0.647
 PLATFORM, USER_HOME             = setup_platform_defaults()
 
 SCENEGRAPH_PATH                 = os.path.dirname(__file__)
+SCENEGRAPH_CORE                 = os.path.join(SCENEGRAPH_PATH, 'core')
 SCENEGRAPH_PLUGIN_PATH          = os.path.join(SCENEGRAPH_PATH, 'plugins')
 SCENEGRAPH_UI                   = os.path.join(SCENEGRAPH_PATH, 'ui', 'SceneGraph.ui')
 SCENEGRAPH_ATTR_EDITOR_UI       = os.path.join(SCENEGRAPH_PATH, 'ui', 'designer', 'NodeAttributes.ui')

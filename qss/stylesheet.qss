@@ -786,6 +786,10 @@ QCheckBox::indicator:checked {
     image: url(:/icons/icons/checkbox-on.png);
 }
 
+QDialogButtonBox {
+    dialogbuttonbox-buttons-have-icons: 0;
+}
+
 /*
 QFrame QGraphicsView{
     border: 2px solid green;

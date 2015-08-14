@@ -22,8 +22,9 @@ class Graph(object):
     def __init__(self, *args, **kwargs):
 
         # events
-        self.dagNodesAdded   = EventHandler(self)
+        self.nodesAdded      = EventHandler(self)
         self.edgesAdded      = EventHandler(self)
+        self.graphUpdated    = EventHandler(self)
 
         #self.network        = nx.DiGraph()
         self.network         = nx.MultiDiGraph() # mutliple edges between nodes
@@ -433,9 +434,7 @@ class Graph(object):
         # add the node to the networkx graph
         self.network.add_node(dag.id, **node_data)
 
-        # update the scene
-        if self.handler is not None:
-            self.handler.dagNodesAdded([dag.id,])
+        self.nodesAdded([dag.id])
         return dag
 
     def parse_connections(self, data):
@@ -476,8 +475,7 @@ class Graph(object):
 
         if node_ids:
             # update the scene
-            if self.handler is not None:
-                self.handler.dagUpdated(node_ids)
+            self.graphUpdated(node_ids)
             return True
         return False
 
@@ -536,8 +534,7 @@ class Graph(object):
             dest_conn._edges.append(edge_id_str)
 
             # update the scene
-            if self.handler is not None:
-                self.handler.dagEdgesAdded(new_edge.get('attributes'))
+            self.edgesAdded([new_edge.get('attributes')])
             return new_edge
         return
 
@@ -686,8 +683,7 @@ class Graph(object):
                 self.remove_node_edge(*edge_id)        
 
                 # update the scene
-                if self.handler is not None:
-                    self.handler.dagUpdated(edge_id)
+                self.graphUpdated(edge_id)
                 return True
         return False
 

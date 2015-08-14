@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import re
-import imp
 import sys
 import pkgutil
 import inspect
@@ -9,7 +8,7 @@ import time
 import simplejson as json
 
 from SceneGraph.core import log
-from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH, SCENEGRAPH_CORE
 
 
 log.level = 20 # 20 = info, 
@@ -29,12 +28,16 @@ class PluginManager(object):
         self._node_data = dict()    
 
         # plugin paths & module data
+        self._builtin_plugin_path    = SCENEGRAPH_PLUGIN_PATH
         self._default_plugin_path    = SCENEGRAPH_PLUGIN_PATH
         self._default_modules        = get_modules(self._default_plugin_path)
 
         # external paths & module
         self._external_plugin_paths  = paths
         self._external_modules       = []
+
+        # load core nodes
+        self.load_core()
 
         # auto-load default plugins
         self.load_plugins(self._default_plugin_path)
@@ -185,6 +188,111 @@ class PluginManager(object):
 
     #- Loading ----
 
+    def load_core(self, plugins=[]):
+        """
+        Load core node types.
+
+
+        :param list plugins: plugin names to filter.
+        """
+        log.info('loading plugins...')
+
+        core_path = SCENEGRAPH_CORE
+        widget_path = os.path.join(SCENEGRAPH_CORE, 'ui')
+
+        builtins = self._load_core(core_path, plugins=plugins)
+        widgets = self._load_core_widgets(widget_path, plugins=builtins)
+
+    def _load_core(self, path, plugins=[]):
+        """
+        Dynamically load all submodules/asset classes
+        in this package.
+
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
+
+        :returns: list of loaded plugin names.
+        :rtype: list
+        """
+        imported = []
+        fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
+
+        for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
+            module = loader.find_module(mod_name).load_module(mod_name)
+
+            modfn = module.__file__
+            src_file = None
+            md_file  = None
+            fnmatch = re.search(fexpr, modfn)
+
+            if fnmatch:
+                bn = fnmatch.group('basename')
+                bfn = os.path.basename(bn)
+                src_file = os.path.join('%s.py' % bn)
+
+            node_type = parse_module_variable(module, 'SCENEGRAPH_NODE_TYPE')
+            
+            # filter DagNode types
+            for cname, obj in inspect.getmembers(module, inspect.isclass):
+                
+                
+                if hasattr(obj, 'node_type'):
+                    node_type = getattr(obj, 'node_type') 
+                    # todo: check if node_type is what we want
+                    if not plugins or node_type in plugins:
+                        if cname in globals():
+                            continue
+
+                        globals()[cname] = obj
+                        # imported.append(cname) 
+                        imported.append(node_type)                
+                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
+
+                        # add source and metadata files
+                        if os.path.exists(src_file):
+                            self._node_data.get(node_type).update(source=src_file)
+
+                        #if os.path.exists(md_file):
+                        md_file = os.path.join(SCENEGRAPH_METADATA_PATH, '%s.mtd' % node_type)
+                        if os.path.exists(md_file):
+                            self._node_data.get(node_type).update(metadata=md_file)
+
+        return sorted(list(set(imported)))
+
+    def _load_core_widgets(self, path, plugins=[]):
+        """
+        Dynamically load all node widgets.
+
+        :param str path: path to scan.
+        :param list plugins: plugin names to filter.
+
+        :returns: dictionary of node type, widget.
+        :rtype: dict
+        """
+        imported = dict()
+        fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
+
+        for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
+            module = loader.find_module(mod_name).load_module(mod_name)
+
+
+            if node_type:
+                modfn = module.__file__
+                src_file = None
+
+                fnmatch = re.search(fexpr, modfn)
+                if fnmatch:
+                    src_file = '%s.py' % fnmatch.group('basename')
+
+                # filter DagNode types
+                for cname, obj in inspect.getmembers(module, inspect.isclass):
+                    if hasattr(obj, 'node_class'):
+                        node_class = obj.node_class
+                        if not plugins or node_class in plugins:
+                            globals()[cname] = obj
+                            imported.update({node_type:{'widget':globals()[cname]}})              
+        return imported
+
     def load_plugins(self, path=None, plugins=[]):
         """
         Load built-in and external asset types
@@ -200,8 +308,6 @@ class PluginManager(object):
             path = self.default_plugin_path
 
         builtins = self._load_builtins(path, plugins=plugins)
-        #external = _load_external_classes(path, verbose=verbose, asset_name=asset_name)
-        #widgets = self._load_widgets(path, plugins=plugins)
 
     def _load_builtins(self, path, plugins=[]):
         """

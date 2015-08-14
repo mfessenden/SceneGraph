@@ -4,7 +4,7 @@ import sys
 import uuid
 import simplejson as json
 from collections import OrderedDict as dict
-from SceneGraph.core import log, Attribute, EventHandler
+from SceneGraph.core import log, Attribute, EventHandler, MetadataParser
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_METADATA_PATH
 from SceneGraph import util
 
@@ -275,8 +275,7 @@ class Node(object):
         DagNode attributes).
         """
         import inspect
-        from . import metadata
-        parser = metadata.MetadataParser()
+        parser = MetadataParser()
 
         node_metadata = dict()
 

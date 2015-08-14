@@ -724,15 +724,14 @@ class SceneGraphUI(form_class, base_class):
 
          * todo: perform os check to see if the file is newer
         
-        params:
-            filename (str) - file to check for autosave.
+        param str filename: file to check for autosave.
 
-        returns:
-            (str) - file to read.
+        :returns: file to read.
+        :rtype: str
         """
         autosave_file = '%s~' % filename
         if os.path.exists(autosave_file):
-            use_autosave = self.promptDialog("Autosave exists: %s, use that?" % autosave_file)
+            use_autosave = self.promptDialog("Newer Autosave", "Autosave exists: %s, use that?" % autosave_file)
             if use_autosave:
                 try:
                     import shutil
@@ -1163,7 +1162,7 @@ class SceneGraphUI(form_class, base_class):
 
         save_action = False
         if not self.undo_stack.isClean():
-            save_action = self.promptDialog("Scene has been modified, save?")
+            save_action = self.promptDialog("Scene Modified", "Scene has been modified, save?")
 
         if save_action:
             self.graph.save()
@@ -1619,11 +1618,11 @@ class SceneGraphUI(form_class, base_class):
         return filename
 
     #- Dialogs -----
-    def promptDialog(self, msg):
+    def promptDialog(self, label, msg):
         """
         Simple Qt prompt dialog.
         """
-        result = QtGui.QMessageBox.question(self, 'Prompt', msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
+        result = QtGui.QMessageBox.question(self, label, msg, QtGui.QMessageBox.Yes|QtGui.QMessageBox.No)
         if (result == QtGui.QMessageBox.Yes):
             return True
         return False

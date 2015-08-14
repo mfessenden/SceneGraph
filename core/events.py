@@ -7,12 +7,15 @@ class EventHandler(object):
 
         self.callbacks = []
         self.sender = sender
+        self.blocked = False
 
     def __call__(self, *args, **kwargs):
         """
         Runs all callbacks.
         """
-        return [callback(self.sender, *args, **kwargs) for callback in self.callbacks]
+        if not self.blocked:
+            return [callback(self.sender, *args, **kwargs) for callback in self.callbacks]
+        return []
 
     def __iadd__(self, callback):
         """
@@ -39,6 +42,14 @@ class EventHandler(object):
 
     def __delitem__(self, index):
         del self.callbacks[index]
+
+    def blockSignals(self, block):
+        """
+        Block signals to the event.
+
+        :param bool block: block signals.
+        """
+        self.blocked = block
 
     def add(self, callback):
         """
