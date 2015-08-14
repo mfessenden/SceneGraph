@@ -11,8 +11,6 @@ from SceneGraph.core import log
 from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH, SCENEGRAPH_CORE
 
 
-log.level = 20 # 20 = info, 
-
 
 class PluginManager(object):
     """
@@ -192,13 +190,12 @@ class PluginManager(object):
         """
         Load core node types.
 
-
         :param list plugins: plugin names to filter.
         """
         log.info('loading plugins...')
 
         core_path = SCENEGRAPH_CORE
-        widget_path = os.path.join(SCENEGRAPH_CORE, 'ui')
+        widget_path = os.path.join(SCENEGRAPH_PATH, 'ui')
 
         builtins = self._load_core(core_path, plugins=plugins)
         widgets = self._load_core_widgets(widget_path, plugins=builtins)
@@ -245,8 +242,9 @@ class PluginManager(object):
 
                         globals()[cname] = obj
                         # imported.append(cname) 
-                        imported.append(node_type)                
-                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
+                        imported.append(node_type)
+                        # raw_data = pkgutil.get_data('mod.components', 'data.txt')            
+                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':'core', 'class':None}})
 
                         # add source and metadata files
                         if os.path.exists(src_file):
@@ -275,22 +273,23 @@ class PluginManager(object):
         for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
             module = loader.find_module(mod_name).load_module(mod_name)
 
+            modfn = module.__file__
+            src_file = None
 
-            if node_type:
-                modfn = module.__file__
-                src_file = None
+            fnmatch = re.search(fexpr, modfn)
+            if fnmatch:
+                src_file = '%s.py' % fnmatch.group('basename')
+                print 'source file: ', src_file
 
-                fnmatch = re.search(fexpr, modfn)
-                if fnmatch:
-                    src_file = '%s.py' % fnmatch.group('basename')
-
-                # filter DagNode types
-                for cname, obj in inspect.getmembers(module, inspect.isclass):
-                    if hasattr(obj, 'node_class'):
-                        node_class = obj.node_class
-                        if not plugins or node_class in plugins:
-                            globals()[cname] = obj
-                            imported.update({node_type:{'widget':globals()[cname]}})              
+            # filter DagNode types
+            for cname, obj in inspect.getmembers(module, inspect.isclass):
+                #print 'class: ', cname
+                if hasattr(obj, 'node_class'):
+                    node_class = obj.node_class
+                    if not plugins or node_class in plugins:
+                        #print 'node class: ', node_class
+                        globals()[cname] = obj
+                        imported.update({node_class:{'widget':globals()[cname]}})
         return imported
 
     def load_plugins(self, path=None, plugins=[]):
@@ -349,7 +348,7 @@ class PluginManager(object):
 
                             globals()[cname] = obj
                             imported.append(cname)                
-                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True}})
+                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':None, 'class':None}})
 
                             # add source and metadata files
                             if os.path.exists(src_file):
@@ -567,8 +566,8 @@ def get_modules(path):
     """
     Returns all sub-modules of this package.
 
-    returns:
-        (list) - list of module names in the current package.
+    :returns: list of module names in the current package.
+    :rtype: list
     """
     mod_names = []
     modules = pkgutil.iter_modules(path=[path])

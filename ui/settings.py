@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 from PySide import QtCore, QtGui
+
+from SceneGraph import options
 from SceneGraph.core import log
 
 
@@ -44,6 +46,42 @@ class Settings(QtCore.QSettings):
 
             while self.group():
                 self.endGroup()
+                
+    @property
+    def groups(self):
+        """
+        Returns the current preferences groups.
+
+        :returns: current preferences groups.
+        :rtype: list
+        """
+        return self._groups
+
+    def addGroup(self, group):
+        """
+        Add a group to the current preferences groups.
+
+        :param str group: name of group to add.
+        :returns: group was successfully added.
+        :rtype: bool
+        """
+        if group not in self._groups:
+            self._groups.append(group)
+            return True
+        return False
+
+    def removeGroup(self, group):
+        """
+        Remove a group from the preferences groups.
+
+        :param str group: name of group to remove.
+        :returns: group was successfully removed.
+        :rtype: bool
+        """
+        if group in self._groups:
+            self._groups.remove(group)
+            return True
+        return False
 
     def window_keys(self):
         """
@@ -79,6 +117,8 @@ class Settings(QtCore.QSettings):
                     layout_names.append(str(attrs[-1]))
 
         return sorted(list(set(layout_names)))
+
+    #- Layouts ----
 
     def saveLayout(self, layout):
         """
@@ -136,7 +176,6 @@ class Settings(QtCore.QSettings):
                 window_state = '%s/windowState/%s' % (widget_name, layout)
                 if window_state in self.allKeys():
                     self.remove(window_state)
-
 
     def getDefaultValue(self, key, *groups):
         """

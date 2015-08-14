@@ -1361,6 +1361,8 @@ class Graph(object):
                 print '\n%s\nPlugin: %s\n%s' % ('-' *35, node_type, '-' * 35)
             print 'source file: %s' % data.get('source')
             print 'metadata:    %s' % data.get('metadata')
+            print 'class:       %s' % data.get('class')
+            print 'category:    %s' % data.get('category')
             print 'dagnode:     %s' % dagnode
             print 'widget:      %s' % widget
             row+=1

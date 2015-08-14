@@ -746,6 +746,8 @@ class DagNode(Node):
 class DefaultNode(DagNode):
 
     node_type     = 'default'
+    node_class    = 'evaluate'
+    node_category = 'core'
     default_name  = 'default'
     default_color = [172, 172, 172, 255]    
 
@@ -755,9 +757,11 @@ class DefaultNode(DagNode):
 
 class DotNode(DagNode):
 
+    node_type     = 'dot'
+    node_class    = 'evaluate'
+    node_category = 'core'
     default_name  = 'dot'
     default_color = [172, 172, 172, 255]
-    node_type     = 'dot'
 
     def __init__(self, name=None, **kwargs):
         DagNode.__init__(self, name, **kwargs)
@@ -814,6 +818,8 @@ class DotNode(DagNode):
 class NoteNode(Node):
 
     node_type     = 'note'
+    node_class    = 'output'
+    node_category = 'core'
     default_name  = 'note'
     default_color = [255, 239, 62, 255]    
 

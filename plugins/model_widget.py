@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from SceneGraph.ui import NodeWidget
+from SceneGraph.ui.node_widgets import NodeWidget
 
 
 SCENEGRAPH_WIDGET_TYPE = 'model'

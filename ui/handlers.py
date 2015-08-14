@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 from PySide import QtCore
+
 from SceneGraph import core
-from . import node_widgets
-from . import commands
+from SceneGraph.ui import node_widgets
+from SceneGraph.ui import commands
+
 
 log = core.log
 

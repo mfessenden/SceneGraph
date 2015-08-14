@@ -5,9 +5,10 @@ from functools import partial
 from SceneGraph import core
 from SceneGraph.core import nodes
 
-from . import node_widgets
-from . import handlers
-from . import commands
+from SceneGraph.ui import handlers
+from SceneGraph.ui import node_widgets
+from SceneGraph.ui import commands
+
 
 # logger
 log = core.log
@@ -437,7 +438,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
     """
     def __init__(self, parent=None, graph=None, ui=None, **kwargs):
         QtGui.QGraphicsScene.__init__(self, parent)
-
+        
         self.ui             = ui
         self.edge_type      = ui.edge_type
         

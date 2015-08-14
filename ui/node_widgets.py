@@ -5,7 +5,7 @@ import weakref
 from PySide import QtCore, QtGui
 from SceneGraph.core import log
 from SceneGraph import options
-from . import commands
+from SceneGraph.ui.commands import SceneNodesCommand, SceneChangedCommand
 
 
 class NodeWidget(QtGui.QGraphicsObject):
@@ -232,7 +232,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         # Don't register undos for selections without moves
         if self.pos() != self._current_pos:
             snapshot = self.scene().graph.snapshot()
-            self.scene().undo_stack.push(commands.SceneNodesCommand(self._data_snapshot, snapshot, self.scene()))
+            self.scene().undo_stack.push(SceneNodesCommand(self._data_snapshot, snapshot, self.scene()))
         QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
 
     def boundingRect(self):
@@ -437,8 +437,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Returns a named connection.
 
-        returns:
-            (Connection) - connection widget.
+        :returns: connection widget.
+        :rtype: Connection
         """
         if name not in self.inputs and name not in self.outputs:
             return 
@@ -462,8 +462,7 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Update all of the connection widgets.
 
-        params:
-            remove (bool) - force connection removal & rebuild.
+        :param bool remove: force connection removal & rebuild.
         """
         inp_start = self.input_pos
         out_start = self.output_pos
@@ -1407,7 +1406,7 @@ class Connection(QtGui.QGraphicsObject):
 
 
 class DefaultWidget(NodeWidget):
-    node_class     = 'default' 
+    node_type     = 'default' 
     def __init__(self, dagnode, parent=None):
         super(DefaultWidget, self).__init__(dagnode, parent)
 
@@ -1415,11 +1414,12 @@ class DefaultWidget(NodeWidget):
 
 class DotWidget(QtGui.QGraphicsObject): 
 
+    node_type      = 'dot'
+    node_class     = 'dagnode' 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
     nodeChanged    = QtCore.Signal(object) 
     nodeDeleted    = QtCore.Signal(object)
-    node_class     = 'dot' 
 
     def __init__(self, dagnode, parent=None):
         super(DotWidget, self).__init__(parent)
@@ -1486,8 +1486,7 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         Update all of the connection widgets.
 
-        params:
-            remove (bool) - force connection removal & rebuild.
+        :param bool remove: force connection removal & rebuild.
         """
         for conn_name in self.dagnode.connections:
             conn_dag = self.dagnode.get_connection(conn_name)
@@ -1951,11 +1950,12 @@ class DotWidget(QtGui.QGraphicsObject):
 
 class NoteWidget(QtGui.QGraphicsObject): 
 
+    node_type      = 'note'
+    node_class     = 'dagnode' 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
     nodeChanged    = QtCore.Signal(object) 
-    nodeDeleted    = QtCore.Signal(object)
-    node_class     = 'note' 
+    nodeDeleted    = QtCore.Signal(object)     
 
     def __init__(self, dagnode, parent=None):
         super(NoteWidget, self).__init__(parent)

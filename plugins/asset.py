@@ -7,10 +7,12 @@ SCENEGRAPH_NODE_TYPE = 'asset'
 
 
 class AssetNode(DagNode):
-
+    
+    node_type     = 'asset'
+    node_class    = 'container'
+    node_category = 'builtin'
     default_name  = 'asset'
     default_color = [174, 188, 43, 255]
-    node_type     = 'asset'
 
     def __init__(self, name=None, **kwargs):
         DagNode.__init__(self, name, **kwargs)

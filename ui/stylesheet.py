@@ -5,7 +5,7 @@ import re
 import sys
 from collections import OrderedDict as dict
 from string import Template
-from PySide import QtCore, QtGui
+
 import simplejson as json
 
 from SceneGraph.core import log
@@ -29,11 +29,12 @@ class StylesheetManager(object):
     substitution via external config files.
     """
     def __init__(self, parent=None, style='default', paths=[]):
+        from PySide.QtGui import QFontDatabase
 
         self._ui            = parent                    # parent UI
         self._style         = style                     # style to parse
-        self._font_db       = QtGui.QFontDatabase()     # font database
-        self._fonts         = dict()                    # dictionary of font types
+        self._font_db       = QFontDatabase()           # font database
+        self._fonts         = dict()                    # dictionary of valid font types (ui, mono)
 
         self._config_paths  = ()                        # paths for cfg mods
         self._config_files  = dict()                    # cfg files
@@ -59,9 +60,17 @@ class StylesheetManager(object):
 
         self._config_paths = self._get_config_paths(paths=paths)
         self._config_files = self._get_config_files(self._config_paths)
-
         self._qss_paths = self._get_qss_paths(paths=paths)
         self._qss_files = self._get_qss_files(self._qss_paths)
+
+        # set parent defaults if not already set
+        defaults = self.font_defaults()
+        for default in defaults.keys():
+            if hasattr(self._ui, default):
+                if getattr(self._ui, default) is None:
+                    value = defaults.get(default)
+                    #print '# DEBUG: setting UI default; "%s", "%s"' % (default, value)
+                    setattr(self._ui, default, value)
 
         self._initialized = True
 
@@ -193,11 +202,10 @@ class StylesheetManager(object):
         """
         Get config files.
 
-        params:
-            paths (list) - list of paths to add to the scan.
+        :param list path: ist of paths to add to the scan.
 
-        returns:
-            (dict) - dictionary of config names/filenames.
+        :returns: dictionary of config names/filenames.
+        :rtype: dict
         """
         cfg_files = dict()
         if not paths:
@@ -226,11 +234,10 @@ class StylesheetManager(object):
         """
         Get qss files.
 
-        params:
-            paths (list) - list of paths to add to the scan.
+        :param list path: ist of paths to add to the scan.
 
-        returns:
-            (dict) - dictionary of stylesheet names/filenames.
+        :returns: dictionary of stylesheet names/filenames.
+        :rtype: dict
         """
         qss_files = dict()
         if not paths:
@@ -257,8 +264,10 @@ class StylesheetManager(object):
         """
         Parse the stylesheet name from a file.
 
-        params:
-            filename (str) - filename to read.
+        :param str: filename to read.
+
+        :returns: style name.
+        :rtype: str
         """
         style_name = None
         if os.path.exists(filename):
@@ -291,8 +300,10 @@ class StylesheetManager(object):
         """
         Builds the manager fonts list.
 
-        params:
-            valid (list) - list of valid font names.
+        :param list valid: list of valid font names.
+
+        :returns: dictionary of fonts.
+        :rtype: dict
         """
         if not valid:
             valid = [x for fontlist in options.SCENEGRAPH_VALID_FONTS.values() for x in fontlist]
@@ -567,6 +578,7 @@ class StyleParser(object):
         """
         * Not used.        
         """
+        from PySide import QtCore
         ssf = QtCore.QFile(default_stylesheet)
         ssf.open(QtCore.QFile.ReadOnly)
         self._ui.setStyleSheet(str(ssf.readAll()))

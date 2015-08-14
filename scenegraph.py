@@ -10,8 +10,13 @@ import simplejson as json
 
 from SceneGraph import options
 from SceneGraph import core
-from SceneGraph import ui
-from SceneGraph import util      
+from SceneGraph import util 
+
+from SceneGraph.ui import stylesheet
+from SceneGraph.ui import settings
+from SceneGraph.ui import models
+from SceneGraph.ui import attributes
+from SceneGraph.ui import graphics
 
 
 log = core.log
@@ -64,12 +69,6 @@ class SceneGraphUI(form_class, base_class):
         self.pmanager             = None                                    # Plugin manager UI
         self.attr_manager         = None                                    # Attribute manager dialog  
 
-        # preferences
-        self.debug                = kwargs.get('debug', False)
-        self.use_gl               = kwargs.get('use_gl', False)
-        self.use_stylesheet       = kwargs.get('use_stylesheet', True)
-        self.stylesheet           = ui.StylesheetManager(self)              # stylesheet manager
-        
         # font prefs
         self.font_family_ui       = None
         self.font_family_mono     = None
@@ -77,6 +76,13 @@ class SceneGraphUI(form_class, base_class):
         self.font_size_ui         = None
         self.font_size_mono       = None
         self.stylesheet_name      = None
+
+        # preferences
+        #self.logging_level        = None # removed, this is a global
+        self.debug                = kwargs.get('debug', False)
+        self.use_gl               = kwargs.get('use_gl', False)
+        self.use_stylesheet       = kwargs.get('use_stylesheet', True)
+        self.stylesheet           = stylesheet.StylesheetManager(self)      # stylesheet manager
 
         self._show_private        = False
         self._valid_plugins       = []  
@@ -101,40 +107,40 @@ class SceneGraphUI(form_class, base_class):
 
         # preferences
         self.settings_file        = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
-        self.qtsettings           = ui.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
+        self.qtsettings           = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
         self.qtsettings.setFallbacksEnabled(False)
 
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
 
         # item views/models
-        self.tableView = ui.TableView(self.sceneWidgetContents)
+        self.tableView = models.TableView(self.sceneWidgetContents)
         self.sceneScrollAreaLayout.addWidget(self.tableView)
-        self.tableModel = ui.GraphTableModel(headers=['Node Type', 'Node'])
+        self.tableModel = models.GraphTableModel(headers=['Node Type', 'Node'])
         self.tableView.setModel(self.tableModel)
         self.tableSelectionModel = self.tableView.selectionModel()
 
         # nodes list model
-        self.nodesModel = ui.NodesListModel()
+        self.nodesModel = models.NodesListModel()
         self.nodeStatsList.setModel(self.nodesModel)
         self.nodeListSelModel = self.nodeStatsList.selectionModel()
 
         # edges list 
-        self.edgesModel = ui.EdgesListModel()
+        self.edgesModel = models.EdgesListModel()
         self.edgeStatsList.setModel(self.edgesModel)
         self.edgeListSelModel = self.edgeStatsList.selectionModel()
 
         # setup
         self.initializeWorkPath(self._work_path)
+
+        # read settings first, so that user prefs will override defaults
         self.readSettings(**kwargs)
-        self.initializeStylesheet()
+
+        self.initializeStylesheet()        
         self.initializeUI()           
         self.connectSignals()       
 
-        self.resetStatus()        
-        self.draw_scene = QtGui.QGraphicsScene()
-        self.draw_view.setScene(self.draw_scene)        
-        #QtGui.QApplication.instance().installEventFilter(self)
+        self.resetStatus()
 
     def eventFilter(self, obj, event):
         """
@@ -178,9 +184,6 @@ class SceneGraphUI(form_class, base_class):
         self.buildWindowTitle()
         self.resetStatus()
 
-        ### UNUSED FEATUERS ###
-        # draw tab
-        self.tabWidget.removeTab(3)
         # Qt application style menu
         self.app_style_label.setHidden(True)
         self.app_style_menu.setHidden(True)
@@ -217,7 +220,7 @@ class SceneGraphUI(form_class, base_class):
             font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
             )
 
-        self.stylesheet.run(paths=paths)    
+        self.stylesheet.run(paths=paths) 
         style_data = self.stylesheet.style_data(style=style, **overrides)
 
         if self.use_stylesheet:
@@ -235,7 +238,7 @@ class SceneGraphUI(form_class, base_class):
         self.network = self.graph.network        
 
         # add our custom GraphicsView object (gview is defined in the ui file)
-        self.view = ui.GraphicsView(self.gview, ui=self, use_gl=self.use_gl, edge_type=self.edge_type)
+        self.view = graphics.GraphicsView(self.gview, ui=self, use_gl=self.use_gl, edge_type=self.edge_type)
         self.gviewLayout.addWidget(self.view) 
 
         self.view.setSceneRect(-5000, -5000, 10000, 10000)
@@ -298,11 +301,11 @@ class SceneGraphUI(form_class, base_class):
         self.autosave_time_edit.editingFinished.connect(self.setAutosaveDelay)
         self.app_style_menu.currentIndexChanged.connect(self.applicationStyleChanged)
 
-        self.ui_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
-        self.mono_font_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
-        self.stylesheet_menu.currentIndexChanged.connect(self.stylsheetChangedAction)
-        self.ui_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
-        self.mono_fontsize_spinbox.valueChanged.connect(self.stylsheetChangedAction)
+        self.ui_font_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.mono_font_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.stylesheet_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.ui_fontsize_spinbox.valueChanged.connect(self.stylesheetChangedAction)
+        self.mono_fontsize_spinbox.valueChanged.connect(self.stylesheetChangedAction)
         self.button_reset_fonts.clicked.connect(self.resetFontsAction)
 
         
@@ -311,7 +314,6 @@ class SceneGraphUI(form_class, base_class):
         self.tabWidget.currentChanged.connect(self.updateMetadata)
         self.button_refresh.clicked.connect(self.updateOutput)
         self.button_clear.clicked.connect(self.outputTextBrowser.clear)
-        self.button_update_draw.clicked.connect(self.updateDrawTab)
         self.consoleTabWidget.currentChanged.connect(self.updateStats)
 
         # table view
@@ -481,11 +483,13 @@ class SceneGraphUI(form_class, base_class):
         self.check_use_gl.setChecked(GL_MODE)
 
         # logging level
-        current_log_level = [x[0] for x in options.LOGGING_LEVELS.items() if x[1] == log.level][0]
+        log_level_str = [x[0] for x in options.LOGGING_LEVELS.items() if x[1] == log.level][0]
+
+        # add current log levels to the menu
         for item in options.LOGGING_LEVELS.items():
             label, mode = item[0], item[1]
             self.logging_level_menu.addItem(label.lower(), mode)            
-        self.logging_level_menu.setCurrentIndex(self.logging_level_menu.findText(current_log_level.lower()))
+        self.logging_level_menu.setCurrentIndex(self.logging_level_menu.findText(log_level_str.lower()))
     
         # undo viewer
         self.undoView = QtGui.QUndoView(self.tab_undo)
@@ -819,7 +823,8 @@ class SceneGraphUI(form_class, base_class):
         """
         Toggle the logging level.
         """
-        log.level = self.logging_level_menu.itemData(self.logging_level_menu.currentIndex())        
+        log.level = self.logging_level_menu.itemData(self.logging_level_menu.currentIndex())
+        print '# DEBUG: toggling log level: ', log.level      
 
     def toggleDebug(self):
         """
@@ -910,7 +915,7 @@ class SceneGraphUI(form_class, base_class):
         app.setStyle(style_name)
         self.initializeStylesheet()
 
-    def stylsheetChangedAction(self, index):
+    def stylesheetChangedAction(self, index):
         """
         Runs when the user updates a font/stylesheet pref.
         """
@@ -1073,7 +1078,7 @@ class SceneGraphUI(form_class, base_class):
         attr_widget = self.getAttributeEditorWidget()
                 
         if not attr_widget:
-            attr_widget = ui.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler, ui=self)
+            attr_widget = attributes.AttributeEditor(self.attrEditorWidget, handler=self.view.scene().handler, ui=self)
             self.attributeScrollAreaLayout.addWidget(attr_widget)
         attr_widget.setNodes(dagnodes)
 
@@ -1339,8 +1344,10 @@ class SceneGraphUI(form_class, base_class):
                     setattr(self, attr, value)
 
         self.qtsettings.endGroup()
+
+        # set globals prefs
         self.autosave_inc = int(autosave_inc)
-        log.setLevel(int(logging_level))
+        log.level = int(logging_level)
 
         # read the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
@@ -1365,10 +1372,17 @@ class SceneGraphUI(form_class, base_class):
         self.qtsettings.beginGroup('Preferences')
 
         for attr in options.SCENEGRAPH_PREFERENCES:
-            if not hasattr(self, attr):
-                log.warning('SceneGraphUI has no attribute "%s", skipping...' % attr)
-                continue
-            self.qtsettings.setValue(attr, getattr(self, attr))
+            if attr == 'logging_level':
+                value = log.level
+                print '# DEBUG: writing log level: ', int(value)
+
+            else:
+                if not hasattr(self, attr):
+                    log.debug('SceneGraphUI has no attribute "%s", skipping...' % attr)
+                    continue
+                value = getattr(self, attr)
+
+            self.qtsettings.setValue(attr, value)
 
         # font/stylesheet preferences
         for fattr in ['font_family_ui', 'font_family_mono', 'font_family_nodes', 'font_size_ui', 'font_size_mono', 'stylesheet_name']:
@@ -1498,16 +1512,6 @@ class SceneGraphUI(form_class, base_class):
         self.metdataBrowser.scrollContentsBy(0, posy)
         #self.outputTextBrowser.setReadOnly(True)
 
-    def updateDrawTab(self, filename=None):
-        """
-        Generate an image of the current graph and update the scene.
-        """
-        # draw tab
-        draw_file = self.drawGraph(filename)
-        self.draw_scene.clear()
-        pxmap = QtGui.QPixmap(draw_file)
-        self.draw_scene.addPixmap(pxmap)
-
     def formatOutputHtml(self, data, highlight=[]):
         """
         Fast and dirty html formatting.
@@ -1582,40 +1586,6 @@ class SceneGraphUI(form_class, base_class):
         Evaluate the current scene.
         """
         self.view.scene().evaluate()
-
-    def drawGraph(self, filename=None):
-        """
-        Output the network as a png image.
-
-        See: http://networkx.github.io/documentation/latest/reference/generated/networkx.drawing.nx_pylab.draw_networkx_nodes.html
-        """
-        if filename is None:
-            filename = os.path.join(os.getenv('TMPDIR'), 'my_graph.png')
-
-        import networkx as nx
-        import matplotlib.pyplot as plt
-        
-        # spring_layout
-        pos=nx.spring_layout(self.network, iterations=20)
-
-        node_labels = dict()
-        for node in self.network.nodes(data=True):
-            nid, node_attrs = node
-            node_labels[nid]=node_attrs.get('name')
-
-        node_color = '#b4b4b4'
-
-        nx.draw_networkx_edges(self.network,pos, alpha=0.3,width=1, edge_color='black')
-        nx.draw_networkx_nodes(self.network,pos, node_size=600, node_color=node_color,alpha=1.0, node_shape='s')
-        nx.draw_networkx_edges(self.network,pos, alpha=0.4,node_size=0,width=1,edge_color='k')
-        nx.draw_networkx_labels(self.network,pos, node_labels, fontsize=10)
-
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        plt.savefig(filename)
-        log.info('saving graph image "%s"' % filename)
-        return filename
 
     #- Dialogs -----
     def promptDialog(self, label, msg):
