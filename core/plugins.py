@@ -23,7 +23,9 @@ class PluginManager(object):
     run with PluginManager.load_plugins()
     """
     def __init__(self, paths=[], **kwargs):
-        self._node_data = dict()    
+
+        # storage for plugin data
+        self._node_data              = dict()    
 
         # plugin paths & module data
         self._builtin_plugin_path    = SCENEGRAPH_PLUGIN_PATH
@@ -61,7 +63,7 @@ class PluginManager(object):
 
     def plugin_paths(self):
         """
-        Returns a list of all plugin paths, starting with builting.
+        Returns a list of all plugin paths, starting with builtin.
 
         :returns: plugin scan paths.
         :rtype: tuple 
@@ -198,7 +200,7 @@ class PluginManager(object):
         widget_path = os.path.join(SCENEGRAPH_PATH, 'ui')
 
         builtins = self._load_core(core_path, plugins=plugins)
-        widgets = self._load_core_widgets(widget_path, plugins=builtins)
+        self.load_widgets(widget_path, plugins=builtins)
 
     def _load_core(self, path, plugins=[]):
         """
@@ -226,71 +228,45 @@ class PluginManager(object):
                 bn = fnmatch.group('basename')
                 bfn = os.path.basename(bn)
                 src_file = os.path.join('%s.py' % bn)
-
-            node_type = parse_module_variable(module, 'SCENEGRAPH_NODE_TYPE')
             
             # filter DagNode types
             for cname, obj in inspect.getmembers(module, inspect.isclass):
-                
-                
-                if hasattr(obj, 'node_type'):
-                    node_type = getattr(obj, 'node_type') 
-                    # todo: check if node_type is what we want
-                    if not plugins or node_type in plugins:
-                        if cname in globals():
-                            continue
 
-                        globals()[cname] = obj
-                        # imported.append(cname) 
-                        imported.append(node_type)
-                        # raw_data = pkgutil.get_data('mod.components', 'data.txt')            
-                        self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':'core', 'class':None}})
+                # plugins need to have two attributes: node_type & node_class
+                node_type = None
+                node_class = None
+                node_category = None
 
-                        # add source and metadata files
-                        if os.path.exists(src_file):
-                            self._node_data.get(node_type).update(source=src_file)
+                if not hasattr(obj, 'node_type') or not hasattr(obj, 'node_class'):
+                    # keep moving
+                    continue
 
-                        #if os.path.exists(md_file):
-                        md_file = os.path.join(SCENEGRAPH_METADATA_PATH, '%s.mtd' % node_type)
-                        if os.path.exists(md_file):
-                            self._node_data.get(node_type).update(metadata=md_file)
+                node_type = getattr(obj, 'node_type')
+                node_class = getattr(obj, 'node_class')
+
+                # for now, "node_category" is not required
+                if getattr(obj, 'node_category'):
+                    node_category = obj.node_category
+                    
+                if cname in globals():
+                    continue
+
+                globals()[cname] = obj
+                # imported.append(cname) 
+                imported.append(node_type)
+                # raw_data = pkgutil.get_data('mod.components', 'data.txt')            
+                self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':node_category, 'class':node_class}})
+
+                # add source and metadata files
+                if os.path.exists(src_file):
+                    self._node_data.get(node_type).update(source=src_file)
+
+                #if os.path.exists(md_file):
+                md_file = os.path.join(SCENEGRAPH_METADATA_PATH, '%s.mtd' % node_type)
+                if os.path.exists(md_file):
+                    self._node_data.get(node_type).update(metadata=md_file)
 
         return sorted(list(set(imported)))
-
-    def _load_core_widgets(self, path, plugins=[]):
-        """
-        Dynamically load all node widgets.
-
-        :param str path: path to scan.
-        :param list plugins: plugin names to filter.
-
-        :returns: dictionary of node type, widget.
-        :rtype: dict
-        """
-        imported = dict()
-        fexpr = re.compile(r"(?P<basename>.+?)(?P<fext>\.[^.]*$|$)")
-
-        for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
-            module = loader.find_module(mod_name).load_module(mod_name)
-
-            modfn = module.__file__
-            src_file = None
-
-            fnmatch = re.search(fexpr, modfn)
-            if fnmatch:
-                src_file = '%s.py' % fnmatch.group('basename')
-                print 'source file: ', src_file
-
-            # filter DagNode types
-            for cname, obj in inspect.getmembers(module, inspect.isclass):
-                #print 'class: ', cname
-                if hasattr(obj, 'node_class'):
-                    node_class = obj.node_class
-                    if not plugins or node_class in plugins:
-                        #print 'node class: ', node_class
-                        globals()[cname] = obj
-                        imported.update({node_class:{'widget':globals()[cname]}})
-        return imported
 
     def load_plugins(self, path=None, plugins=[]):
         """
@@ -334,28 +310,40 @@ class PluginManager(object):
                 src_file = '%s.py' % fnmatch.group('basename')
                 md_file = '%s.mtd' % fnmatch.group('basename')
 
-            node_type = parse_module_variable(module, 'SCENEGRAPH_NODE_TYPE')
-            
             # filter DagNode types
             for cname, obj in inspect.getmembers(module, inspect.isclass):
                 
-                if not plugins or cname in plugins:
-                    if hasattr(obj, 'node_type'):
-                        if getattr(obj, 'node_type') != 'dagnode':
-                            #print '# DEBUG: Loading "%s" from plugin "%s"' % (cname, src_file)
-                            if cname in globals():
-                                continue
+                # plugins need to have two attributes: node_type & node_class
+                node_type = None
+                node_class = None
+                node_category = None
 
-                            globals()[cname] = obj
-                            imported.append(cname)                
-                            self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':None, 'class':None}})
+                if not hasattr(obj, 'node_type') or not hasattr(obj, 'node_class'):
+                    # keep moving
+                    continue
 
-                            # add source and metadata files
-                            if os.path.exists(src_file):
-                                self._node_data.get(node_type).update(source=src_file)
+                node_type = getattr(obj, 'node_type')
+                node_class = getattr(obj, 'node_class')
 
-                            if os.path.exists(md_file):
-                                self._node_data.get(node_type).update(metadata=md_file)
+                if not plugins or node_type in plugins:
+
+                    # for now, "node_category" is not required
+                    if getattr(obj, 'node_category'):
+                        node_category = obj.node_category
+                        
+                    if cname in globals():
+                        continue
+
+                    globals()[cname] = obj
+                    imported.append(node_type)                
+                    self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':node_category, 'class':node_class}})
+
+                    # add source and metadata files
+                    if os.path.exists(src_file):
+                        self._node_data.get(node_type).update(source=src_file)
+
+                    if os.path.exists(md_file):
+                        self._node_data.get(node_type).update(metadata=md_file)
 
         return sorted(list(set(imported)))
 
@@ -373,13 +361,14 @@ class PluginManager(object):
         if path is None:
             path = self.default_plugin_path
 
-        default_widgets = self._load_widgets(path, plugins=plugins)
+        widgets = self._load_widgets(path, plugins=plugins)
 
         # update the node data attribute with widget classes
-        for node_type in default_widgets:
+        for node_type in widgets:
+            
             if node_type in self._node_data:
-                self._node_data.get(node_type).update(default_widgets.get(node_type))
-        #external_widgets = _load_external_classes(path, verbose=verbose, asset_name=asset_name)
+                #print '# DEBUG: updating node "%s" with widget...' % node_type
+                self._node_data.get(node_type).update(widgets.get(node_type))
 
     def _load_widgets(self, path, plugins=[]):
         """
@@ -397,23 +386,33 @@ class PluginManager(object):
         for loader, mod_name, is_pkg in pkgutil.walk_packages([path]):
             module = loader.find_module(mod_name).load_module(mod_name)
 
-            node_type = parse_module_variable(module, 'SCENEGRAPH_WIDGET_TYPE')
+            modfn = module.__file__
+            src_file = None
 
-            if node_type:
-                modfn = module.__file__
-                src_file = None
+            fnmatch = re.search(fexpr, modfn)
+            if fnmatch:
+                src_file = '%s.py' % fnmatch.group('basename')
 
-                fnmatch = re.search(fexpr, modfn)
-                if fnmatch:
-                    src_file = '%s.py' % fnmatch.group('basename')
+            # filter widget types
+            for cname, obj in inspect.getmembers(module, inspect.isclass):
 
-                # filter DagNode types
-                for cname, obj in inspect.getmembers(module, inspect.isclass):
-                    if not plugins or cname in plugins:
-                        if hasattr(obj, 'ParentClasses'):
-                            #if 'NodeWidget' in obj.ParentClasses(obj):
-                            globals()[cname] = obj
-                            imported.update({node_type:{'widget':globals()[cname]}})              
+                # we need to match the widget_type attribute to 
+                # the corresponding node_type value.
+                widget_type = None
+
+                if not hasattr(obj, 'widget_type'):
+                    # keep moving
+                    continue
+
+                widget_type = getattr(obj, 'widget_type')
+                #print '# DEBUG: checking widget class: "%s" (%s)' % (widget_type, src_file)
+                if cname in globals():
+                    continue
+
+                if not plugins or widget_type in plugins:
+                    globals()[cname] = obj
+                    imported.update({widget_type:{'widget':globals()[cname]}})
+
         return imported
 
     def _get_external_plugin_paths(self, dirname='scenegraph_plugins'):
@@ -433,6 +432,27 @@ class PluginManager(object):
                     if ppath not in result:
                         result.append(ppath)
         return result
+
+    @property
+    def valid_plugins(self):
+        result = []
+        for pname in self._node_data:
+            pattrs = self._node_data.get(pname)
+
+            enabled = pattrs.get('enabled', False)
+            if not enabled:
+                continue
+
+            dag = pattrs.get('dagnode', None)
+            widget = pattrs.get('widget', None)
+
+            if dag is None or widget is None:
+                continue
+
+            if pname not in result:
+                result.append(pname)
+
+        return result    
 
     def get_plugins(self, plugins=[], disabled=False):
         """

@@ -1374,7 +1374,6 @@ class SceneGraphUI(form_class, base_class):
         for attr in options.SCENEGRAPH_PREFERENCES:
             if attr == 'logging_level':
                 value = log.level
-                print '# DEBUG: writing log level: ', int(value)
 
             else:
                 if not hasattr(self, attr):
@@ -1390,6 +1389,7 @@ class SceneGraphUI(form_class, base_class):
                 continue
             self.qtsettings.setValue(fattr, getattr(self, fattr))
 
+        self.qtsettings.setValue('plugins', self.graph.plug_mgr.valid_plugins)
         self.qtsettings.endGroup()
 
         # write the dock settings

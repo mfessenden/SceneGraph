@@ -537,7 +537,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
             if dag_id in self.graph.dagnodes:
                 dag = self.graph.dagnodes.get(dag_id)
 
-                if issubclass(type(dag), nodes.Node):
+                if self.graph.is_node(dag):
                     if dag_id not in self.scenenodes:               
                         widget = self.plug_mgr.get_widget(dag)
 
@@ -557,7 +557,7 @@ class GraphicsScene(QtGui.QGraphicsScene):
                         widget.nodeChanged.connect(self.nodeChangedEvent)
                         widget.nodeDeleted.connect(self.nodeDeletedEvent)
                 else:
-                    log.warning('invalid dag type: "%s"' % dag.__class__)
+                    log.warning('invalid dag type: "%s"' % dag.Class())
                
             else:
                 raise GraphException('invalid graph id: "%s"' % dag_id )
@@ -658,14 +658,13 @@ class GraphicsScene(QtGui.QGraphicsScene):
         """
         Returns true if the given widget is a dag node type.
 
-        params:
-            widget (obj) - QGraphicsObject widget.
+        :param QtGui.QGraphicsObject widget: QGraphicsObject widget.
 
-        returns:
-            (bool) - widget is a Dag node type. 
+        :returns: widget is a valid node type. 
+        :rtype: bool
         """
         if hasattr(widget, 'node_class'):
-            if widget.node_class in ['dagnode', 'dot', 'note', 'container']:
+            if widget.node_class in ['dagnode', 'dot', 'note', 'container', 'evaluate']:
                 return True
         return False
 

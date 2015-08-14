@@ -1406,7 +1406,7 @@ class Connection(QtGui.QGraphicsObject):
 
 
 class DefaultWidget(NodeWidget):
-    node_type     = 'default' 
+    widget_type     = 'default' 
     def __init__(self, dagnode, parent=None):
         super(DefaultWidget, self).__init__(dagnode, parent)
 
@@ -1414,7 +1414,7 @@ class DefaultWidget(NodeWidget):
 
 class DotWidget(QtGui.QGraphicsObject): 
 
-    node_type      = 'dot'
+    widget_type    = 'dot'
     node_class     = 'dagnode' 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()
@@ -1950,7 +1950,7 @@ class DotWidget(QtGui.QGraphicsObject):
 
 class NoteWidget(QtGui.QGraphicsObject): 
 
-    node_type      = 'note'
+    widget_type    = 'note'
     node_class     = 'dagnode' 
     Type           = QtGui.QGraphicsObject.UserType + 1
     doubleClicked  = QtCore.Signal()

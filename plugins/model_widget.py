@@ -2,11 +2,9 @@
 from SceneGraph.ui.node_widgets import NodeWidget
 
 
-SCENEGRAPH_WIDGET_TYPE = 'model'
-
-
 class ModelWidget(NodeWidget):
-    node_class = 'container'
+    widget_type  = 'model'
+    node_class   = 'container'
     def __init__(self, dagnode, parent=None):
-        super(ModelWidget, self).__init__(dagnode, parent)
+        NodeWidget.__init__(self, dagnode, parent)
         

@@ -3,6 +3,7 @@ import os
 from PySide import QtCore, QtGui
 from functools import partial
 from SceneGraph import core
+from SceneGraph.options import SCENEGRAPH_PREFS_PATH
 
 
 class PluginManager(QtGui.QDialog):
@@ -11,18 +12,25 @@ class PluginManager(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
 
         self.fonts          = dict()
+        self.settings_file  = os.path.join(SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
+        self._valid_plugins = []
 
         if parent is not None:
             self.plugin_manager = parent.graph.plug_mgr
+            self.qtsettings = parent.qtsettings
+            self._valid_plugins = parent._valid_plugins
+
         else:
             graph = core.Graph()
             self.plugin_manager = graph.plug_mgr
 
             # todo: messy haxx
-            from SceneGraph import ui
-            self.stylesheet = ui.StylesheetManager(self)
+            from SceneGraph.ui import stylesheet
+            from SceneGraph.ui import settings
+            self.stylesheet = stylesheet.StylesheetManager(self)
             style_data = self.stylesheet.style_data()
-            self.setStyleSheet(style_data) 
+            self.setStyleSheet(style_data)
+            self.qtsettings = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
 
         self.setupFonts()
 
@@ -128,22 +136,28 @@ class PluginManager(QtGui.QDialog):
         data = []
         plugins = self.plugin_manager._node_data
         self.tableModel.clear()
-        for plug_name in plugins:
-            if plug_name not in ['default', 'dot']:
-                pattrs = plugins.get(plug_name)
-                dagnode = pattrs.get('dagnode', None)
-                src = pattrs.get('source')
-                enabled =pattrs.get('enabled')
-                if dagnode is not None:
-                    dagnode=dagnode.__name__
-                
-                widget = pattrs.get('widget', None)
-                if widget is not None:
-                    widget=widget.__name__
+        for pname in plugins:
 
-                metadata = pattrs.get('metadata', None)
+            category = plugins.get(pname).get('category', None)
 
-                data.append([plug_name, dagnode, src, enabled])
+            # don't allow core plugins to be disabled
+            if category == 'core':
+                continue 
+
+            pattrs = plugins.get(pname)
+            dagnode = pattrs.get('dagnode', None)
+            src = pattrs.get('source')
+            enabled =pattrs.get('enabled')
+            if dagnode is not None:
+                dagnode=dagnode.__name__
+            
+            widget = pattrs.get('widget', None)
+            if widget is not None:
+                widget=widget.__name__
+
+            metadata = pattrs.get('metadata', None)
+            data.append([pname, dagnode, src, enabled])
+
         self.tableModel.addPlugins(data)
 
     def selectedPlugins(self):
@@ -185,7 +199,26 @@ class PluginManager(QtGui.QDialog):
                 self.checkPlugins()
 
     def acceptedAction(self):
+        self.writeSettings()
         self.close()
+
+    def readSettings(self):
+        self.qtsettings.beginGroup("Preferences")
+        # update valid plugin types
+        plugins = self.qtsettings.value("plugins")
+        if plugins:
+            if type(plugins) in [str, unicode]:
+                plugins = [plugins,]
+            for plugin in plugins:
+                if plugin not in self._valid_plugins:
+                    self._valid_plugins.append(plugin)
+        self.qtsettings.endGroup()
+
+    def writeSettings(self):
+        self._valid_plugins = self.plugin_manager.valid_plugins
+        self.qtsettings.beginGroup('Preferences')
+        self.qtsettings.setValue('plugins', self.plugin_manager.valid_plugins)
+        self.qtsettings.endGroup()
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)

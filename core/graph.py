@@ -214,11 +214,10 @@ class Graph(object):
 
         # update network nodes from dag attributes
         self.updateDagNodes(dagnodes)
-
         node_ids = []
         invalid_node_ids = []
         for node in dagnodes:
-            if issubclass(type(node), nodes.Node):
+            if self.is_node(node):
                 if node.id not in node_ids:
                     node_ids.append(node.id)
 
@@ -234,9 +233,22 @@ class Graph(object):
                 node_id, node_attrs = node
                 if node_id not in node_ids:
                     invalid_node_ids.append(node_id)
-                    log.warning('invalid node "%s" ( %s )' % (node_attrs.get('name'), node_id))
+                    log.warning('invalid NetworkX node "%s" ( %s )' % (node_attrs.get('name'), node_id))
                     result = False
         return result
+
+    def is_node(self, obj):
+        """
+        Evaluates an object to see if it is a valid node type.
+
+        :param object obj: object to evaluate.
+        :returns: object is a valid node.
+        :rtype: bool
+        """
+        if hasattr(obj, 'node_class'):
+            if obj.node_class in ['dagnode', 'dot', 'note', 'container', 'evaluate', 'output']:
+                return True
+        return False
 
     def node_types(self, plugins=[], disabled=False):
         """

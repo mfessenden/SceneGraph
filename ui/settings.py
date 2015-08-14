@@ -62,6 +62,7 @@ class Settings(QtCore.QSettings):
         Add a group to the current preferences groups.
 
         :param str group: name of group to add.
+
         :returns: group was successfully added.
         :rtype: bool
         """
@@ -75,6 +76,7 @@ class Settings(QtCore.QSettings):
         Remove a group from the preferences groups.
 
         :param str group: name of group to remove.
+        
         :returns: group was successfully removed.
         :rtype: bool
         """
