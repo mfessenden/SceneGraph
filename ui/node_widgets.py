@@ -239,8 +239,8 @@ class NodeWidget(QtGui.QGraphicsObject):
         """
         Returns a bounding rectangle for the node.
 
-        returns:
-            (QRectF) - node bounding rect.
+        :returns: node bounding rect.
+        :rtype: QtCore.QRectF
         """
         w = self.width
         h = self.height
@@ -522,6 +522,15 @@ class NodeWidget(QtGui.QGraphicsObject):
         self.label.setPos(self.label_pos)        
         self.drawConnections()
 
+        # adjust size, if necessary
+        if self.label.width > self.width:
+            self.width = self.label.width + 14
+
+        """
+        if self.label.height > (self.dagnode.base_height * 2):
+            self.dagnode.base_height = self.label.height
+        """
+
         # set the tooltip to the current node's documentation string.
         self.setToolTip(self.dagnode.docstring)
 
@@ -650,6 +659,7 @@ class EdgeWidget(QtGui.QGraphicsObject):
         self.show_conn       = False                  # show connection string
         self.multi_conn      = False                  # multiple connections (future)
         self.edge_type       = edge.get('edge_type', 'bezier')
+        self.style           = edge.get('style', 'solid')  
 
         # Connection widgets
         self.source_item     = weakref.ref(source_item, self.callback_source_deleted)
@@ -701,8 +711,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Return an easy-to-query attribute to check nx edges.
 
-        returns:
-            (tuple) - edge source id, edge destination id
+        :returns: edge source id, edge destination id.
+        :rtype: tuple
         """
         return (self.src_id, self.dest_id)
 
@@ -710,11 +720,10 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Connect the edge widget to the connection passed.
 
-        params:
-            conn (Connection) - node connection widget.
+        :params Connection conn:  node connection widget.
 
-        returns:
-            (bool) - connection succeeded.
+        :returns: connection succeeded.
+        :rtype: bool
         """
         # conn.connections (dict of edge id, edge widget)
         if not conn:
@@ -778,36 +787,32 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Returns a list of connected nodes.
 
-        returns:
-            (tuple) - source Node widget, dest Node widget
+        :returns: source Node widget, dest Node widget
+        :rtype: list
         """
         return (self.source_item().node, self.dest_item().node)
 
     @property
     def source_node(self):
         """
-        Returns the source node widget.
-
-        returns:
-            (NodeWidget) - source node.
+        :returns: source node widget.
+        :rtype: NodeWidget 
         """
         return self.source_item().node
 
     @property
     def dest_node(self):
         """
-        Returns the destination node widget.
-
-        returns:
-            (NodeWidget) - destination node.
+        :returns: destination node widget.
+        :rtype: NodeWidget 
         """
         return self.dest_item().node
 
     @property
     def source_connection(self):
         """
-        returns:
-            (str) - source connection name (ie: "node1.output").
+        :returns: source connection name (ie: "node1.output").
+        :rtype: str
         """
         if self.source_item():            
             if hasattr(self.source_item(),'dagnode'):
@@ -817,8 +822,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
     @property
     def dest_connection(self):
         """
-        returns:
-            (str) - destination connection name (ie: "node2.input").
+        :returns: destination connection name (ie: "node1.output").
+        :rtype: str
         """
         if self.dest_item():            
             if hasattr(self.dest_item(), 'dagnode'):
@@ -828,15 +833,16 @@ class EdgeWidget(QtGui.QGraphicsObject):
     @property
     def name(self):
         """
-        returns:
-            (str) - connection string.
+        :returns: connection string.
+        :rtype: str
         """
         return "%s,%s" % (self.source_connection, self.dest_connection)
 
     @property
     def line_color(self):
         """
-        Returns the current line color.
+        :returns: current line color.
+        :rtype: QtGui.QColor
         """
         if self._debug:
             if self.is_selected:
@@ -875,8 +881,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
         """
         Create a bounding rect for the line.
 
-         todo: see why self.bezier_path.controlPointRect()
-         doesn't work.
+        :returns: line bounding rect.
+        :rtype: QtCore.QRectF
         """
         extra = (self.gline.pen().width() + 100)  / 2.0
         line = self.getLine()
@@ -971,7 +977,8 @@ class EdgeWidget(QtGui.QGraphicsObject):
 
     def shape(self):
         """
-         * todo: add some adjustments to the line to make it more selectable.
+         .. todo::
+            - add some adjustments to the line to make it more selectable.
         """
         path = QtGui.QPainterPath()
         stroker = QtGui.QPainterPathStroker()
@@ -1048,6 +1055,15 @@ class EdgeWidget(QtGui.QGraphicsObject):
                     painter.drawEllipse(arrow_rect.center(), 3,3)
 
                 painter.setBrush(QtCore.Qt.NoBrush)
+
+                if self.style == 'solid':
+                    painter.pen().setStyle(QtCore.Qt.SolidLine)
+
+                if self.style == 'dashed':
+                    painter.pen().setStyle(QtCore.Qt.DashLine)
+
+                if self.style in ['dot', 'dotted']:
+                    painter.pen().setStyle(QtCore.Qt.DotLine)
 
                 if self.edge_type == 'bezier':
                     painter.drawPath(self.bezier_path)
@@ -1144,30 +1160,50 @@ class Connection(QtGui.QGraphicsObject):
 
     @property
     def is_connected(self):
-        return len(self.connections)  
+        """
+        :returns: connection has connected edges.
+        :rtype: bool
+        """
+        return bool(len(self.connections)) 
 
     @property
     def orientation(self):
+        """
+        :returns: DagNode orientation.
+        :rtype: str
+        """
         return self.dagnode.orientation
 
     @property
     def is_enabled(self):
+        """
+        :returns: node is enabled.
+        :rtype: bool
+        """
         return self.dagnode.enabled
 
     @property
     def is_expanded(self):
+        """
+        :returns: node is in expanded mode.
+        :rtype: bool
+        """
         return self.node.is_expanded
 
     @property
     def max_connections(self):
+        """
+        :returns: max number of connections that this connection can accept.
+        :rtype: int
+        """
         return self.dagconn.max_connections
 
     def connected_edges(self):
         """
         Returns a list of connected edges.
 
-        returns:
-            (list) - list of connected edge widgets.
+        :returns: list of connected edge widgets.
+        :rtype: list
         """
         return self.connections.values()
 
@@ -1176,6 +1212,9 @@ class Connection(QtGui.QGraphicsObject):
         """
         Returns true if the connection can take a connection.
          0 - unlimited connections
+
+        :returns: connection can accept a connection.
+        :rtype: bool
         """
         if self.max_connections == 0:
             return True
@@ -1296,6 +1335,9 @@ class Connection(QtGui.QGraphicsObject):
     def boundingRect(self):
         """
         Return the bounding rect for the connection (plus selection buffer).
+
+        :returns: node bounding rect.
+        :rtype: QtCore.QRectF
         """
         r = self.radius
         b = self.buffer
@@ -1334,10 +1376,10 @@ class Connection(QtGui.QGraphicsObject):
         if option.state & QtGui.QStyle.State_MouseOver:
             self.is_hover = True
 
-        self.setToolTip('%s.%s (%s)' % (self.dagnode.name, self.name, self.dagnode.get_attr(self.name).data_type))
+        self.setToolTip('%s.%s (%s)' % (self.dagnode.name, self.name, self.dagconn.attr_type))
 
         # background
-        gradient = QtGui.QLinearGradient(0, -self.draw_radius, 0, self.draw_radius)
+        gradient = QtGui.QLinearGradient(0, - self.draw_radius, 0, self.draw_radius)
         gradient.setColorAt(0, self.bg_color)
         gradient.setColorAt(1, self.bg_color.darker(125))
         
@@ -1702,8 +1744,8 @@ class DotWidget(QtGui.QGraphicsObject):
         """
         Returns a bounding rectangle for the node.
 
-        returns:
-            (QRectF) - node bounding rect.
+        :returns: node bounding rect.
+        :rtype: QtCore.QRectF
         """
         w = self.width
         h = self.height
@@ -2169,8 +2211,8 @@ class NoteWidget(QtGui.QGraphicsObject):
         """
         Returns a bounding rectangle for the node.
 
-        returns:
-            (QRectF) - node bounding rect.
+        :returns: node bounding rect.
+        :rtype: QtCore.QRectF
         """
         if self.top_left and self.btm_right:
             top_left = self.mapFromScene(*self.top_left)
@@ -2465,7 +2507,9 @@ class NoteWidget(QtGui.QGraphicsObject):
 #- Sub-Widgets ----
 
 class NodeLabel(QtGui.QGraphicsObject):
-    
+    """
+    Widget that draws the node name label.
+    """    
     doubleClicked     = QtCore.Signal()
     labelChanged      = QtCore.Signal()
     clicked           = QtCore.Signal()
@@ -2498,6 +2542,9 @@ class NodeLabel(QtGui.QGraphicsObject):
         self.rect_item.stackBefore(self.label)
         self.setHandlesChildEvents(False)
 
+    def __repr__(self):
+        return '%s("%s")' % (self.__class__.__name__, self.dagnode.name)
+
     @QtCore.Slot()
     def nodeNameChanged(self):
         """
@@ -2516,7 +2563,6 @@ class NodeLabel(QtGui.QGraphicsObject):
         return self.label.textInteractionFlags() == QtCore.Qt.TextEditorInteraction
 
     def keyPressEvent(self, event):
-        print '# NodeLabel: keyPressEvent'
         if event.key() == QtCore.Qt.Key_Enter or event.key() == QtCore.Qt.Key_Return:
             self.nodeNameChanged()
         else:
@@ -2527,10 +2573,32 @@ class NodeLabel(QtGui.QGraphicsObject):
         return self.parentItem()
 
     def boundingRect(self):
+        """
+        Returns a bounding rectangle for the label.
+
+        :returns: node bounding rect.
+        :rtype: QtCore.QRectF
+        """
         try:
             return self.label.boundingRect()
         except:
             return QtCore.QRectF(0, 0, 0, 0)
+
+    @property
+    def width(self):
+        """       
+        :returns: label width.
+        :rtype: float
+        """
+        return self.boundingRect().width()
+
+    @property
+    def height(self):
+        """       
+        :returns: label height.
+        :rtype: float
+        """
+        return self.boundingRect().height()
 
     @property
     def text(self):
@@ -2543,7 +2611,7 @@ class NodeLabel(QtGui.QGraphicsObject):
 
     def shape(self):
         """
-        Aids in selection.
+        Define a shape for selection.
         """
         path = QtGui.QPainterPath()
         polyon = QtGui.QPolygonF(self.boundingRect())
@@ -2566,7 +2634,6 @@ class NodeLabel(QtGui.QGraphicsObject):
         qfont.setPointSize(self.node._font_size)
         qfont.setBold(self.node._font_bold)
         qfont.setItalic(label_italic)
-        #qfont.setFamily("Menlo")
         self.label.setFont(qfont)
 
         # debug

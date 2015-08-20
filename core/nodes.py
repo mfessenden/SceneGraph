@@ -5,7 +5,7 @@ import uuid
 import simplejson as json
 from collections import OrderedDict as dict
 from SceneGraph.core import log, Attribute, EventHandler, MetadataParser
-from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_METADATA_PATH
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_CORE, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_METADATA_PATH
 from SceneGraph import util
 
 
@@ -21,7 +21,7 @@ class Node(object):
     default_color = [172, 172, 172, 255]
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
-                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation']
+                      'base_height', 'force_expand', 'pos', 'enabled', 'orientation', 'style']
 
     def __init__(self, name=None, **kwargs):
 
@@ -45,6 +45,7 @@ class Node(object):
         self.pos                    = kwargs.pop('pos', (0.0, 0.0))
         self.enabled                = kwargs.pop('enabled', True)
         self.orientation            = kwargs.pop('orientation', 'horizontal')
+        self.style                  = kwargs.pop('style', 'default')
 
         # metadata
         metadata                    = kwargs.pop('metadata', dict())
@@ -64,6 +65,7 @@ class Node(object):
 
         # update attributes (if reading from scene)
         if attributes:
+            print '# DEBUG: %s attributes: ' % self.Class(), attributes
             for attr_name, properties in attributes.iteritems():
                 if attr_name in self._attributes:
                     self._attributes.get(attr_name).update(**properties)
@@ -115,7 +117,10 @@ class Node(object):
     @property
     def data(self):
         """
-        Output data for writing.
+        Returns node output data for writing.
+
+        :returns: dictionary of node data for writing.
+        :rtype: dict
         """
         data = dict()
         for attr in self.REQUIRED:
@@ -128,7 +133,7 @@ class Node(object):
         """
         Connect a widget to the dag.
 
-        :param SceneGraph.ui.NodeWidget widget: widget object.
+        :param NodeWidget widget: widget object.
         """
         if not self._widget:
             self._widget = widget
@@ -200,13 +205,25 @@ class Node(object):
             if attrs and len(attrs) == 1:
                 return attrs[0]
             return attrs
+    
+    def list_attrs(self):
+        """
+        Returns a list of connections names.
+        
+        :returns: connection names.
+        :rtype: list
+        """
+        return self._attributes.keys()
 
     def add_attr(self, name, value=None, **kwargs):
         """
         Add an attribute.
 
-         * todo: add attribute type mapper.
+         .. todo::: 
+             - add attribute type mapper.
         """
+        attr_type = kwargs.get('attr_type', None)
+        #print '\t"%s.%s" type: %s' %(self.name, name, attr_type)
         attr = Attribute(name, value, dagnode=self, **kwargs)
         self._attributes.update({attr.name:attr})
         return attr
@@ -251,7 +268,8 @@ class Node(object):
         :rtype: str
         """
         import inspect
-        src_file = inspect.getfile(self.__class__)
+        #src_file = inspect.getfile(self.__class__)
+        src_file = inspect.getfile(self)
         if os.path.exists(src_file.rstrip('c')):
             plugin_file = src_file.rstrip('c')
         return plugin_file
@@ -267,7 +285,7 @@ class Node(object):
         """
         return SCENEGRAPH_PLUGIN_PATH in self.plugin_file
 
-    def read_metadata(self, verbose=True):
+    def read_metadata(self, verbose=False):
         """
         Initialize node metadata from metadata files on disk.
         Metadata is parsed by looking at the __bases__ of each node
@@ -278,18 +296,27 @@ class Node(object):
         parser = MetadataParser()
 
         node_metadata = dict()
-
+        if verbose:
+            print '\n# DEBUG: building metadata for: "%s" ' % self.Class()
         # query the base classes
         result = [self.__class__,]
         for pc in self.ParentClasses():
-            result.append(pc)
+            if pc.__name__ != 'Node':
+                result.append(pc)
         
-        sg_core_path = os.path.join(SCENEGRAPH_PATH, 'core', 'nodes.py')
+        sg_core_path = os.path.join(SCENEGRAPH_CORE, 'nodes.py')
 
         for cls in reversed(result):
             cname = cls.__name__
             src_file = inspect.getfile(cls)
+
+            node_type = None
+            if hasattr(cls, 'node_type'):
+                node_type = cls.node_type
+
             py_src = src_file.rstrip('c')
+            if verbose:
+                print '   - base class "%s" source file: "%s"' % (cname, py_src)
 
             dirname = os.path.dirname(src_file)
             basename = os.path.splitext(os.path.basename(src_file))[0]
@@ -300,12 +327,18 @@ class Node(object):
 
             metadata_filename = os.path.join(dirname, '%s.mtd' % basename)
 
-            # default DagNode type is special.
+            # look for code node metadata in ../mtd
             if py_src == sg_core_path:
-                metadata_filename = os.path.join(SCENEGRAPH_METADATA_PATH, 'dagnode.mtd')
-            
+                if node_type:             
+                    metadata_filename = os.path.join(SCENEGRAPH_METADATA_PATH, '%s.mtd' % node_type)
+                    if verbose:
+                        print '     - metadata file for "%s": "%s"' % (cname, metadata_filename)
+
             if not os.path.exists(metadata_filename):
-                log.warning('plugin description file "%s" does not exist.' % metadata_filename)
+                if not verbose:
+                    log.warning('plugin description file "%s" does not exist.' % metadata_filename)
+                else:
+                    print '       WARNING: metadata file for "%s": "%s" not found' % (cname, metadata_filename)
                 continue
 
             log.debug('reading plugin metadata file: "%s".' % metadata_filename)
@@ -355,7 +388,7 @@ class Node(object):
 
 
 class DagNode(Node):
-
+    node_type     = 'dagnode'
     default_color = [172, 172, 172, 255]
     PRIVATE       = ['node_type']
     REQUIRED      = ['name', 'node_type', 'id', 'color', 'docstring', 'width', 
@@ -365,8 +398,8 @@ class DagNode(Node):
         attributes = kwargs.pop('attributes', {})
         super(DagNode, self).__init__(name=name, **kwargs)
 
-        # attributes
-        self.buildAttributes()
+        # build connections from metadata
+        self.buildConnections()
 
         # update attributes (if reading from scene)
         if attributes:
@@ -409,9 +442,9 @@ class DagNode(Node):
 
     #- Connections ----
 
-    def buildAttributes(self, verbose=False):
+    def buildConnections(self, verbose=False):
         """
-        Parse and build attributes from the Metadata object.
+        Build connections from the node's metadata.
         """
         if verbose:
             print '\n# %s:"%s":' % (self.Class(), self.name)
@@ -431,8 +464,6 @@ class DagNode(Node):
                 conn_type = None
                 required  = False
                 attr_type = None
-
-                #print 'buildAttributes: properties:  ', properties.keys()
 
                 if 'connectable' in properties:
                     if 'connection_type' in properties:
@@ -504,39 +535,35 @@ class DagNode(Node):
         :param dict properties: attribute dictionary.
         :param str connection_type: connection type (input or output).
 
-        :returns: Attribute object.
-        :rtype: :py:class:`SceneGraph.core.Attribute`
+        :returns: attribute node.
+        :rtype: Attribute
         """
         # connection properties
         max_connections = properties.pop('max_connections', 1) 
+        attr_type = None
+
+        #print '- Mapping: "%s.%s": ' % (self.name, name)
+        #print json.dumps(properties, indent=5)
 
         pdict = dict()
         # attribute properties (ie 'label', 'desc', 'connection_type')
         for property_name in properties:
-
+            #print '  - updating property: "%s.%s:%s' % (self.name, name, property_name)
             pattrs = properties.get(property_name)
+            #print '# DEBUG: pattrs: ', pattrs
             if not util.is_dict(pattrs):
                 continue
 
             property_value = pattrs.get('value')
             property_type  = pattrs.get('type')
-
-            attr_type      = None
-
-            if property_value:
-                if type(property_value) in [str, unicode]:
-                    if property_type.isupper():
-                        if property_type not in PROPERTY_TYPES.get('data_types'): 
-                                attr_type = property_type.lower()
-                        else:
-                            # data type (ie 'FILE')
-                            attr_type = property_type.lower()
+            if property_name == 'default':
+                attr_type = property_type.lower()
+                #print '# DEBUG: "%s.%s" default: "%s"' % (self.name, name, attr_type.upper())
 
             # {'label': 'Name'}
             pdict[property_name] = property_value
-            pdict['attr_type'] = attr_type
 
-        #print '%s attrs: ' % name, pdict
+        pdict['attr_type'] = attr_type
         return self.add_attr(name, connectable=True, connection_type=connection_type, max_connections=max_connections, user=False, **pdict)
 
 
@@ -710,12 +737,11 @@ class DagNode(Node):
         """
         Rename a connection.
 
-        params:
-            old (str) - old connection name.
-            new (new) - new connection name.
-
-        returns:
-            (bool) - rename was successful.
+        :param str old: old connection name.
+        :param str new: new connection name.
+        
+        :returns:  rename was successful.
+        :rtype: bool
         """
         conn = self.get_connection(old)
         if conn:
@@ -727,11 +753,10 @@ class DagNode(Node):
         """
         Remove a named connection (input or output).
 
-        params:
-            name (str) - name of connection to query.
+        :param str name: name of connection to remove.
 
-        returns:
-            (bool) - connection was removed.
+        :returns:  connection was removed.
+        :rtype: bool
         """
         conn = self.get_connection(name)
         if conn:
@@ -835,7 +860,10 @@ class NoteNode(Node):
     @property
     def data(self):
         """
-        Output data for writing.
+        Returns node output data for writing.
+
+        :returns: dictionary of node data for writing.
+        :rtype: dict
         """
         data = dict()
         for attr in self.REQUIRED:
@@ -873,7 +901,7 @@ class Metadata(object):
         """
         Update the data dictionary.
 
-        * todo: can't pass as **kwargs else we lose the order (why is that?)
+        .. todo::: can't pass as **kwargs else we lose the order (why is that?)
         """
         if data:
             self._template_data = data
@@ -885,14 +913,20 @@ class Metadata(object):
 
     @property
     def data(self):
+        """
+        Returns metadata data for the parent node.
+
+        :returns: dictionary of node metadata attributes.
+        :rtype: dict
+        """
         return self._data
 
     def parentItem(self):
         """
         Returns the parent DagNode.
 
-        returns:
-            (DagNode) - parent DagNode.
+        :returns: parent Node.
+        :rtype: DagNode
         """
         return self._parent
 
@@ -906,8 +940,8 @@ class Metadata(object):
         """
         Returns the metadata "sections" (top-level groups).
 
-        returns:
-            (list) - list of metadata group sections.
+        :returns: list of metadata group sections.
+        :rtype: list
         """
         return self._data.keys()
 
@@ -987,7 +1021,7 @@ class Metadata(object):
 
         returns:
             (list) - list of connection dictionaries.
-                     * todo: should we return an attribute object here?
+                     .. todo::: should we return an attribute object here?
         """
         connections = []
         for section in self.sections():
@@ -1010,7 +1044,7 @@ class Metadata(object):
 
         returns:
             (list) - list of connection dictionaries.
-                     * todo: should we return an attribute object here?
+                     .. todo::: should we return an attribute object here?
         """
         connections = []
         for section in self.sections():

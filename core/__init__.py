@@ -12,12 +12,8 @@ from . import events
 EventHandler            = events.EventHandler
 
 
-from . import manager
 from . import metadata
-
-
 # Parsers/Managers
-NodeManager             = manager.NodeManager
 MetadataParser          = metadata.MetadataParser 
 
 

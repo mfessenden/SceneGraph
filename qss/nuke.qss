@@ -6,7 +6,7 @@
 */
 
 /*
-@STYLENAME = default
+@STYLENAME = nuke
 */
 
 QWidget{
@@ -111,10 +111,10 @@ QDockWidget::close-button:hover{
 
 QPushButton, QToolButton{
     background-color: @button-bg-color;
-    border-color: @button-border;
-    border-style: solid;
+    border-color: @border-dark;
+    border-style: ridge;
     border-width: 1px;
-    border-radius: 1px;    
+    border-radius: 4px;    
 }
 
 QPushButton{  
@@ -486,11 +486,9 @@ QTabBar {
 
 /* Style the tab using the tab sub-control */
 QTabBar::tab {    
-    border-bottom-color: @background-color; /* same as the pane color */
     min-width: 6ex;
     margin: 0 1px 0 1px; /* margin adds a pixel left/right of each tab */
     padding: 0 10px 0 10px; /* padding adds 10px left/right of each tab title */
-    color: @tab-title-color-selected; /* tab title text color */
 }
 
 QTabBar::tab:hover{
@@ -499,15 +497,17 @@ QTabBar::tab:hover{
 
 QTabBar::tab:selected {
     background: @tab-top-selected;
+    color: @tab-title-color-selected;
 }
 
 QTabBar::tab:!selected {
     background: @tab-top-deselected;
+    color: @tab-title-color-deselected;
 }
 
 QTabBar::tab::top{
-    border-top-left-radius: 3px;
-    border-top-right-radius: 3px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
     padding-top: 3px;
     padding-bottom: 3px;
 }
@@ -518,8 +518,8 @@ QTabBar::tab::top:!selected {
 
 /* tab inverted (for nested dock widgets) */
 QTabBar::tab::bottom{
-    border-bottom-left-radius: 3px;
-    border-bottom-right-radius: 3px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
     padding-bottom: 3px;
     padding-top: 3px;
     margin-bottom: 3px;
@@ -658,8 +658,8 @@ QSlider::handle:horizontal {
 QComboBox {
     background: @combo-bg-color1;
     padding: 1px 0px 1px 4px;
-    border: none;
-    border-radius: 2px;    
+    border: 1px outset @combo-border-color;
+    border-radius: 4px;    
 }
 
 /* this defines when a user has clicked the widget to generate the popup */
@@ -789,42 +789,3 @@ QCheckBox::indicator:checked {
 QDialogButtonBox {
     dialogbuttonbox-buttons-have-icons: 0;
 }
-
-/*
-QFrame QGraphicsView{
-    border: 2px solid green;
-    border-radius: 4px;
-    padding: 2px;
-    background-clip: padding;
-    background-origin: content;
-    background-position: top left;
-}
-
-
-QAbstractButton#qt_dockwidget_closebutton{qproperty-toolTip: "Close";}
-QAbstractButton#qt_dockwidget_floatbutton{qproperty-toolTip: "Restore";}
-
-QTableView#tableWidget QHeaderView{
-    /* draw the hole hor top & bottom line for the header *//*
-    height: 24px;
-    border-top: 1px solid #161618;
-    border-bottom: 1px solid #161618;
-}
-
-QTableView#tableWidget QHeaderView::section:horizontal:first{
-    border-left-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f4f4f6, stop:1 #ceced6);
-}
-
-QTableView#tableWidget QHeaderView::section:horizontal:last{
-    border-right-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f4f4f6, stop:1 #ceced6);
-}
-
-QTableView#tableWidget QHeaderView::section:horizontal{
-    /* for each section draw ONLY left & right lines *//*
-    height: 24px;
-    border-style: none;
-    border-left: 1px solid #ecedef;
-    border-right: 1px solid #b1b1b5;
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f4f4f6, stop:1 #ceced6);
- }
-*/

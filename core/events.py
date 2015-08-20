@@ -27,6 +27,8 @@ class EventHandler(object):
     def __isub__(self, callback):
         """
         Remove a callback to the stack.
+
+        :param callable callback: callback function/method.
         """
         self.remove(callback)
         return self
@@ -45,7 +47,7 @@ class EventHandler(object):
 
     def blockSignals(self, block):
         """
-        Block signals to the event.
+        Temporarily block the handler from signalling its observers.
 
         :param bool block: block signals.
         """

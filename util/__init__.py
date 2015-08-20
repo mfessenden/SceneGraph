@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 import re
+import os
 
+
+__all__ = ['attr_type', 'auto_convert', 'camel_case_to_lower_case_underscore', 'camel_case_to_title', 'clean_name', 
+            'is_bool', 'is_dict', 'is_list', 'is_none', 'is_number', 'is_string', 'list_attr_types', 
+            'lower_case_underscore_to_camel_case', 'is_newer', 'test_func']
 
 #- Naming ----
 def clean_name(text):
@@ -67,15 +72,36 @@ def lower_case_underscore_to_camel_case(text):
 
 
 #- Attribute Functions ----
+def auto_convert(value):
+    """
+    Auto-convert a value to it's given type.
+    """
+    atype = attr_type(value)
+    if atype == 'str':
+        return str(value)
+
+    if atype == 'bool':
+        return bool(value)
+
+    if atype == 'float':
+        return float(value)
+
+    if atype == 'int':
+        return int(value)
+    return value
+
 def attr_type(value):
     """
-    Determine the attribute type based on a value. Returns a string.
+    Determine the attribute type based on a value. 
+    Returns a string.
+
     For example:
     
         value = [2.1, 0.5]
         type = 'float2'
 
     :param value: attribute value.
+    
     :returns: attribute type.
     :rtype: str
     """
@@ -95,16 +121,16 @@ def attr_type(value):
         if is_number(value):
             if type(value) is float:
                 return 'float'
+
             if type(value) is int:
                 return 'int'
     return 'unknown'
-
 
 def list_attr_types(s):
     """
     Return a string type for the value.
 
-    *todo:
+    .. todo::
         - 'unknown' might need to be changed
         - we'll need a feature to convert valid int/str to floats
           ie:
@@ -160,6 +186,28 @@ def is_dict(s):
     """
     from collections import OrderedDict
     return type(s) in [dict, OrderedDict]
+
+
+def is_newer(file1, file2):
+    """
+    Returns true if file1 is newer than file2.
+
+    :param str file1: first file to compare.
+    :param str file2: second file to compare.
+
+    :returns: file1 is newer.
+    :rtype: bool
+    """ 
+    if not os.path.exists(file1) or not os.path.exists(file2):
+        return False
+
+    time1 = os.path.getmtime(file1)
+    time2 = os.path.getmtime(file2)
+    return time1 > time2
+
+#- Testing -----
+def test_func(w, h):
+    print '# width: %.2f, height: %.2f' % (float(w), float(h))
 
 
 def nodeParse(node):

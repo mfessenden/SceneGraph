@@ -12,7 +12,6 @@ from SceneGraph import options
 from SceneGraph import core
 from SceneGraph import util 
 
-from SceneGraph.ui import stylesheet
 from SceneGraph.ui import settings
 from SceneGraph.ui import models
 from SceneGraph.ui import attributes
@@ -68,6 +67,7 @@ class SceneGraphUI(form_class, base_class):
         self.view                 = None                                    # GraphicsView
         self.pmanager             = None                                    # Plugin manager UI
         self.attr_manager         = None                                    # Attribute manager dialog  
+        self.graph_attrs          = None
 
         # font prefs
         self.font_family_ui       = None
@@ -75,14 +75,18 @@ class SceneGraphUI(form_class, base_class):
         self.font_family_nodes    = None
         self.font_size_ui         = None
         self.font_size_mono       = None
+
+        # stylesheet
         self.stylesheet_name      = None
+        self.palette_style        = None
+        self.font_style           = None  
 
         # preferences
-        #self.logging_level        = None # removed, this is a global
         self.debug                = kwargs.get('debug', False)
         self.use_gl               = kwargs.get('use_gl', False)
         self.use_stylesheet       = kwargs.get('use_stylesheet', True)
-        self.stylesheet           = stylesheet.StylesheetManager(self)      # stylesheet manager
+        self.stylesheet           = None                                    # stylesheet manager
+        self.ignore_scene_prefs   = False
 
         self._show_private        = False
         self._valid_plugins       = []  
@@ -107,8 +111,9 @@ class SceneGraphUI(form_class, base_class):
 
         # preferences
         self.settings_file        = os.path.join(options.SCENEGRAPH_PREFS_PATH, 'SceneGraph.ini')
-        self.qtsettings           = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
-        self.qtsettings.setFallbacksEnabled(False)
+        self.qsettings            = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
+
+        self.qsettings.setFallbacksEnabled(False)
 
         # icon
         self.setWindowIcon(QtGui.QIcon(os.path.join(options.SCENEGRAPH_ICON_PATH, 'graph_icon.png')))
@@ -142,6 +147,19 @@ class SceneGraphUI(form_class, base_class):
 
         self.resetStatus()
 
+    #- Attributes ----
+    @property
+    def handler(self):
+        """
+        Return the current SceneEventHandler.
+
+         .. todo::: probably should take this out, useful for debugging mostly.
+
+        :returns: SceneEventHandler instance.
+        :rtype: SceneEventHandler
+        """
+        return self.view.scene().handler
+
     def eventFilter(self, obj, event):
         """
         Install an event filter to filter key presses away from the parent.
@@ -158,8 +176,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Setup the user work directory.
 
-        params:
-            path (str) - user work path.
+        :param str path: user work path.
         """
         if not path:
             path = options.SCENEGRAPH_USER_WORK_PATH
@@ -217,7 +234,9 @@ class SceneGraphUI(form_class, base_class):
             font_family_mono = kwargs.get('font_family_mono', self.font_family_mono),
             font_size_ui = kwargs.get('font_size_ui', self.font_size_ui),
             font_size_mono = kwargs.get('font_size_mono', self.font_size_mono),
-            font_family_nodes = kwargs.get('font_family_nodes', self.font_family_nodes),
+            stylesheet_name = kwargs.get('stylesheet_name', self.stylesheet_name),
+            palette_style = kwargs.get('palette_style', self.palette_style),
+            font_style = kwargs.get('font_style', self.font_style)
             )
 
         self.stylesheet.run(paths=paths) 
@@ -227,7 +246,7 @@ class SceneGraphUI(form_class, base_class):
             self.setStyleSheet(style_data)
             attr_editor = self.getAttributeEditorWidget()
             if attr_editor:
-                attr_editor.setStyleSheet(style_data) 
+                attr_editor.setStyleSheet(style_data)
 
     def initializeGraphicsView(self, filter=False):
         """
@@ -264,7 +283,6 @@ class SceneGraphUI(form_class, base_class):
         self.view.statusEvent.connect(self.updateConsole)
 
         # Scene handler
-        #self.view.scene().handler.sceneNodesUpdated.connect(self.nodesChangedAction)
         self.view.selectionChanged.connect(self.nodesSelectedAction)
 
         # file & ui menu
@@ -290,8 +308,12 @@ class SceneGraphUI(form_class, base_class):
         # debug menu
         self.action_reset_dots.triggered.connect(self.resetDotsAction)
         self.action_evaluate.triggered.connect(self.evaluateScene)
+        self.action_plugin_output.triggered.connect(self.evaluatePlugins)
+        self.action_update_nodes.triggered.connect(self.graphAttributesAction)
+        self.action_style_output.triggered.connect(self.stylesheetOutputAction)
 
         # preferences
+        self.ignore_scene_prefs_check.toggled.connect(self.toggleIgnore)
         self.action_debug_mode.triggered.connect(self.toggleDebug)
         self.edge_type_menu.currentIndexChanged.connect(self.edgeTypeChangedAction)
         self.viewport_mode_menu.currentIndexChanged.connect(self.toggleViewMode)
@@ -303,7 +325,13 @@ class SceneGraphUI(form_class, base_class):
 
         self.ui_font_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
         self.mono_font_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.node_font_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        
+        # styles
         self.stylesheet_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.palette_style_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        self.font_style_menu.currentIndexChanged.connect(self.stylesheetChangedAction)
+        
         self.ui_fontsize_spinbox.valueChanged.connect(self.stylesheetChangedAction)
         self.mono_fontsize_spinbox.valueChanged.connect(self.stylesheetChangedAction)
         self.button_reset_fonts.clicked.connect(self.resetFontsAction)
@@ -386,15 +414,15 @@ class SceneGraphUI(form_class, base_class):
         restore_menu.clear()
         delete_menu.clear()
         
-        layout_names = self.qtsettings.get_layouts()
+        layout_names = self.qsettings.get_layouts()
 
         for layout in layout_names:
             restore_action = restore_menu.addAction(layout)
-            restore_action.triggered.connect(partial(self.qtsettings.restoreLayout, layout))
+            restore_action.triggered.connect(partial(self.qsettings.restoreLayout, layout))
 
             if layout != 'default':
                 delete_action = delete_menu.addAction(layout)
-                delete_action.triggered.connect(partial(self.qtsettings.deleteLayout, layout))
+                delete_action.triggered.connect(partial(self.qsettings.deleteLayout, layout))
 
     def initializeDebugMenu(self):
         """
@@ -427,7 +455,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Build a menu of recently opened scenes.
         """
-        recent_files = self.qtsettings.getRecentFiles()
+        recent_files = self.qsettings.getRecentFiles()
         self.menu_recent_files.clear()
         self.menu_recent_files.setEnabled(False)
         if recent_files:
@@ -435,17 +463,35 @@ class SceneGraphUI(form_class, base_class):
             # Recent files menu
             for filename in reversed(recent_files):
                 if filename:
-                    if i < self.qtsettings._max_files:
+                    if i < self.qsettings._max_files:
                         file_action = QtGui.QAction(filename, self.menu_recent_files)
                         file_action.triggered.connect(partial(self.readGraph, filename))
                         self.menu_recent_files.addAction(file_action)
                         i+=1
             self.menu_recent_files.setEnabled(True)
 
-    def initializePreferencesPane(self):
+    def initializePreferencesPane(self, **kwargs):
         """
         Setup the preferences area.
         """
+        ignore_scene_prefs = kwargs.pop('ignore_scene_prefs', self.ignore_scene_prefs)
+        render_fx = kwargs.pop('render_fx', self.render_fx)
+        viewport_mode = kwargs.pop('viewport_mode', self.viewport_mode)
+        font_family_ui = kwargs.pop('font_family_ui', self.font_family_ui)
+        autosave_inc = kwargs.pop('autosave_inc', self.autosave_inc)
+        antialiasing = kwargs.pop('antialiasing', self.antialiasing)
+        font_size_mono = kwargs.pop('font_size_mono', self.font_size_mono)
+        stylesheet_name = kwargs.pop('stylesheet_name', self.stylesheet_name)
+        palette_style = kwargs.pop('palette_style', self.palette_style)
+        font_style = kwargs.pop('font_style', self.font_style)
+        font_size_ui = kwargs.pop('font_size_ui', self.font_size_ui)
+        edge_type = kwargs.pop('edge_type', self.edge_type)
+        font_family_nodes = kwargs.pop('font_family_nodes', self.font_family_nodes)
+        use_gl = kwargs.pop('use_gl', self.use_gl)
+        font_family_mono = kwargs.pop('font_family_mono', self.font_family_mono)
+
+        self.ignore_scene_prefs_check.blockSignals(True)
+        self.edge_type_menu.blockSignals(True)
         self.edge_type_menu.blockSignals(True)
         self.viewport_mode_menu.blockSignals(True)
         self.check_use_gl.blockSignals(True)
@@ -454,9 +500,16 @@ class SceneGraphUI(form_class, base_class):
         self.app_style_menu.blockSignals(True)
         self.ui_font_menu.blockSignals(True)
         self.mono_font_menu.blockSignals(True)
+        self.node_font_menu.blockSignals(True)
         self.ui_fontsize_spinbox.blockSignals(True)
         self.mono_fontsize_spinbox.blockSignals(True)
         self.stylesheet_menu.blockSignals(True)
+        self.palette_style_menu.blockSignals(True)
+        self.font_style_menu.blockSignals(True)
+        
+
+        # global preferences
+        self.ignore_scene_prefs_check.setChecked(ignore_scene_prefs)
 
         self.edge_type_menu.clear()
         self.viewport_mode_menu.clear()
@@ -464,19 +517,19 @@ class SceneGraphUI(form_class, base_class):
 
         # edge type menu
         self.edge_type_menu.addItems(options.EDGE_TYPES)
-        self.edge_type_menu.setCurrentIndex(self.edge_type_menu.findText(self.edge_type))
+        self.edge_type_menu.setCurrentIndex(self.edge_type_menu.findText(edge_type))
 
         # render FX
-        self.check_render_fx.setChecked(self.render_fx)
+        self.check_render_fx.setChecked(render_fx)
 
         # build the viewport menu
         for item in options.VIEWPORT_MODES.items():
             label, mode = item[0], item[1]
             self.viewport_mode_menu.addItem(label, str(mode))
-        self.viewport_mode_menu.setCurrentIndex(self.viewport_mode_menu.findText(self.viewport_mode))
+        self.viewport_mode_menu.setCurrentIndex(self.viewport_mode_menu.findText(viewport_mode))
 
         # OpenGL check
-        GL_MODE = self.use_gl
+        GL_MODE = use_gl
         if GL_MODE is None:
             GL_MODE = False
 
@@ -498,7 +551,7 @@ class SceneGraphUI(form_class, base_class):
         self.undoView.setCleanIcon(self.icons.get("arrow_curve_180_left"))
 
         # autosave prefs
-        self.autosave_time_edit.setText(str(self.autosave_inc/1000))
+        self.autosave_time_edit.setText(str(autosave_inc/1000))
 
         # application style
         app = QtGui.QApplication.instance()
@@ -516,21 +569,34 @@ class SceneGraphUI(form_class, base_class):
         self.ui_font_menu.clear()
         self.mono_font_menu.clear()
         self.stylesheet_menu.clear()
+        self.palette_style_menu.clear()
+        self.font_style_menu.clear()        
 
+
+        
+        # font menus
         self.ui_font_menu.addItems(self.stylesheet.buildUIFontList())
         self.mono_font_menu.addItems(self.stylesheet.buildMonospaceFontList())
+        self.node_font_menu.addItems(self.stylesheet.buildNodesFontList())
         self.stylesheet_menu.addItems(self.stylesheet.qss_names)
-        
-        self.ui_font_menu.setCurrentIndex(self.ui_font_menu.findText(self.font_family_ui))
-        self.mono_font_menu.setCurrentIndex(self.mono_font_menu.findText(self.font_family_mono))
-        self.stylesheet_menu.setCurrentIndex(self.stylesheet_menu.findText(self.stylesheet_name))
+        self.palette_style_menu.addItems(self.stylesheet.palette_styles)
+        self.font_style_menu.addItems(self.stylesheet.font_styles)        
 
-        ui_font_size = float(re.sub('pt$', '', self.font_size_ui))
-        mono_font_size = float(re.sub('pt$', '', self.font_size_mono))
+
+        self.ui_font_menu.setCurrentIndex(self.ui_font_menu.findText(font_family_ui))
+        self.mono_font_menu.setCurrentIndex(self.mono_font_menu.findText(font_family_mono))
+        self.node_font_menu.setCurrentIndex(self.node_font_menu.findText(font_family_nodes))       
+        self.stylesheet_menu.setCurrentIndex(self.stylesheet_menu.findText(stylesheet_name))
+        self.palette_style_menu.setCurrentIndex(self.palette_style_menu.findText(palette_style))
+        self.font_style_menu.setCurrentIndex(self.font_style_menu.findText(font_style))        
+
+        ui_font_size = float(re.sub('pt$', '', font_size_ui))
+        mono_font_size = float(re.sub('pt$', '', font_size_mono))
 
         self.ui_fontsize_spinbox.setValue(ui_font_size)
         self.mono_fontsize_spinbox.setValue(mono_font_size)
 
+        self.ignore_scene_prefs_check.blockSignals(False)
         self.edge_type_menu.blockSignals(False)
         self.viewport_mode_menu.blockSignals(False)
         self.check_use_gl.blockSignals(False)
@@ -539,9 +605,12 @@ class SceneGraphUI(form_class, base_class):
         self.app_style_menu.blockSignals(False)
         self.ui_font_menu.blockSignals(False)
         self.mono_font_menu.blockSignals(False)
+        self.node_font_menu.blockSignals(False)
         self.ui_fontsize_spinbox.blockSignals(False)
         self.mono_fontsize_spinbox.blockSignals(False)
         self.stylesheet_menu.blockSignals(False)
+        self.palette_style_menu.blockSignals(False)
+        self.font_style_menu.blockSignals(False)        
 
     def buildWindowTitle(self):
         """
@@ -597,15 +666,13 @@ class SceneGraphUI(form_class, base_class):
     def _getWarningStatus(self, val):
         return '[SceneGraph]: WARNING: %s' % msg
 
-    #- SAVING/LOADING ------
+    #- Saving & Loading ------
+    
     def saveGraphAs(self, filename=None):
         """
-        Save the current graph to a json file
+        Save the current graph to a json file. Pass the filename argument to override.
 
-        Pass the filename argument to override
-
-        params:
-            filename  - (str) file path
+        :param str filename: file path to save.
         """
         import os
         if not filename:
@@ -633,7 +700,7 @@ class SceneGraphUI(form_class, base_class):
         if os.path.exists(autosave_file):
             os.remove(autosave_file)
 
-        self.qtsettings.addRecentFile(scenefile)
+        self.qsettings.addRecentFile(scenefile)
         self.initializeRecentFilesMenu()
         self.buildWindowTitle()
 
@@ -641,7 +708,8 @@ class SceneGraphUI(form_class, base_class):
         """
         Save the current graph file.
 
-         * todo: combine this with saveGraphAs
+         .. todo::: 
+            - combine this with saveGraphAs
         """
         if not self.graph.getScene():
             filename = self.saveDialog()
@@ -656,7 +724,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.write(filename)
         self.buildWindowTitle()
 
-        self.qtsettings.addRecentFile(filename)
+        self.qsettings.addRecentFile(filename)
         self.initializeRecentFilesMenu()
 
         # remove autosave files
@@ -668,7 +736,8 @@ class SceneGraphUI(form_class, base_class):
 
     def autoSaveAction(self):
         """
-        Save a temp file when the graph changes.
+        Save a temp file when the graph changes. Set to auto-fire when the autosave timer
+        timeouts.
         """
         if self.undo_stack.isClean():
             self.autosave_timer.start(self.autosave_inc)
@@ -689,8 +758,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Read the current graph from a json file.
 
-        params:
-            filename (str) - scene file to read.
+        :param str filename: scene file to read.
         """
         if filename is None:
             filename = self.openDialog("Open graph file", path=self._work_path)
@@ -712,7 +780,7 @@ class SceneGraphUI(form_class, base_class):
         self.graph.read(filename)
         #self.action_save_graph.setEnabled(True)
 
-        self.qtsettings.addRecentFile(recent_file)
+        self.qsettings.addRecentFile(recent_file)
         log.debug('adding recent file: "%s"' % filename)
 
         self.buildWindowTitle()
@@ -723,25 +791,27 @@ class SceneGraphUI(form_class, base_class):
 
     def autoSaveCheck(self, filename):
         """
-        Queries the user to choose if an autosave file exists.
-        Returns the file that the user chooses.
-
-         * todo: perform os check to see if the file is newer
+        Queries the user to choose to use a newer autosave version
+        of the given filename. If the user chooses the autosave file, 
+        the autosave is copied over the current filename and removed.
         
-        param str filename: file to check for autosave.
+        :param str filename: file to check for autosave.
 
         :returns: file to read.
         :rtype: str
         """
         autosave_file = '%s~' % filename
         if os.path.exists(autosave_file):
-            use_autosave = self.promptDialog("Newer Autosave", "Autosave exists: %s, use that?" % autosave_file)
-            if use_autosave:
-                try:
-                    import shutil
-                    shutil.copy(autosave_file, filename)
-                except:
-                    pass
+            if util.is_newer(autosave_file, filename):
+                use_autosave = self.promptDialog("Autosave exists", "Newer file exists: %s, use that?" % autosave_file)
+
+                if use_autosave:
+                    try:
+                        import shutil
+                        shutil.copy(autosave_file, filename)
+                    except:
+                        pass
+            # remove the autosave file.
             os.remove(autosave_file)
         return filename
 
@@ -809,7 +879,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Toggle rendering of node effects.
 
-         * todo: this probably belongs in GraphicsView/Scene.
+         .. todo::: this probably belongs in GraphicsView/Scene.
         """
         self.render_fx = val
         log.info('toggling effects %s' % ('on' if val else 'off'))
@@ -826,6 +896,9 @@ class SceneGraphUI(form_class, base_class):
         log.level = self.logging_level_menu.itemData(self.logging_level_menu.currentIndex())
         print '# DEBUG: toggling log level: ', log.level      
 
+    def toggleIgnore(self):
+        self.ignore_scene_prefs = self.ignore_scene_prefs_check.isChecked()
+
     def toggleDebug(self):
         """
         Set the debug environment variable and set widget
@@ -839,11 +912,11 @@ class SceneGraphUI(form_class, base_class):
         if debug in ['false', '0']:
             debug = True
 
-        node_widgets = self.view.scene().get_nodes()
+        nodes = self.view.scene().get_nodes()
         edge_widgets = self.view.scene().get_edges()
 
-        if node_widgets:
-            for widget in node_widgets:
+        if nodes:
+            for widget in nodes:
                 widget.setDebug(debug)
 
         if edge_widgets:
@@ -859,8 +932,7 @@ class SceneGraphUI(form_class, base_class):
         """
         Toggle the edge types.
 
-        params:
-            edge_type (str) - edge type (bezier or polygon)
+        :params str edge_type:  edge type (bezier or polygon)
         """           
         if edge_type != self.edge_type:
             self.edge_type = edge_type
@@ -897,7 +969,8 @@ class SceneGraphUI(form_class, base_class):
         self.autosave_inc = astime * 1000
         self.autosave_timer.start(self.autosave_inc)
 
-    #- ACTIONS ----
+    #- Actions ----
+    
     def edgeTypeChangedAction(self):
         """
         Runs when the current edge type menu is changed.
@@ -921,7 +994,8 @@ class SceneGraphUI(form_class, base_class):
         """
         self.font_family_ui = str(self.ui_font_menu.currentText())
         self.font_family_mono = str(self.mono_font_menu.currentText())
-
+        self.font_family_nodes = str(self.node_font_menu.currentText())
+        
         ui_fontsize = self.ui_fontsize_spinbox.value()
         mono_fontsize = self.mono_fontsize_spinbox.value()
 
@@ -930,16 +1004,29 @@ class SceneGraphUI(form_class, base_class):
 
         self.font_size_ui = ui_fontsize
         self.font_size_mono = mono_fontsize
+
         stylesheet_name = self.stylesheet_menu.currentText()
+        palette_style = self.palette_style_menu.currentText()
+        font_style = self.font_style_menu.currentText()
+
+        self.stylesheet_name = stylesheet_name
+        self.palette_style = palette_style
+        self.font_style = font_style
 
         overrides = dict(
             font_family_ui = self.font_family_ui,
             font_family_mono = self.font_family_mono,
             font_size_ui = self.font_size_ui,
             font_size_mono = self.font_size_mono,
+            stylesheet_name = stylesheet_name,
+            palette_style = palette_style,
+            font_style = font_style
             )
 
-        self.initializeStylesheet(**overrides)  
+        self.initializeStylesheet(**overrides)
+
+        # update scene node fonts
+        self.handler.scene.updateNodes(_font=self.font_family_nodes)
 
     def resetFontsAction(self, platform=None, style='default'):
         """
@@ -1118,10 +1205,12 @@ class SceneGraphUI(form_class, base_class):
             edge = self.edgesModel.edges[idx.row()]
             edge.setSelected(True)
 
-    # todo: deprecated?
     def nodeAddedAction(self, node):
         """
         Action whenever a node is added to the graph.
+
+        .. todo::
+            - deprecated?
         """
         self.updateOutput()
 
@@ -1166,11 +1255,17 @@ class SceneGraphUI(form_class, base_class):
         self.writeSettings()
 
         save_action = False
-        if not self.undo_stack.isClean():
+        if not self.undo_stack.isClean():            
             save_action = self.promptDialog("Scene Modified", "Scene has been modified, save?")
 
-        if save_action:
-            self.graph.save()
+            if save_action:
+                filename = self.graph.getScene()
+                if not filename:
+                    filename = self.saveDialog()
+
+                if filename:
+                    self.graph.write(filename)
+
         QtGui.QApplication.instance().removeEventFilter(self)
         return super(SceneGraphUI, self).closeEvent(event)
 
@@ -1215,7 +1310,7 @@ class SceneGraphUI(form_class, base_class):
 
         if attribute:
             for action_name in ['add', 'remove']:
-                attr_action = menu_node_attributes.addAction('%s attribute' % action_name)
+                attr_action = menu_node_attributes.addAction('%s attribute...' % action_name)
                 attr_action.triggered.connect(partial(self.attributeManagerAction, action=action_name))
 
         # add the add node menu
@@ -1275,55 +1370,59 @@ class SceneGraphUI(form_class, base_class):
         Read user settings from preferences. Any arguments passed in kwargs are ignored,
         as the have been passed to the UI.
         """
-        self.qtsettings.beginGroup("MainWindow")
-        self.restoreGeometry(self.qtsettings.value("geometry"))
-        self.restoreState(self.qtsettings.value("windowState"))
-        self.qtsettings.endGroup()
+        self.qsettings.beginGroup("MainWindow")
+        self.restoreGeometry(self.qsettings.value("geometry"))
+        self.restoreState(self.qsettings.value("windowState"))
+        if self.qsettings.group():
+            self.qsettings.endGroup()
+        self.qsettings.beginGroup("Preferences")
 
-        self.qtsettings.beginGroup("Preferences")
+        # viewport mode (ie smart, full, minimal) (global?)
+        if 'ignore_scene_prefs' not in kwargs:
+            ignore_scene_prefs = self.qsettings.value("ignore_scene_prefs")
+            self.ignore_scene_prefs = False
+            if ignore_scene_prefs is not None:
+                self.ignore_scene_prefs = bool(int(ignore_scene_prefs))
+
 
         # viewport mode (ie smart, full, minimal) (global?)
         if 'viewport_mode' not in kwargs:
-            viewport_mode = self.qtsettings.value("viewport_mode")
+            viewport_mode = self.qsettings.value("viewport_mode")
             if viewport_mode is not None:
                 self.viewport_mode = viewport_mode
 
         # render fx (scene?)
         if not 'render_fx' in kwargs:
-            render_fx = self.qtsettings.value("render_fx")
+            render_fx = self.qsettings.value("render_fx")
+            self.render_fx = False
             if render_fx is not None:
-                if render_fx == 'false':
-                    self.render_fx =False
-                if render_fx == 'true':
-                    self.render_fx =True
+                self.render_fx = bool(int(render_fx))
 
         # edge type (scene)
         if not 'edge_type' in kwargs:
-            edge_type = self.qtsettings.value("edge_type")
+            edge_type = self.qsettings.value("edge_type")
             if edge_type is not None:
                 self.edge_type = edge_type
 
         # OpenGL mode (global)
         if not 'use_gl' in kwargs:
-            use_gl = self.qtsettings.value("use_gl")
+            use_gl = self.qsettings.value("use_gl")
+            self.use_gl = False
             if use_gl is not None:
-                if use_gl == 'false':
-                    self.use_gl =False
-                if use_gl == 'true':
-                    self.use_gl =True
+                self.use_gl = bool(int(use_gl))
 
         #logging level (global)
-        logging_level = self.qtsettings.value("logging_level")
+        logging_level = self.qsettings.value("logging_level")
         if logging_level is None:
             logging_level = options.SCENEGRAPH_PREFERENCES.get('logging_level').get('default')
 
         #autosave delay (global)
-        autosave_inc = self.qtsettings.value("autosave_inc")
+        autosave_inc = self.qsettings.value("autosave_inc")
         if autosave_inc is None:
             autosave_inc = options.SCENEGRAPH_PREFERENCES.get('autosave_inc').get('default')
 
         # update valid plugin types
-        plugins = self.qtsettings.value("plugins")
+        plugins = self.qsettings.value("plugins")
         if plugins:
             if type(plugins) in [str, unicode]:
                 plugins = [plugins,]
@@ -1332,19 +1431,18 @@ class SceneGraphUI(form_class, base_class):
                     self._valid_plugins.append(plugin)
 
         # font/stylesheet preferences
-        for attr in ['font_family_ui', 'font_family_mono', 'font_family_nodes', 'font_size_ui', 'font_size_mono', 'stylesheet_name']:
+        for attr in ['font_family_ui', 'font_family_mono', 'font_family_nodes', 'font_size_ui', 'font_size_mono', 'stylesheet_name', 'palette_style', 'font_style']:
             if attr not in kwargs:
-                value = self.qtsettings.value(attr)
+                value = self.qsettings.value(attr)
                 if value is None:
-                    default = self.qtsettings.getDefaultValue(attr, 'Preferences')
+                    default = self.qsettings.getDefaultValue(attr, 'Preferences')
                     if default is not None:
                         value = default
 
                 if value is not None:
                     setattr(self, attr, value)
 
-        self.qtsettings.endGroup()
-
+        self.qsettings.endGroup()
         # set globals prefs
         self.autosave_inc = int(autosave_inc)
         log.level = int(logging_level)
@@ -1352,24 +1450,23 @@ class SceneGraphUI(form_class, base_class):
         # read the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
-            self.qtsettings.beginGroup(dock_name)
-            if "geometry" in self.qtsettings.childKeys():
-                w.restoreGeometry(self.qtsettings.value("geometry"))
-            self.qtsettings.endGroup()
+            self.qsettings.beginGroup(dock_name)
+            if "geometry" in self.qsettings.childKeys():
+                w.restoreGeometry(self.qsettings.value("geometry"))
+            self.qsettings.endGroup()
 
     def writeSettings(self):
         """
         Write Qt settings to file
         """
-        self.qtsettings.beginGroup('MainWindow')
+        self.qsettings.beginGroup('MainWindow')
         width = self.width()
         height = self.height()
-        self.qtsettings.setValue("geometry", self.saveGeometry())
-        self.qtsettings.setValue("windowState", self.saveState())
-        self.qtsettings.endGroup()
-
+        self.qsettings.setValue("geometry", self.saveGeometry())
+        self.qsettings.setValue("windowState", self.saveState())
+        self.qsettings.endGroup()
         # general preferences
-        self.qtsettings.beginGroup('Preferences')
+        self.qsettings.beginGroup('Preferences')
 
         for attr in options.SCENEGRAPH_PREFERENCES:
             if attr == 'logging_level':
@@ -1381,32 +1478,35 @@ class SceneGraphUI(form_class, base_class):
                     continue
                 value = getattr(self, attr)
 
-            self.qtsettings.setValue(attr, value)
+                if type(value) is bool:
+                    value = int(value)
+
+            self.qsettings.setValue(attr, value)
 
         # font/stylesheet preferences
         for fattr in ['font_family_ui', 'font_family_mono', 'font_family_nodes', 'font_size_ui', 'font_size_mono', 'stylesheet_name']:
             if not hasattr(self, fattr):
                 continue
-            self.qtsettings.setValue(fattr, getattr(self, fattr))
+            self.qsettings.setValue(fattr, getattr(self, fattr))
 
-        self.qtsettings.setValue('plugins', self.graph.plug_mgr.valid_plugins)
-        self.qtsettings.endGroup()
+        self.qsettings.setValue('plugins', self.graph.plug_mgr.valid_plugins)
 
+        self.qsettings.endGroup()
         # write the dock settings
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
             no_default = False
 
             # this is the first launch
-            if dock_name not in self.qtsettings.childGroups():
+            if dock_name not in self.qsettings.childGroups():
                 no_default = True
 
-            self.qtsettings.beginGroup(dock_name)
+            self.qsettings.beginGroup(dock_name)
             # save defaults
             if no_default:
-                self.qtsettings.setValue("geometry/default", w.saveGeometry())
-            self.qtsettings.setValue("geometry", w.saveGeometry())
-            self.qtsettings.endGroup()
+                self.qsettings.setValue("geometry/default", w.saveGeometry())
+            self.qsettings.setValue("geometry", w.saveGeometry())
+            self.qsettings.endGroup()
 
     def restoreDefaultSettings(self):
         """
@@ -1417,19 +1517,19 @@ class SceneGraphUI(form_class, base_class):
         main_geo_key = 'MainWindow/geometry/default'
         main_state_key = 'MainWindow/windowState/default'
         
-        self.restoreGeometry(self.qtsettings.value(main_geo_key))
-        self.restoreState(self.qtsettings.value(main_state_key))
+        self.restoreGeometry(self.qsettings.value(main_geo_key))
+        self.restoreState(self.qsettings.value(main_state_key))
         
         for w in self.findChildren(QtGui.QDockWidget):
             dock_name = w.objectName()
 
             defaults_key = '%s/geometry/default' % dock_name
-            if defaults_key in self.qtsettings.allKeys():
-                w.restoreGeometry(self.qtsettings.value(defaults_key))
+            if defaults_key in self.qsettings.allKeys():
+                w.restoreGeometry(self.qsettings.value(defaults_key))
         self.move(pos)
 
     def getCurrentLayouts(self):
-        window_keys = self.qtsettings.window_keys()
+        window_keys = self.qsettings.window_keys()
 
     def saveLayoutAction(self):
         """
@@ -1440,7 +1540,7 @@ class SceneGraphUI(form_class, base_class):
             return 
 
         layout_name = util.clean_name(layout_name)
-        self.qtsettings.saveLayout(layout_name)
+        self.qsettings.saveLayout(layout_name)
 
     def pluginManagerAction(self):
         """
@@ -1466,10 +1566,22 @@ class SceneGraphUI(form_class, base_class):
             self.attr_manager = AttributeManager.AttributeManager(self)
             self.attr_manager.show()
 
+    def graphAttributesAction(self):
+        """
+        Launches the Graph Attributes dialog.
+        """
+        try:
+            self.graph_attrs.close()
+        except:
+            from SceneGraph.ui import GraphAttributes
+            reload(GraphAttributes)
+            self.graph_attrs = GraphAttributes.GraphAttributes(self)
+            self.graph_attrs.show()
+
     def updateOutput(self):
         """
         Update the output text edit.
-        """        
+        """
         # store the current position in the text box
         bar = self.outputTextBrowser.verticalScrollBar()
         posy = bar.value()
@@ -1586,6 +1698,18 @@ class SceneGraphUI(form_class, base_class):
         Evaluate the current scene.
         """
         self.view.scene().evaluate()
+
+    def evaluatePlugins(self):
+        """
+        Evaluate currently loaded plugins.
+        """
+        self.graph.plugins
+
+    def stylesheetOutputAction(self):
+        """
+        Debug method. 
+        """
+        pass
 
     #- Dialogs -----
     def promptDialog(self, label, msg):

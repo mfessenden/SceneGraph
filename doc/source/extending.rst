@@ -4,13 +4,22 @@ Extending SceneGraph
 
 .. image:: ../images/intro_debug.png
 
-Extending SceneGraph is very easy. Custom plugins are easy to write and behave well with the builtin node types. The SceneGraph API provides four distinct classes of node:
+Extending SceneGraph is very easy. Custom plugins are easy to write and behave well with the builtin node types. The SceneGraph API provides distinct node classes that can be created:
 
 - Execute
-- Read
-- Write
+- Math
+- Read/Write
 - Mapping
+- File
+- Output
+- Globals
+- Display
+- Container
 
+Node Classes
+============
+
+Coming soon.
 
 Writing your own plugins
 ========================
@@ -34,17 +43,18 @@ Place your custom plugin somewhere in the SCENEGRAPH_PLUGIN_PATH_. You'll need t
     from SceneGraph import options
     from SceneGraph.core.nodes import DagNode
 
-    SCENEGRAPH_NODE_TYPE = 'myNode'
 
     class MyNode(DagNode):
-
+        node_type     = 'myNode'
+        node_class    = 'container'
         default_name  = 'my_node'
         default_color = [172, 172, 172, 255]
-        node_type     = 'myNode'
 
         def __init__(self, name=None, **kwargs):
-            super(MyNode, self).__init__(name, **kwargs)
+            DagNode.__init__(self, name, **kwargs)
 
+
+To register the node as a valid type, you'll need to add attributes for the class: **node_type** and **node_class**. Additionally, you can add a descriptor attribute **node_category**.
 
 After that, let's create a widget plugin:
 
@@ -52,17 +62,17 @@ After that, let's create a widget plugin:
 ::
 
     #!/usr/bin/env python
-    from SceneGraph.ui import NodeWidget
+    from SceneGraph.ui.node_widgets import NodeWidget
 
-    SCENEGRAPH_WIDGET_TYPE = 'myNode'
 
     class MyNodeWidget(NodeWidget):
-        node_class     = 'dagnode' 
+        widget_type  = 'myNode'
+        node_class   = 'container'
         def __init__(self, dagnode, parent=None):
-            super(MyNodeWidget, self).__init__(dagnode, parent)
+            NodeWidget.__init__(self, dagnode, parent)
 
 
-You'll need to define the global **SCENEGRAPH_NODE_TYPE** in the plugin file, and **SCENEGRAPH_WIDGET_TYPE** in the corresponding widget plugin. If they don't match, your plugin won't load.
+You'll need to make sure that the widget has an attribute **widget_type** that matches the base node type you've just created.
 
 
 Metadata Description Files

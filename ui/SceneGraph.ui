@@ -202,6 +202,11 @@
     <addaction name="action_reset_dots"/>
     <addaction name="action_evaluate"/>
     <addaction name="action_update_graph"/>
+    <addaction name="separator"/>
+    <addaction name="action_plugin_output"/>
+    <addaction name="action_style_output"/>
+    <addaction name="separator"/>
+    <addaction name="action_update_nodes"/>
    </widget>
    <addaction name="menu_file"/>
    <addaction name="menu_edit"/>
@@ -626,8 +631,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>370</width>
-              <height>488</height>
+              <width>145</width>
+              <height>119</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="nodeStatsLayout" stretch="0">
@@ -718,8 +723,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>357</width>
-              <height>504</height>
+              <width>289</width>
+              <height>531</height>
              </rect>
             </property>
             <layout class="QFormLayout" name="preferencesScrollAreaLayout">
@@ -735,138 +740,165 @@
              <property name="margin">
               <number>3</number>
              </property>
-             <item row="0" column="0">
+             <item row="1" column="0">
               <widget class="QLabel" name="app_style_label">
                <property name="text">
                 <string>Style:</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QComboBox" name="app_style_menu"/>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <widget class="QLabel" name="viewport_mode_label">
                <property name="text">
                 <string>Viewport Mode:</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QComboBox" name="viewport_mode_menu"/>
              </item>
-             <item row="2" column="0">
+             <item row="3" column="0">
               <widget class="QLabel" name="edge_type_label">
                <property name="text">
                 <string>Edge type:</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QComboBox" name="edge_type_menu"/>
              </item>
-             <item row="3" column="1">
+             <item row="4" column="1">
               <widget class="QCheckBox" name="check_render_fx">
                <property name="text">
                 <string>render FX</string>
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="5" column="1">
               <widget class="QCheckBox" name="check_use_gl">
                <property name="text">
                 <string>Use OpenGL</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
+             <item row="6" column="0">
               <widget class="QLabel" name="logging_level_label">
                <property name="text">
                 <string>Logging level:</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="6" column="1">
               <widget class="QComboBox" name="logging_level_menu"/>
              </item>
-             <item row="6" column="0">
+             <item row="7" column="0">
               <widget class="QLabel" name="autosave_time_label">
                <property name="text">
                 <string>Autosave time:</string>
                </property>
               </widget>
              </item>
-             <item row="6" column="1">
+             <item row="7" column="1">
               <widget class="QLineEdit" name="autosave_time_edit"/>
              </item>
-             <item row="8" column="0">
+             <item row="8" column="0" colspan="2">
+              <widget class="Line" name="hline2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item row="9" column="0">
               <widget class="QLabel" name="stylesheet_label">
                <property name="text">
                 <string>Stylesheet:</string>
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="9" column="1">
               <widget class="QComboBox" name="stylesheet_menu"/>
              </item>
-             <item row="11" column="0" colspan="2">
+             <item row="10" column="0">
+              <widget class="QLabel" name="palette_style_label">
+               <property name="text">
+                <string>Palette:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="10" column="1">
+              <widget class="QComboBox" name="palette_style_menu"/>
+             </item>
+             <item row="11" column="0">
+              <widget class="QLabel" name="font_style_label">
+               <property name="text">
+                <string>Font style:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="11" column="1">
+              <widget class="QComboBox" name="font_style_menu"/>
+             </item>
+             <item row="12" column="0" colspan="2">
               <widget class="Line" name="hline1">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
               </widget>
              </item>
-             <item row="12" column="0">
+             <item row="13" column="0">
               <widget class="QLabel" name="ui_font_label">
                <property name="text">
                 <string>UI Font:</string>
                </property>
               </widget>
              </item>
-             <item row="12" column="1">
+             <item row="13" column="1">
               <widget class="QComboBox" name="ui_font_menu"/>
              </item>
-             <item row="13" column="0">
+             <item row="14" column="0">
               <widget class="QLabel" name="mono_font_label">
                <property name="text">
                 <string>Monospace Font:</string>
                </property>
               </widget>
              </item>
-             <item row="13" column="1">
+             <item row="14" column="1">
               <widget class="QComboBox" name="mono_font_menu"/>
              </item>
-             <item row="14" column="0">
+             <item row="15" column="0">
               <widget class="QLabel" name="node_font_label">
                <property name="text">
                 <string>Node Font:</string>
                </property>
               </widget>
              </item>
-             <item row="14" column="1">
+             <item row="15" column="1">
               <widget class="QComboBox" name="node_font_menu"/>
              </item>
-             <item row="15" column="0">
+             <item row="16" column="0">
               <widget class="QLabel" name="ui_fontsize_label">
                <property name="text">
                 <string>UI Font Size:</string>
                </property>
               </widget>
              </item>
-             <item row="15" column="1">
+             <item row="16" column="1">
               <widget class="QDoubleSpinBox" name="ui_fontsize_spinbox"/>
              </item>
-             <item row="17" column="0">
+             <item row="18" column="0">
               <widget class="QLabel" name="mono_fontsize_label">
                <property name="text">
                 <string>Mono Font Size:</string>
                </property>
               </widget>
              </item>
-             <item row="17" column="1">
+             <item row="18" column="1">
               <widget class="QDoubleSpinBox" name="mono_fontsize_spinbox"/>
              </item>
-             <item row="18" column="1">
+             <item row="19" column="1">
               <widget class="QToolButton" name="button_reset_fonts">
                <property name="text">
                 <string>Reset Fonts</string>
@@ -876,32 +908,12 @@
                </property>
               </widget>
              </item>
-             <item row="7" column="0" colspan="2">
-              <widget class="Line" name="hline2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item row="9" column="0">
-              <widget class="QLabel" name="font_style_label">
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="ignore_scene_prefs_check">
                <property name="text">
-                <string>Font style:</string>
+                <string>Ignore scene preferences</string>
                </property>
               </widget>
-             </item>
-             <item row="9" column="1">
-              <widget class="QComboBox" name="font_style_menu"/>
-             </item>
-             <item row="10" column="0">
-              <widget class="QLabel" name="palette_style_label">
-               <property name="text">
-                <string>Palette</string>
-               </property>
-              </widget>
-             </item>
-             <item row="10" column="1">
-              <widget class="QComboBox" name="palette_style_menu"/>
              </item>
             </layout>
            </widget>
@@ -1090,6 +1102,21 @@
   <action name="action_update_graph">
    <property name="text">
     <string>Update graph...</string>
+   </property>
+  </action>
+  <action name="action_plugin_output">
+   <property name="text">
+    <string>Plugin output</string>
+   </property>
+  </action>
+  <action name="action_update_nodes">
+   <property name="text">
+    <string>Update nodes...</string>
+   </property>
+  </action>
+  <action name="action_style_output">
+   <property name="text">
+    <string>Stylesheet output</string>
    </property>
   </action>
  </widget>

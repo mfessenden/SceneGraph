@@ -16,23 +16,30 @@ class AttributeManager(QtGui.QMainWindow):
         self.mainLayout.setObjectName("mainLayout")
         self.mainGroup = QtGui.QGroupBox(self.centralwidget)
         self.mainGroup.setObjectName("mainGroup")
+        
         self.mainGroupLayout = QtGui.QVBoxLayout(self.mainGroup)
         self.mainGroupLayout.setObjectName("mainGroupLayout")
         self.listViewLayout = QtGui.QHBoxLayout()
         self.listViewLayout.setObjectName("listViewLayout")
+        
         self.listView = QtGui.QListView(self.mainGroup)
         self.listView.setObjectName("listView")
         self.listViewLayout.addWidget(self.listView)
         self.actionButtonsLayout = QtGui.QVBoxLayout()
         self.actionButtonsLayout.setObjectName("actionButtonsLayout")
+        
         self.tb_new = QtGui.QToolButton(self.mainGroup)
         self.tb_new.setObjectName("tb_new")
         self.tb_new.setProperty("class", "Prefs")
         self.actionButtonsLayout.addWidget(self.tb_new)
+        self.tb_new.setMinimumSize(70, 20)
+        
         self.tb_delete = QtGui.QToolButton(self.mainGroup)
         self.tb_delete.setObjectName("tb_delete")
         self.tb_delete.setProperty("class", "Prefs")
         self.actionButtonsLayout.addWidget(self.tb_delete)
+        self.tb_delete.setMinimumSize(70, 20)
+
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.actionButtonsLayout.addItem(spacerItem)
         self.listViewLayout.addLayout(self.actionButtonsLayout)
@@ -69,6 +76,7 @@ class AttributeManager(QtGui.QMainWindow):
         self.mainLayout.addWidget(self.mainGroup)
         self.buttonsLayout = QtGui.QHBoxLayout()
         self.buttonsLayout.setObjectName("buttonsLayout")
+        
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.buttonsLayout.addItem(spacerItem1)
         self.button_cancel = QtGui.QPushButton(self.centralwidget)

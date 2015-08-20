@@ -17,7 +17,7 @@ class PluginManager(QtGui.QDialog):
 
         if parent is not None:
             self.plugin_manager = parent.graph.plug_mgr
-            self.qtsettings = parent.qtsettings
+            self.qsettings = parent.qsettings
             self._valid_plugins = parent._valid_plugins
 
         else:
@@ -30,7 +30,7 @@ class PluginManager(QtGui.QDialog):
             self.stylesheet = stylesheet.StylesheetManager(self)
             style_data = self.stylesheet.style_data()
             self.setStyleSheet(style_data)
-            self.qtsettings = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
+            self.qsettings = settings.Settings(self.settings_file, QtCore.QSettings.IniFormat, parent=self)
 
         self.setupFonts()
 
@@ -203,22 +203,22 @@ class PluginManager(QtGui.QDialog):
         self.close()
 
     def readSettings(self):
-        self.qtsettings.beginGroup("Preferences")
+        self.qsettings.beginGroup("Preferences")
         # update valid plugin types
-        plugins = self.qtsettings.value("plugins")
+        plugins = self.qsettings.value("plugins")
         if plugins:
             if type(plugins) in [str, unicode]:
                 plugins = [plugins,]
             for plugin in plugins:
                 if plugin not in self._valid_plugins:
                     self._valid_plugins.append(plugin)
-        self.qtsettings.endGroup()
+        self.qsettings.endGroup()
 
     def writeSettings(self):
         self._valid_plugins = self.plugin_manager.valid_plugins
-        self.qtsettings.beginGroup('Preferences')
-        self.qtsettings.setValue('plugins', self.plugin_manager.valid_plugins)
-        self.qtsettings.endGroup()
+        self.qsettings.beginGroup('Preferences')
+        self.qsettings.setValue('plugins', self.plugin_manager.valid_plugins)
+        self.qsettings.endGroup()
 
     def sizeHint(self):
         return QtCore.QSize(800, 500)

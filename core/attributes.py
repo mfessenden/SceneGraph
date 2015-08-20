@@ -58,20 +58,25 @@ class Attribute(object):
         """
         Update attributes.
 
-        * todo: can't pass as **kwargs else we lose the order (why is that?)
+        .. todo::
+            - can't pass as **kwargs else we lose the order (why is that?)
         """
         for name, value in kwargs.iteritems():
-            # we don't save edge attributes, so don't read them from disk.
-            if name not in ['_edges']:
-                #print '# adding attribute: "%s"' % name
-                if hasattr(self, name) and value != getattr(self, name):
-                    print '# DEBUG: Attribute "%s" updating value: "%s": "%s" - "%s"' % (self.name, name, value, getattr(self, name))
-                setattr(self, name, value)
+            if value not in [None, 'null']:
+                # we don't save edge attributes, so don't read them from disk.
+                if name not in ['_edges']:
+                    #print '# adding attribute: "%s"' % name
+                    if hasattr(self, name) and value != getattr(self, name):
+                        print '# DEBUG: Attribute "%s" updating value: "%s": "%s" - "%s"' % (self.name, name, value, getattr(self, name))
+                    setattr(self, name, value)
 
     @property
     def data(self):
         """
         Output data for writing.
+
+        :returns: attribute data.
+        :rtype: dict
         """
         data = dict()
         #for attr in self.REQUIRED:
@@ -86,6 +91,10 @@ class Attribute(object):
 
     @property
     def dagnode(self):
+        """
+        :returns: dag node parent.
+        :rtype: DagNode
+        """
         return self._dag()
 
     @property
@@ -100,12 +109,20 @@ class Attribute(object):
 
     @property
     def is_input(self):
+        """
+        :returns: attribute is an input connection.
+        :rtype: bool
+        """
         if not self.connectable:
             return False
         return self.connection_type == 'input'
 
     @property
     def is_output(self):
+        """
+        :returns: attribute is an output connection.
+        :rtype: bool
+        """
         if not self.connectable:
             return False
         return self.connection_type == 'output'
@@ -113,6 +130,8 @@ class Attribute(object):
     def rename(self, name):
         """
         Rename the attribute.
+
+        :param str name: new name.
         """
         old_name = self.name
         self.name = name

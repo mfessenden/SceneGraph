@@ -73,10 +73,12 @@ Merge
 -----
 
 Note
------
+----
+The :ref:`NoteNode` is simply a resizable display node that can display user's text. 
 
 Dot
 ---
+The :ref:`DotNode` is a simple node that can change the direction of the graph. 
 
 Working with the Graph
 ======================

@@ -8,7 +8,7 @@ import time
 import simplejson as json
 
 from SceneGraph.core import log
-from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH, SCENEGRAPH_CORE
+from SceneGraph.options import SCENEGRAPH_PATH, SCENEGRAPH_CORE, SCENEGRAPH_PLUGIN_PATH, SCENEGRAPH_ICON_PATH, SCENEGRAPH_METADATA_PATH
 
 
 
@@ -28,6 +28,7 @@ class PluginManager(object):
         self._node_data              = dict()    
 
         # plugin paths & module data
+        self._core_plugin_path       = SCENEGRAPH_CORE
         self._builtin_plugin_path    = SCENEGRAPH_PLUGIN_PATH
         self._default_plugin_path    = SCENEGRAPH_PLUGIN_PATH
         self._default_modules        = get_modules(self._default_plugin_path)
@@ -92,8 +93,9 @@ class PluginManager(object):
                 filename = inspect.getsourcefile(v)
                 module = inspect.getmodule(v)
 
-                plugin_name = parse_module_variable(module, 'SCENEGRAPH_NODE_TYPE')
-                widget_name = parse_module_variable(module, 'SCENEGRAPH_WIDGET_TYPE')
+                print 'class: ', v
+                plugin_name = None
+                widget_name = None
 
                 if plugin_name or widget_name:
                     plugin_data[k] = dict()
@@ -130,6 +132,40 @@ class PluginManager(object):
         :rtype: list
         """
         return self.get_plugins(plugins=plugins, disabled=disabled) 
+
+    @property
+    def node_categories(self):
+        """
+        Returns a list of node categories.
+
+        :returns: node categories.
+        :rtype: list
+        """
+        node_categories = []
+
+        for node_type, node_attrs in data.iteritems():
+            category = node_attrs.get('category', None)
+            
+            if category and category not in node_categories:
+                node_categories.append(category)
+
+        return sorted(node_categories)   
+
+    @property
+    def node_classes(self):
+        """
+        Returns a list of node classes.
+
+        :returns: node classes.
+        :rtype: list
+        """
+        node_classes = []
+        for node_type, node_attrs in data.iteritems():
+            node_class = node_attrs.get('class', None)
+            
+            if node_class and node_class not in node_classes:
+                node_classes.append(node_class)
+        return sorted(node_classes)   
 
     @property
     def default_plugin_path(self):
@@ -200,6 +236,7 @@ class PluginManager(object):
         widget_path = os.path.join(SCENEGRAPH_PATH, 'ui')
 
         builtins = self._load_core(core_path, plugins=plugins)
+        #print '# DEBUG: core nodes loaded: ', builtins
         self.load_widgets(widget_path, plugins=builtins)
 
     def _load_core(self, path, plugins=[]):
@@ -247,12 +284,11 @@ class PluginManager(object):
                 # for now, "node_category" is not required
                 if getattr(obj, 'node_category'):
                     node_category = obj.node_category
-                    
-                if cname in globals():
-                    continue
 
-                globals()[cname] = obj
-                # imported.append(cname) 
+
+                if cname not in globals():
+                    globals()[cname] = obj
+
                 imported.append(node_type)
                 # raw_data = pkgutil.get_data('mod.components', 'data.txt')            
                 self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':node_category, 'class':node_class}})
@@ -272,7 +308,7 @@ class PluginManager(object):
         """
         Load built-in and external asset types
 
-         *todo: load the external plugins as well.
+         .. todo::: load the external plugins as well.
 
         :param str path: path to scan.
         :param list plugins: plugin names to filter.
@@ -331,10 +367,9 @@ class PluginManager(object):
                     if getattr(obj, 'node_category'):
                         node_category = obj.node_category
                         
-                    if cname in globals():
-                        continue
+                    if cname not in globals():
+                        globals()[cname] = obj
 
-                    globals()[cname] = obj
                     imported.append(node_type)                
                     self._node_data.update({node_type:{'dagnode':globals()[cname], 'metadata':None, 'source':None, 'enabled':True, 'category':node_category, 'class':node_class}})
 
@@ -351,7 +386,8 @@ class PluginManager(object):
         """
         Load built-in and external node widgets.
 
-         *todo: load the external plugins as well.
+        .. todo:: 
+            - load the external plugins as well.
 
         :param str path: path to scan.
         :param list plugins: plugin names to filter.
@@ -405,12 +441,11 @@ class PluginManager(object):
                     continue
 
                 widget_type = getattr(obj, 'widget_type')
-                #print '# DEBUG: checking widget class: "%s" (%s)' % (widget_type, src_file)
-                if cname in globals():
-                    continue
 
                 if not plugins or widget_type in plugins:
-                    globals()[cname] = obj
+                    if cname not in globals():
+                        globals()[cname] = obj
+
                     imported.update({widget_type:{'widget':globals()[cname]}})
 
         return imported
@@ -479,7 +514,7 @@ class PluginManager(object):
         :param str node_type: dag node type to return.
 
         :returns: dag node subclass.
-        :rtype: core.DagNode
+        :rtype: DagNode
         """
         if node_type not in self._node_data:
             log.error('plugin type "%s" is not loaded.' % node_type)
@@ -495,10 +530,10 @@ class PluginManager(object):
         Return the appropriate node type widget. Returns the default widget
         if one is not defined.
 
-        :param core.nodes.DagNode dagnode: node type.
+        :param DagNode dagnode: node type.
 
         :returns: node widget subclass.
-        :rtype: ui.node_widgets.NodeWidget
+        :rtype: NodeWidget
         """
         if dagnode.node_type not in self._node_data:
             log.error('plugin "%s" is not loaded.' % dagnode.node_type)

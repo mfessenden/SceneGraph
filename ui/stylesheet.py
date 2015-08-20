@@ -10,7 +10,6 @@ import simplejson as json
 
 from SceneGraph.core import log
 from SceneGraph import options
-reload(options)
 
 
 regex = dict(
@@ -27,6 +26,10 @@ class StylesheetManager(object):
     """
     The StylesheetManager reads and parses stylesheet data, plus does some basic sass 
     substitution via external config files.
+
+    :param QtGui.QWidget parent: parent UI.
+    :param str style: default style name.
+    :param list paths: additional search paths.
     """
     def __init__(self, parent=None, style='default', paths=[]):
         from PySide.QtGui import QFontDatabase
@@ -78,19 +81,20 @@ class StylesheetManager(object):
     def style(self):
         return self._style
 
-    def style_data(self, style=None, **kwargs):
+    def style_data(self, **kwargs):
         """
         Return the stylesheet data.
 
         :returns: parsed stylesheet data.
         :rtype: str
         """
-        if style is None:
-            style = self._style
+        stylesheet_name = kwargs.pop('stylesheet_name', 'default')
+        palette_style = kwargs.pop('palette_style', 'default')
+        font_style = kwargs.pop('font_style', 'default')
         
         self._data = dict()
-        parser = StyleParser(self, style=style)
-        parser.run()
+        parser = StyleParser(self, style=stylesheet_name, palette_style=palette_style, font_style=font_style)
+        parser.run(style=stylesheet_name, palette_style=palette_style, font_style=font_style)
         data = parser.data(**kwargs)
 
         # grab data here for debugging
@@ -127,6 +131,40 @@ class StylesheetManager(object):
         :rtype: list
         """
         return self._qss_files.keys()    
+
+    @property
+    def palette_styles(self):
+        """
+        Returns a list of palette style names.
+
+        :returns: list of palette names.
+        :rtype: list
+        """
+        styles = []
+        for style_name, files in self._config_files.iteritems():
+            if 'palette' in files:
+                value = files.get('palette', None)
+                if value is not None:
+                    if os.path.exists(value):
+                        styles.append(style_name)
+        return styles
+
+    @property
+    def font_styles(self):
+        """
+        Returns a list of font style names.
+
+        :returns: list of font style names.
+        :rtype: list
+        """
+        styles = []
+        for style_name, files in self._config_files.iteritems():
+            if 'fonts' in files:
+                value = files.get('fonts', None)
+                if value is not None:
+                    if os.path.exists(value):
+                        styles.append(style_name)
+        return styles
 
     @property
     def qss_files(self):
@@ -343,6 +381,20 @@ class StylesheetManager(object):
                 families.append(font_name)
         return families
 
+    def buildNodesFontList(self, valid=[]):
+        """
+        Returns a list of fonts for node display.
+        """
+        if not valid:
+            valid = options.SCENEGRAPH_VALID_FONTS.get('nodes')
+
+        families = []
+        all_fonts = [x for fontlist in self._fonts.values() for x in fontlist]
+        for font_name in all_fonts:
+            if font_name in valid:
+                families.append(font_name)
+        return families
+
     def font_defaults(self, platform=None, style='default'):
         """
         Builds a dictionary of font & size defaults by platform.
@@ -379,10 +431,12 @@ class StyleParser(object):
     The StyleParse class reads stylesheets, parses config files and does sass-style
     replacements for properties.
     """
-    def __init__(self, parent, style=None):
+    def __init__(self, parent, style=None, **kwargs):
 
         self.manager            = parent
         self.style              = style
+        self.palette_style      = kwargs.get('palette_style', 'default')
+        self.font_style         = kwargs.get('font_style', 'default')
 
         self._stylesheet        = None
         self._config_fonts      = None
@@ -390,7 +444,7 @@ class StyleParser(object):
 
         self._data              = dict()
 
-    def run(self, style='default'):
+    def run(self, style='default', **kwargs):
         """
         Parse stylesheet data for a given style and substitute values 
         from config file data. 
@@ -398,18 +452,23 @@ class StyleParser(object):
         :param str style: style name to parse.
         :param dict kwargs: overrides.
         """
+        palette_style = kwargs.get('palette_style', 'default')
+        font_style = kwargs.get('font_style', 'default')
+
         stylesheet = self.manager._qss_files.get(style, None)
-        configs    = self.manager.config_files(style)
+
+        #configs    = self.manager.config_files(style)
+        config_palette = self.manager._config_files.get(palette_style).get('palette')
+        config_fonts = self.manager._config_files.get(font_style).get('fonts')
 
         if stylesheet and os.path.exists(stylesheet):
             self._stylesheet = stylesheet
 
-        if configs:
-            if 'fonts' in configs:
-                self._config_fonts = configs.get('fonts')
+        if config_palette and os.path.exists(config_palette):
+            self._config_palette = config_palette
 
-            if 'palette' in configs:
-                self._config_palette = configs.get('palette')
+        if config_fonts and os.path.exists(config_fonts):
+            self._config_fonts = config_fonts
 
         if self._stylesheet is not None:
             self._data = self._parse_configs()
@@ -477,6 +536,45 @@ class StyleParser(object):
                             data[class_name][attribute] = attr_val
         return data
 
+
+    def data(self, verbose=False, **kwargs):
+        """
+        Returns the raw stylesheet data with config values substituted.
+
+        :returns: stylesheet data.
+        :rtype: str
+        """
+        data = self._parse_platform_data(self._data, **kwargs)
+       
+        ff = open(self._stylesheet, 'r')
+        ss_lines = ""
+        for line in ff.readlines():
+            if line:
+                # fix some unicode errors
+                line = str(line)
+                if '@' in line:
+                    if not '@STYLENAME' in line:
+                        if line.count('@') > 1:
+                            new_value = line
+                            values = re.findall(regex.get('value'), line)
+                            if values:                                
+                                for value in values:
+                                    new_value = re.sub('@%s' % str(value), str(data.get(value)), new_value)
+                            
+                            ss_lines += new_value
+                            continue
+
+                        smatch = re.search(regex.get('value'), line)
+                        if smatch:
+                            value = str(smatch.group('value'))
+                            if value in data:
+                                new_value = str(data.get(value))
+                                ss_lines += '%s' % re.sub('@%s' % value, new_value, line)
+                                continue
+
+                ss_lines += '%s' % line
+        return ss_lines
+
     def _parse_platform_data(self, data, platform=None, verbose=False, **kwargs):
         """
         Parse config data into platform defaults, etc.
@@ -536,43 +634,6 @@ class StyleParser(object):
                             result[attr] = derived_val
         return result
 
-    def data(self, verbose=False, **kwargs):
-        """
-        Returns the raw stylesheet data with config values substituted.
-
-        :returns: stylesheet data.
-        :rtype: str
-        """
-        data = self._parse_platform_data(self._data, **kwargs)
-       
-        ff = open(self._stylesheet, 'r')
-        ss_lines = ""
-        for line in ff.readlines():
-            if line:
-                # fix some unicode errors
-                line = str(line)
-                if '@' in line:
-                    if not '@STYLENAME' in line:
-                        if line.count('@') > 1:
-                            new_value = line
-                            values = re.findall(regex.get('value'), line)
-                            if values:                                
-                                for value in values:
-                                    new_value = re.sub('@%s' % str(value), str(data.get(value)), new_value)
-                            
-                            ss_lines += new_value
-                            continue
-
-                        smatch = re.search(regex.get('value'), line)
-                        if smatch:
-                            value = str(smatch.group('value'))
-                            if value in data:
-                                new_value = str(data.get(value))
-                                ss_lines += '%s' % re.sub('@%s' % value, new_value, line)
-                                continue
-
-                ss_lines += '%s' % line
-        return ss_lines
 
     def apply(self, stylesheet=None, style=None):
         """

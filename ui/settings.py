@@ -4,6 +4,7 @@ from PySide import QtCore, QtGui
 
 from SceneGraph import options
 from SceneGraph.core import log
+from SceneGraph.ui import stylesheet
 
 
 class Settings(QtCore.QSettings):
@@ -11,8 +12,11 @@ class Settings(QtCore.QSettings):
     def __init__(self, filename, frmt=QtCore.QSettings.IniFormat, parent=None, max_files=10):
         QtCore.QSettings.__init__(self, filename, frmt, parent)
 
+        
         self._max_files     = max_files
         self._parent        = parent
+        self._stylesheet    = stylesheet.StylesheetManager(parent)
+        parent.stylesheet   = self._stylesheet
         self._groups        = ['MainWindow', 'RecentFiles', 'Preferences']
         self.initialize()
 
@@ -30,6 +34,7 @@ class Settings(QtCore.QSettings):
             self.endArray()
 
         while self.group():
+            #print '# DEBUG: Settings: current group: "%s"' % self.group()
             self.endGroup()
         self.initializePreferences()
 
@@ -42,9 +47,18 @@ class Settings(QtCore.QSettings):
             # query the defauls from options.
             for option in options.SCENEGRAPH_PREFERENCES:
                 if 'default' in options.SCENEGRAPH_PREFERENCES.get(option):
-                    self.setValue('default/%s' % option, options.SCENEGRAPH_PREFERENCES.get(option).get('default'))
+                    def_value = options.SCENEGRAPH_PREFERENCES.get(option).get('default')
+                    if type(def_value) is bool:
+                        def_value = int(def_value)
+                    self.setValue('default/%s' % option, def_value)
+
+            # font defaults
+            for font_attr, font_value in self._stylesheet.font_defaults().iteritems():
+                if not ':' in font_attr:
+                    self.setValue('default/%s' % font_attr, font_value)
 
             while self.group():
+                #print '# DEBUG: Settings: current group: "%s"' % self.group()
                 self.endGroup()
                 
     @property
@@ -100,6 +114,19 @@ class Settings(QtCore.QSettings):
             dock_name = dock.objectName()
             result.append(str(dock_name))
         return result
+
+    def prefs_keys(self):
+        """
+        Returns a list of preferences keys.
+
+        :returns: list of user prefs keys.
+        :rtype: list
+        """
+        results = []
+        self.beginGroup('Preferences')
+        results = self.childKeys()
+        self.endGroup()
+        return results
 
     def get_layouts(self):
         """

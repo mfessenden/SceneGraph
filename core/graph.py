@@ -21,28 +21,40 @@ class Graph(object):
     """
     def __init__(self, *args, **kwargs):
 
-        # events
-        self.nodesAdded      = EventHandler(self)
-        self.edgesAdded      = EventHandler(self)
-        self.graphUpdated    = EventHandler(self)
+        default_width                      = kwargs.pop('width', 150.0)
+        default_height                     = kwargs.pop('height', 150.0)
 
-        #self.network        = nx.DiGraph()
-        self.network         = nx.MultiDiGraph() # mutliple edges between nodes
+        # events
+        self.nodesAdded                    = EventHandler(self)
+        self.edgesAdded                    = EventHandler(self)
+        self.graphUpdated                  = EventHandler(self)
+
+        # events - TESTING
+        self.graphAboutToBeSaved           = EventHandler(self)
+        self.graphSaved                    = EventHandler(self)
+        self.graphAboutToBeRead            = EventHandler(self)
+        self.graphRead                     = EventHandler(self)
+
+        self.graphRefreshed                = EventHandler(self)
+
+
+        #self.network                      = nx.DiGraph()
+        self.network                       = nx.MultiDiGraph() # mutliple edges between nodes
         
-        self.mode            = 'standalone'
-        self.grid            = Grid(5, 5)
-        self.handler         = None
-        self.plug_mgr        = PluginManager()
-        self._initialized    = 0
+        self.mode                          = 'standalone'
+        self.grid                          = Grid(5, 5, width=default_width, height=default_height)
+        self.handler                       = None
+        self.plug_mgr                      = PluginManager()
+        self._initialized                  = 0
 
         # attributes for current nodes/dynamically loaded nodes
-        self._node_types     = dict() 
-        self.dagnodes        = dict()
-        self.autosave_path   = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
-        self._autosave_file  = None
+        self._node_types                   = dict() 
+        self.dagnodes                      = dict()
+        self.autosave_path                 = os.path.join(os.getenv('TMPDIR'), 'sg_autosave.json') 
+        self._autosave_file                = None
 
         # testing mode only
-        self.debug           = kwargs.pop('debug', False)
+        self.debug                         = kwargs.pop('debug', False)
 
         # initialize the NetworkX graph attributes
         self.initializeNetworkAttributes()
@@ -120,10 +132,14 @@ class Graph(object):
         self.network.graph['api_version'] = options.API_VERSION
         self.network.graph['scene'] = self.getScene()
         self.network.graph['environment'] = self.mode
-        self.network.graph['preferences'] = dict()
 
-        if self.handler is not None:
-            self.network.graph.get('preferences').update(self.handler.updateGraphAttributes())
+        self.graphRefreshed()
+
+    def updateGraphPreferences(self, **kwargs):
+        """
+        Updates the 'preferences' attribute with ui values from the handler.
+        """
+        self.getNetworkPreferences().update(**kwargs)
 
     def clean_legacy_attrs(self, attributes=['autosave']):
         """
@@ -141,7 +157,7 @@ class Graph(object):
         """
         Callback method.
 
-        :param SceneGraph.nodes.DagNode node:
+        :param DagNode node:
         """
         old_name = node.name
         new_name = kwargs.get('name', old_name)
@@ -154,7 +170,7 @@ class Graph(object):
         """
         Callback method.
 
-        :param SceneGraph.nodes.DagNode node:
+        :param DagNode node:
         """
         nid = node.id
         pos = kwargs.get('pos', [])
@@ -168,7 +184,7 @@ class Graph(object):
         """
         Callback method to update the NetworkX data when the dagnode changes.
 
-        :param SceneGraph.nodes.DagNode node:
+        :param DagNode node:
         """
         nid = node.id
         if nid in self.network.nodes():
@@ -336,8 +352,8 @@ class Graph(object):
         """
         Returns a list of all dag edges.
 
-        returns:
-            (list) - list of edges.
+        :returns: list of edge dictionaries.
+        :rtype: list
         """
         return self.network.edges(data=True)
 
@@ -345,11 +361,10 @@ class Graph(object):
         """
         Return a dag node by name.
 
-        params:
-            node - (str) name of node to return
+        :param str node: name of node to return.
 
-        returns:
-            (obj)
+        :returns: node(s)
+        :rtype: DagNode
         """
         nodes=[]
         network_nodes = self.network.nodes()
@@ -366,8 +381,8 @@ class Graph(object):
         Returns a list of human-readable edge
         connections.
 
-        returns:
-            (list) - list of connection strings. 
+        :returns: list of connection strings.
+        :rtype: list
         """
         connections = []
         # edge: (id, id, {attrs})
@@ -399,11 +414,11 @@ class Graph(object):
 
         :returns:
             
-            :type: `core.DagNode`
+            DagNode
                 
                 - in standalone mode
 
-            :type: `ui.NodeWidget`
+            NodeWidget
                 
                 - in ui mode
 
@@ -452,6 +467,9 @@ class Graph(object):
     def parse_connections(self, data):
         """
         parse connections from parsed graph data.
+        
+        :returns: attribute dictionary.
+        :rtype: dict
         """
         attributes = dict()
         for k, v in data.iteritems():
@@ -463,8 +481,7 @@ class Graph(object):
         """
         Removes a node from the graph
 
-        :param *args: node name, node id
-        :type *args: str
+        :param args: node name, node id
 
         :returns: node was removed.
         :rtype: bool
@@ -501,13 +518,14 @@ class Graph(object):
         :param dest: destination node
         :type dest: DagNode
 
-        :returns: edge object
+        :returns: edge dictionary
         :rtype: dict
         """
         src_attr = kwargs.pop('src_attr', 'output')
         dest_attr = kwargs.pop('dest_attr', 'input')
         weight = kwargs.pop('weight', 1.0)
         edge_type = kwargs.pop('edge_type', 'bezier')
+        style = kwargs.pop('style', 'solid')
 
         if src is None or dest is None:
             log.warning('none type passed.')
@@ -528,31 +546,30 @@ class Graph(object):
             return 
         
         # edge attributes for nx graph
-        edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr, edge_type=edge_type)
+        edge_attrs = dict(src_id=src.id, dest_id=dest.id, src_attr=src_attr, dest_attr=dest_attr, edge_type=edge_type, style=style)
 
         src_conn = src.get_connection(src_attr)
         dest_conn = dest.get_connection(dest_attr)
         edge_id_str = '(%s,%s)' % (src.id, dest.id)
 
-        if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:            
-            # add the nx edge        
-            self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)
-            log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
+        #if edge_id_str not in src_conn._edges and edge_id_str not in dest_conn._edges:            
+        # add the nx edge - weight should go here        
+        self.network.add_edge(src.id, dest.id, key='attributes', weight=weight, attr_dict=edge_attrs)
+        log.info('adding edge: "%s"' % self.edge_nice_name(src.id, dest.id))
 
-            # new edge = {'attributes': {'dest_attr': 'input', 'src_attr': 'output', 'weight': 1}}
-            new_edge = self.network.edge[src.id][dest.id]
-            
-            src_conn._edges.append(edge_id_str)
-            dest_conn._edges.append(edge_id_str)
+        # new edge = {'attributes': {'dest_attr': 'input', 'src_attr': 'output', 'weight': 1}}
+        new_edge = self.network.edge[src.id][dest.id]
+        #print 'new edge: ', new_edge
+        src_conn._edges.append(edge_id_str)
+        dest_conn._edges.append(edge_id_str)
 
-            # update the scene
-            self.edgesAdded([new_edge.get('attributes')])
-            return new_edge
-        return
+        # update the scene
+        self.edgesAdded([new_edge.get('attributes')])
+        return new_edge
 
     def get_edge(self, *args):
         """
-        Return a dag edge.
+        Return an edge attribute dictionary.
 
         Pass connection string ie: ('node1.output, node2.input'),
         or source dest (ie: 'node1.output', 'node2.input')
@@ -1053,12 +1070,16 @@ class Graph(object):
         Returns a snapshot dictionary for writing scenes 
         and updating undo stack.
 
-         * todo: look into nxj.adjacency_data() method.
+        .. todo::
+            - try using the nxj.adjacency_data() method.
+
+        :returns: dictionary of graph data.
+        :rtype: dict
         """
         if not self.evaluate():
             log.warning('graph did not evaluate correctly.')
         attrs = {'source': 'source', 'target': 'target', 'key': 'key', 
-                'id': 'id', 'src_id': 'src_id', 'dest_id': 'dest_id', 'src_attr': 'src_attr', 'dest_attr': 'dest_attr'}
+                'id': 'id', 'src_id': 'src_id', 'dest_id': 'dest_id', 'src_attr': 'src_attr', 'dest_attr': 'dest_attr', 'weight':'weight', 'style':'style'}
         graph_data = nxj.node_link_data(self.network, attrs=attrs)
         return graph_data
 
@@ -1066,8 +1087,8 @@ class Graph(object):
         """
         Returns a snapshot of just the graph.
 
-        returns:
-            (dict) - dictionary of graph data.
+        :returns: dictionary of graph data.
+        :rtype: dict
         """
         data = self.snapshot()
         for d in ['nodes', 'links']:
@@ -1079,11 +1100,10 @@ class Graph(object):
         """
         Returns a snapshot of just the graph.
 
-        params:
-            dagnodes (list) - list of dag node names.
+        :param list dagnodes:  list of dag node names.
 
-        return:
-            (dict) - dictionary of nodes & connected edges.
+        :returns: dictionary of nodes & connected edges.
+        :rtype: dict
         """
         if nodes:
             if type(nodes) not in [list, tuple]:
@@ -1112,20 +1132,102 @@ class Graph(object):
         result.update(links=link_data_filtered)
         return result
 
-    def save(self):
+    def write(self, filename, auto=False, data={}):
         """
-        Save the current scene.
-        """
-        if not self.getScene():
-            log.error('please save the current scene.')
-            return
+        Write the graph to scene file.
 
-        log.info('saving current scene: "%s"' % self.getScene())
-        return self.write(self.getScene())
+        :param str filename:  file to save.
+        :param bool auto: file is an autosave, don't set it as the current scene.
+        :param dict data: dictionary of graph data.
+
+        :returns: current scene name.
+        :rtype: str
+        """ 
+        # callbacks
+        self.graphAboutToBeSaved()
+
+        if not data:
+            data = self.snapshot()
+
+        fn = open(filename, 'w')
+        json.dump(data, fn, indent=4)
+        fn.close()
+
+        if auto:
+            self._autosave_file = filename
+            # don't set the current autosave filename as the scene, use the parent filename
+            filename = filename[:-1]
+
+        # callbacks
+        self.graphSaved()
+        return self.setScene(filename)
+
+    def read(self, filename, force=False):
+        """
+        Read a graph from a saved scene.
+
+        :param str filename: file to read
+        :param bool force: force scenes not meeting API_MINIMUM to be read.
+
+        :returns: current scene.
+        :rtype: str
+        """
+        # callbacks
+        self.graphAboutToBeRead()
+
+        graph_data = self.read_file(filename)
+        if not graph_data:
+            log.error('scene "%s" appears to be invalid.' % filename)
+            return False
+
+        api_ver = [x[1] for x in graph_data.get('graph', []) if x[0] == 'api_version'][0]
+        if not self.version_check(graph_data):
+            if not force:
+                log.error('scene "%s" requires api version %s ( %s )' % (filename, options.API_MINIMUM, api_ver))
+                return False   
+
+        # restore from state.
+        self.restore(graph_data)
+
+        # callbacks
+        prefs = dict()
+        for data in graph_data.get('graph'):
+            dname, attrs = data
+            if dname == 'preferences':
+                prefs = attrs
+
+        self.graphRead(**prefs)
+        return self.setScene(filename)
+    
+    def read_file(self, filename):
+        """
+        Read a data file and return the data.
+
+        :param str filename: file to read
+        
+        :returns: graph data
+        :rtype: dict
+        """
+        # expand user home path.
+        filename = os.path.expanduser(filename)
+        autosave_file = '%s~' % filename
+
+        if not os.path.exists(filename):
+            log.error('file %s does not exist.' % filename)
+            return False
+
+        if os.path.exists(autosave_file):
+            os.remove(autosave_file)
+            log.info('removing autosave "%s"' % autosave_file)
+
+        log.info('reading scene file "%s"' % filename)
+        raw_data = open(filename).read()
+        graph_data = json.loads(raw_data, object_pairs_hook=dict)
+        return graph_data
 
     def restore(self, data, nodes=True, graph=True):
         """
-        Restore current DAG state from data.
+        Restore current DAG state from data. Also used for restoring graph state for the undo stack.
 
         :param dict data: dictionary of scene graph data.
         :param bool nodes: restore nodes/edges.
@@ -1187,93 +1289,34 @@ class Graph(object):
         view_scale = self.network.graph.get('view_scale', (1.0, 1.0))
 
         # update the UI.
-        if self.handler is not None:
+        if self.mode == 'ui':
             if graph:
-                view = self.handler.scene.views()[0]
-                view.resetTransform()
-                view.setCenterPoint(scene_pos)
-                view.scale(*view_scale)
+                self.handler.restoreGeometry(pos=scene_pos, scale=view_scale)
+                
         self._initialized = 1
 
-    def write(self, filename, auto=False, data={}):
+    def autosave_check(self, filename):
         """
-        Write the graph to scene file.
-
-        params:
-            filename (str)  - file to save.
-            auto     (bool) - file is an autosave, don't set
-                              it as the current scene.
-            data     (dict) - dictionary of graph data.
-        """  
-        if not data:
-            data = self.snapshot()
-
-        fn = open(filename, 'w')
-        json.dump(data, fn, indent=4)
-        fn.close()
-
-        if auto:
-            self._autosave_file = filename
-            filename = filename[:-1]
-        return self.setScene(filename)
-
-    def read(self, filename, force=False):
+        Check to see if there's an autosave file. Returns it if the file exists.
+        
+        :param str filename: filename to query.
+        
+        :returns: autosave filename
+        :rtype: str
         """
-        Read a graph from a saved scene.
-
-        params:
-            filename - (str) file to read
-        """
-        graph_data = self.read_file(filename)
-        if not graph_data:
-            log.error('scene "%s" appears to be invalid.' % filename)
-            return False
-
-        api_ver = [x[1] for x in graph_data.get('graph', []) if x[0] == 'api_version'][0]
-        if not self.version_check(graph_data):
-            if not force:
-                log.error('scene "%s" requires api version %s ( %s )' % (filename, options.API_MINIMUM, api_ver))
-                return False   
-
-        # restore from state.
-        self.restore(graph_data)
-        if self.handler is not None:
-            self.handler.graphReadAction()
-        return self.setScene(filename)
-    
-    def read_file(self, filename):
-        """
-        Read a data file and return the data.
-
-        params:
-            filename - (str) file to read
-        """
-        # expand user home path.
-        filename = os.path.expanduser(filename)
         autosave_file = '%s~' % filename
-
-        if not os.path.exists(filename):
-            log.error('file %s does not exist.' % filename)
-            return False
-
         if os.path.exists(autosave_file):
-            os.remove(autosave_file)
-            log.info('removing autosave "%s"' % autosave_file)
-
-        log.info('reading scene file "%s"' % filename)
-        raw_data = open(filename).read()
-        graph_data = json.loads(raw_data, object_pairs_hook=dict)
-        return graph_data
-
+            return autosave_file
+        return
+    
     def version_check(self, data):
         """
         Check to make sure the document is readable.
 
-        params:
-            data (dict) - raw json data from file.
+        :param dict data: raw json data from file.
 
-        returns:
-            (bool) - file is readable.
+        :returns: file is readable.
+        :rtype: bool
         """
         # version check
         api_ver = 0.0
@@ -1311,19 +1354,19 @@ class Graph(object):
         Send a message through the SceneHandler.
         """
         if self.handler is not None:
-            self.handler.updateConsole(msg, clear=clear, graph=True)
+            #self.handler.updateConsole(msg, clear=clear, graph=True)
+            print '# DEBUG: handler missing "updateConsole()"'
 
     #- Virtual ----
     def is_connected(self, node1, node2):
         """
         Returns true if two nodes are connected.
 
-        params:
-            node1 - (DagNode) - first node to query.
-            node2 - (DagNode) - second node to query.
+        :param DagNode node1: first node to query.
+        :param DagNode node2: second node to query.
 
-        returns:
-            (bool) - nodes are connected.
+        :returns: nodes are connected.
+        :rtype: bool 
         """
         dag_names = [node1.name, node2.name]
         for edge in self.network.edges(data=True):
@@ -1428,8 +1471,16 @@ class Array(object):
 class Grid(object):
     """
     Represents a two-dimensional grid.
+
+    :param int rows: number of rows to create.
+    :param int columns: number of rows to create.
+    :param float width: column width.
+    :param float height: row height.
+
+    :param fillValue: initial value to grid with.
+    :type fillValue: any
     """
-    def __init__(self, rows, columns, fillValue=None):
+    def __init__(self, rows, columns, width=150.0, height=150.0, fillValue=None):
 
         self._data      = Array(rows)
         self._row       = 0
@@ -1437,8 +1488,8 @@ class Grid(object):
         self._current   = None
 
         # coordinates
-        self._width     = 150
-        self._height    = 150
+        self._width     = width
+        self._height    = height
 
         for row in range(rows):
             self._data[row] = Array(columns, fillValue)
@@ -1485,11 +1536,10 @@ class Grid(object):
         """
         Get the graph coordinates of a specific value.
 
-        params:
-            val - (any) value to search for
+        :param val: value to search for: str, int, etc.
 
-        returns:
-            (tuple) - coordiates of val in the grid.
+        :returns: x,y coordiates of value in the grid.
+        :rtype: tuple
         """
         result = ()
         for r in range(self.height):
@@ -1503,11 +1553,10 @@ class Grid(object):
         Return the number of times the given value
         exists in the current graph.
 
-        params:
-            val - (any) value to search for
+        :param val: value to search for
 
-        returns:
-            (int) - number of times this value exists.
+        :returns: number of times this exists in the grid.
+        :rtype: int
         """
         return len(self.find(val))
 
@@ -1525,8 +1574,8 @@ class Grid(object):
         """
         Reset the grid coordinates.
 
-        returns:
-            (tuple) - current row-column coordinates
+        :returns: current row-column coordinates.
+        :rtype: tuple
         """
         self._row = 0
         self._col = 0
@@ -1537,8 +1586,8 @@ class Grid(object):
         """
         Return the current position in the grid.
 
-        returns:
-            (tuple) - current row-column coordinates
+        :returns: current row-column coordinates.
+        :rtype: tuple
         """
         return (self._row, self._col)
 
@@ -1547,8 +1596,8 @@ class Grid(object):
         """
         Return the current x/y values of the current grid coordinates.
 
-        returns:
-            (tuple) - current row-column coordinates
+        :returns: current row-column coordinates.
+        :rtype: tuple
         """
         return (self._row * self._width, self._col * self._height)
 

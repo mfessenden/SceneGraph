@@ -16,18 +16,19 @@ import sys
 import os
 import shlex
 import sphinx_rtd_theme
-from PySide import QtCore, QtGui
 
-sys.path.insert(0, os.path.abspath("../.."))
-sys.path.append(os.path.abspath("../core"))
-sys.path.append(os.path.abspath("../util"))
-sys.path.append(os.path.abspath("../ui"))
-
+from PySide import QtCore, QtGui, QtOpenGL
 from SceneGraph import options
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
+
+sys.path.append('/usr/lib64/python2.7/site-packages/PySide')
+sys.path.insert(0, os.path.abspath("../.."))
+sys.path.append(os.path.abspath("../core"))
+sys.path.append(os.path.abspath("../util"))
+sys.path.append(os.path.abspath("../ui"))
 
 # -- General configuration ------------------------------------------------
 
@@ -45,6 +46,7 @@ extensions = [
     'sphinx.ext.pngmath',
     'sphinx.ext.viewcode',
 ]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -96,7 +98,7 @@ exclude_patterns = []
 #default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
+add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -300,4 +302,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
+# 'PySide':'http://www.pyside.org/docs/pyside/objects.inv#/pyside-objects.inv'
 intersphinx_mapping = {'https://docs.python.org/': None}
+                       
+  
