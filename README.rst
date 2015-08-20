@@ -120,9 +120,3 @@ Usage
 * simplejson
 * NetworkX 1.9.1
 
-**Branch: core-node-dev:**
-
-- development of the core dag node types
-- and strengthing of the plugin and attributes API
-- development of callbacks and events
-
