@@ -1,12 +1,16 @@
 SceneGraph
 ----------
+![Alt text](/doc/images/intro.png?raw=true "SceneGraph")
+
+**SceneGraph** is a fast & flexible framework for visualizing node graphs using in visual effects DCCs using PySide. Scenes can be saved and loaded in a variety of applications, and users can easily add their own nodes to suit their needs.
 
 =====
 Usage
 =====
 
-**Launching the interface**::
+**Launching the interface:**
 
+```python
     from SceneGraph import scenegraph
     sgui = scenegraph.SceneGraphUI()
     sgui.show()
@@ -47,17 +51,29 @@ Usage
     # get connected nodes from an edge
     e1.listConnections()
 
-**Loading in Maya**::
+```
+
+**Maya Usage:**
+
+```python
 
     from SceneGraph import scenegraph_maya
     scenegraph_maya.main()
 
-**Loading in Nuke**::
+```
+
+**Nuke Usage:**
+
+```python
 
     from SceneGraph import scenegraph_nuke
     scenegraph_nuke.main()
 
-**Using the API**::
+```
+
+**SceneGraph API:**
+
+```python
 
     # create a graph
     from SceneGraph import core
@@ -103,8 +119,11 @@ Usage
     g.add_edge(d, m, dest_attr='inputA')
     m.rename_connection('inputA', 'newInput')
 
-**Advanced API**::
+```
 
+**Advanced API:**
+
+```python
     # add attributes to a dag node, flag it as an input connection
     attr=n1.addAttr('env', value='maya', input=True)
 
@@ -113,6 +132,8 @@ Usage
 
     # set the value via the attribute instance
     attr.value = 'houdini'
+
+```
 
 **Dependencies:**
 
