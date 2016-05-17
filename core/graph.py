@@ -1180,21 +1180,27 @@ class Graph(object):
             log.error('scene "%s" appears to be invalid.' % filename)
             return False
 
-        api_ver = [x[1] for x in graph_data.get('graph', []) if x[0] == 'api_version'][0]
-        if not self.version_check(graph_data):
-            if not force:
-                log.error('scene "%s" requires api version %s ( %s )' % (filename, options.API_MINIMUM, api_ver))
-                return False   
+
+        file_data = graph_data.get('graph', [])
+        if len(file_data) > 1:
+            api_ver = [x[1] for x in file_data if x[0] == 'api_version']
+            if api_ver:
+
+                if not self.version_check(graph_data):
+                    if not force:
+                        log.error('scene "%s" requires api version %s ( %s )' % (filename, options.API_MINIMUM, api_ver[0]))
+                        return False   
 
         # restore from state.
         self.restore(graph_data)
 
         # callbacks
         prefs = dict()
-        for data in graph_data.get('graph'):
-            dname, attrs = data
-            if dname == 'preferences':
-                prefs = attrs
+        for data in graph_data.get('graph').items():
+            if len(data) > 1:
+                dname, attrs = data
+                if dname == 'preferences':
+                    prefs = attrs
 
         self.graphRead(**prefs)
         return self.setScene(filename)
@@ -1245,7 +1251,8 @@ class Graph(object):
         for gdata in graph_data:
             if len(gdata):
                 if graph or gdata[0] in ['scene', 'api_version']:
-                    self.network.graph[gdata[0]]=gdata[1]
+                    if len(gdata) > 1:
+                        self.network.graph[gdata[0]]=gdata[1]
 
         # build nodes from data
         if nodes:
@@ -1329,6 +1336,7 @@ class Graph(object):
                     api_ver = float(val)
                 except:
                     api_ver = float('.'.join(val.split('.')[:-1]))
+                    print api_ver
         if api_ver:
             return api_ver >= options.API_MINIMUM
         return False

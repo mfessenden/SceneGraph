@@ -33,7 +33,7 @@ API_REVISION                    = 0
 API_VERSION                     = float('%s%s' % (API_MAJOR_VERSION, API_REVISION))
 API_VERSION_AS_STRING           = '%.02f.%d' % (API_MAJOR_VERSION, API_REVISION)
 PLATFORM                        = None
-API_MINIMUM                     = 0.647
+API_MINIMUM                     = 0.64
 
 # initialize globals
 PLATFORM, USER_HOME             = setup_platform_defaults()
